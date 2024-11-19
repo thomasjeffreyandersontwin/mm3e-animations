@@ -39,27 +39,21 @@ Hooks.on("ready", () => {
     static get targets() {
         return Array.from(game.user.targets);
     }
-
     static get Tiles() {
         return canvas.tiles.placeables;
     }
-
     static get Selecteds() {
         return canvas.tokens.controlled;
     }
-
     static get FirstTemplate() {
         return canvas.templates.placeables[0];
     }
-
     static get FirstSelected() {
         return canvas.tokens.controlled[0];
     }
-
     static get FirstTile() {
         return canvas.tiles.placeables[0];
     }
-
     static get FirstTarget() {
         return this.targets[0];
     }
@@ -148,7 +142,7 @@ Hooks.on("ready", () => {
         return this.burstCommon({affected:affected})
     }
 
-    castCommon({caster = (this.caster || this.firstSelected), affected = (this.affected || this.firstTarget)}={}){
+    castCommon({caster = (this.caster || this.firstSelected), affected = (this.affected || this.firstTarget), rotation = true}={}){
         if(caster!=0)
             this.caster = caster
         if(affected && affected!=0)
@@ -159,7 +153,7 @@ Hooks.on("ready", () => {
         }
         this.mm3eEffect()
             this.atLocation(this.caster)
-            if(this.affected && this.affected!=this.caster)
+            if(this.affected && this.affected!=this.caster && rotation)
                 this.rotateTowards(this.affected)
         return this
     }
@@ -376,36 +370,7 @@ Hooks.on("ready", () => {
         return this;
     }
 
-    leapToPosition({token = this.affected, position=undefined, height=1.25}={}){
-        this.hideToken(token)
-        //.loopUp({distance:[50,0,50], duration:500, duration: 500, delay:0, pause:false})
-        .loopProperty("sprite", "position.y", { values: [50, 0, 50], duration: 500})
-        .loopScaleHeight({from:1,to:height, duration: 500, pingPong: true, delay:0})
-        .loopScaleWidth({from:1,to:height, duration: 500, pingPong: true, delay:0})
-        .moveTowards(position, {rotate:false})
-        .anchor({ x: 0.5, y: 1.5 })
-        .zIndex(2)
 
-    .mm3eEffect()
-        .from(token)
-        .opacity(0.5)
-        .scale(0.9)
-        .belowTokens()
-        .duration(1000)
-        .anchor({ x: 0.5, y: 0.5 })
-        .filter("ColorMatrix", { brightness: -1 })
-        .filter("Blur", { blurX: 5, blurY: 10 })
-        .moveTowards(position, {rotate:false})
-        .zIndex(2)
-        .waitUntilFinished()
-
-    .teleportTo(position)
-    .snapToGrid()
-    .waitUntilFinished()
-    .showToken(token)
-    
-    return this
-    }
 
     resistAndStruggle(target = this.affected){
         this.mm3eEffect()
@@ -1213,9 +1178,31 @@ Hooks.on("ready", () => {
         return this;
     }
     }
+
     class PowerEffectSection extends BaseEffectSection {
+        
+
+        affectAffliction({affected = this.affected}={}){
+            return this.affectCommon({affected:affected})
+            .file('jb2a.condition.curse')
+            .scaleToObject(2)
+            .persist(true)
+            .playSound('modules/mm3e-animations/sounds/Spells/Debuff/spell-*.mp3')
+        }
+
+        static async placeCreationTile({animation='animated-spell-effects-cartoon.energy.01', tint="#745002"}={}){
+            let creationTile = await GameHelper.placeCreationTile({power: this.getClass().getName(), animation:animation, tint:tint, height:300, width:300}) 
+        }
+
+        //this doesnt matter
+        /*
+        affectDamage({affected = this.affected}={})
+        {
+            return this.affectCommon({affected:affected})
+        }*/
+
         async affectConcealment({affected = (this.affected|this.firstSelected),filter= GameHelper.whiteColorFilter}= {}){
-                    
+                
             this.affectCommon({affected:affected})
                 .scaleToObject(1.5)
                 .file("jb2a.shimmer.01.blue")
@@ -1227,13 +1214,25 @@ Hooks.on("ready", () => {
             return this;
         }
 
+
+
+        affectDamage({affected = this.affected}={})
+        {
+            return this.affectCommon({affected:affected})
+            .file('animated-spell-effects-cartoon.energy.flash')
+            .scaleToObject(1)
+            .playSound('modules/mm3e-animations/sounds/Combat/Melee%20Natural/melee-hit-1.mp3')
+        }
+
+
         affectHealing({affected = this.firstSelected}={})
         {
             this.affectCommon({affected:affected})
-                .file('jb2a.healing_generic.200px.yellow02')
-                .playSound('modules/mm3e-animations/sounds/Spells/Buff/spell-buff-long-3.mp3')
+            .file('jb2a.healing_generic.200px.yellow02')
+            .playSound('modules/mm3e-animations/sounds/Spells/Buff/spell-buff-long-3.mp3')
             return this;
         }
+
 
         affectIllusion({affected = this.affected}={})
         {
@@ -1266,6 +1265,43 @@ Hooks.on("ready", () => {
             .persist()
             .playSound('modules/mm3e-animations/sounds/action/powers/Seers_SootheMind_Hit.ogg')
         }
+
+        affectNullify({affected = this.affected}={})
+        {
+            return this.affectCommon({affected:affected})
+            .file("jb2a.condition.curse.01.012")
+            .playSound('modules/mm3e-animations/sounds/Spells/Debuff/spell-decrescendo-short-1.mp3')
+           
+        }
+
+        affectProtection({affected = this.affected}={})
+        {
+            return this.affectCommon({affected:affected})
+            .file("jb2a.shield")
+            .persist( true)
+            .playSound('modules/mm3e-animations/sounds/action/powers/ForcefieldOn.ogg')
+            .pause(1000)
+            .playSound('modules/mm3e-animations/sounds/action/powers/ForceField*_loop.ogg')
+        }
+
+        static async placeSummonedActor({actor }={}){
+            let creationTile = await GameHelper.placeSummonedActor({actor}) 
+        }
+
+        /* unecessary
+        affectSummon({affected = this.affected}={})
+        {
+            return this.affectCommon({affected:affected})
+        }*/
+
+        affectTransform({affected = this.affected, image=this.getClass().getName()+'.webm'}={})
+        {
+             this.affectCommon({affected:affected})
+             //update the token image
+             this.affected.document.update({ "img": image });
+             return this;
+        }
+
 
         affectWeaken({affected = (this.affected|this.firstSelected)}={}){
             let tintColor = '#808080'
@@ -1333,6 +1369,365 @@ Hooks.on("ready", () => {
             .pause(1000)
             .playSound('modules/mm3e-animations/sounds/action/powers/Seers_RevealWeakness_Attack.ogg')
             return this;
+        }
+
+        startFly({caster}={}){
+            this.castCommon({caster:caster, affected:caster})
+                .loopUp({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
+                .file("animated-spell-effects-cartoon.energy.16")
+                .rotate(90)
+                .scaleToObject(1)
+                .filter("ColorMatrix" , {
+                     hue: 500, 
+                     contrast: 0, 
+                     saturate: 0,
+                     brightness: 1
+                 })
+                .repeatEffect()    //inherit last effect with any modifications we want below
+                    .spriteOffset({x:0, y: 25})
+                    .playSound("modules/mm3e-animations/sounds/action/powers/whoosh9.ogg")
+                .repeatEffect()   //inherit last effect with any modifications we want below
+                    .spriteOffset({x:0, y: -25})
+                    .pause(900)
+                return this
+        }
+        
+        endFly({caster:caster}={}){
+             this.castCommon({caster:caster, affected:caster})
+                .loopDown({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
+ 
+                .castCommon()
+                .file("animated-spell-effects-cartoon.energy.16")
+                .rotate(270)
+                .scaleToObject(1)
+                .filter("ColorMatrix" , {
+                     hue: 500, 
+                     contrast: 0, 
+                     saturate: 0,
+                     brightness: 1
+                 })
+            .repeatEffect()   //inherit last effect with any modifications we want below
+                .spriteOffset({x:0, y: 25})
+            .repeatEffect()   //inherit last effect with any modifications we want below
+                .playSound("modules/mm3e-animations/sounds/action/powers/Whoosh2.ogg")
+                .spriteOffset({x:0, y: -25})
+                .pause(300)
+            .endMovement()
+            return this;
+        }
+
+         //put into macro -->let position= GameHelper.placeEffectTargeter(); then do speed, burrow, or leap
+        leap({token = this.affected, position, height=1.25}={}){
+            if(!position){
+                throw new Error("Position is required for leap")
+            }
+            this.hideToken(token)
+            //.loopUp({distance:[50,0,50], duration:500, duration: 500, delay:0, pause:false})
+            .loopProperty("sprite", "position.y", { values: [50, 0, 50], duration: 500})
+            .loopScaleHeight({from:1,to:height, duration: 500, pingPong: true, delay:0})
+            .loopScaleWidth({from:1,to:height, duration: 500, pingPong: true, delay:0})
+            .moveTowards(position, {rotate:false})
+            .anchor({ x: 0.5, y: 1.5 })
+            .zIndex(2)
+    
+        .mm3eEffect()
+            .from(token)
+            .opacity(0.5)
+            .scale(0.9)
+            .belowTokens()
+            .duration(1000)
+            .anchor({ x: 0.5, y: 0.5 })
+            .filter("ColorMatrix", { brightness: -1 })
+            .filter("Blur", { blurX: 5, blurY: 10 })
+            .moveTowards(position, {rotate:false})
+            .zIndex(2)
+            .waitUntilFinished()
+    
+        .teleportTo(position)
+        .snapToGrid()
+        .waitUntilFinished()
+        .showToken(token)
+        
+        return this
+        }
+
+       
+        speed({caster, position}={}){
+            if(!position){
+                throw new Error("Position is required for speed")
+            }
+            this.castCommon({caster:caster, affected:caster})
+                .animation()
+                .on(this.caster)
+                .fadeOut(500)
+                .waitUntilFinished(-150)
+            this.castCommon()
+                .file("animated-spell-effects-cartoon.air.puff.01")
+                .tint("#1c1c1c")
+                .scaleToObject(4)
+                .waitUntilFinished(-2000)
+
+            .animation()
+                .on(this.caster)
+                .teleportTo(position)
+                .snapToGrid()
+                .offset({ x: -1, y: -1 })
+                .waitUntilFinished(-1400)
+            this.castCommon()
+                .file("animated-spell-effects-cartoon.smoke.99")
+                .tint("#1c1c1c")
+                .filter("ColorMatrix", {brightness: 1, contrast: 1.5})
+                .spriteOffset({ x: -3, y: -1 }, { gridUnits: true })
+                .atLocation(position)
+                .rotateTowards(this.caster)
+                .rotate(90)
+                .scaleToObject(5, {considerTokenScale: true})
+                .waitUntilFinished(-1500)
+        
+            .animation()
+                .on(this.caster)
+                .fadeIn(100)
+                .waitUntilFinished()
+
+
+
+        }
+
+        burrow({caster, position}={}){
+           if(!position){
+                throw new Error("Position is required for burrow")
+            }
+
+            super.castCommon({caster:caster, affected:caster})
+                .delay(500)
+                .file("jb2a.extras.tmfx.outpulse.circle.03.fast")
+                
+                .scaleToObject(2)
+                .belowTokens()
+                .opacity(0.5)
+                .duration(2000)
+            
+                .pause(800)
+            
+            super.castCommon()
+                .file("jb2a.explosion.04.orange")
+
+                .fadeOut(5000)
+                .anchor({x:0.2})
+                .scaleToObject(2)
+                .duration(1000)
+                .rotateTowards(position, { cacheLocation: true })
+                .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 3000})
+                .scaleOut(0.175, 5000, {ease: "easeOutQuint", delay: -3000})
+                .zIndex(3)
+            
+            this.castCommon()
+                .file("jb2a.impact.ground_crack.white.03")
+                .anchor({x: 0.1})
+                .atLocation(this.caster, {cacheLocation: true})
+                .rotateTowards(position, {cacheLocation: true})
+                .scaleToObject(2)
+                .belowTokens()
+                .opacity(1)
+            
+            this.castCommon()
+                .file("-Assets/Images/Effects/CrackedEarthWEBP.webp")
+                .belowTokens()
+                .anchor({x: -0.2})
+                .size(2, { gridUnits: true })
+                .atLocation(token, { cacheLocation: true })
+                .rotateTowards(position, { cacheLocation: true })
+                .delay(300)
+                .duration(8000)
+                .fadeOut(2000)
+                .opacity(1)
+                .zIndex(1)
+            
+                .canvasPan()
+                .delay(200)
+                .shake({ duration: 800, strength: 5, rotation: false })
+            
+                .canvasPan()
+                .delay(1000)
+                .shake({ duration: 5000, strength: 2, rotation: false, fadeOutDuration: 1000 })
+            
+            this.castCommon()
+                .file("blfx.spell.template.line.crack1")
+                .stretchTo(position)
+                .delay(200)
+                .zIndex(5)
+            
+                .pause(500)
+            
+            this.castCommon()
+                .file("jb2a.burrow.out.01.brown.1")
+                .atLocation(this.caster, {offset: {y: -0}, gridUnits: true})
+                .scaleToObject(4)
+                .fadeOut(1000, {ease: "easeInExpo"})
+                .zIndex(5)
+            
+                .pause(100)
+            
+            this.castCommon()
+                .delay(100)
+                .file("animated-spell-effects-cartoon.smoke.11")
+                .playbackRate(0.65)
+                .fadeIn(250)
+                .fadeOut(1500)
+                .scaleToObject(4)
+                .randomRotation()
+                .opacity(0.5)
+                .filter("ColorMatrix", { brightness: 0.8 })
+                .zIndex(4)
+            
+            this.castCommon()
+                .file("jb2a.particles.outward.orange.01.03")
+                .fadeIn(250, {ease: "easeOutQuint"})
+                .scaleIn(0, 200, {ease: "easeOutCubic"})
+                .fadeOut(5000, {ease: "easeOutQuint"})
+                .opacity(1)
+                .filter("ColorMatrix", { saturate: 0.75, brightness: 0.85 })
+                .randomRotation()
+                .scaleToObject(4)
+                .duration(10000)
+            
+            .animation()
+                .on(this.caster)
+                .teleportTo(position)
+                .delay(1000)
+                .snapToGrid()
+                .fadeOut(50)
+                .fadeIn(50)
+                .offset({ x: -1, y: -1 })
+                .waitUntilFinished(100)
+                
+                .pause(1000)
+            
+            
+            this.castCommon()
+                .file("jb2a.burrow.out.01.brown.1")
+                .atLocation(this.caster, {offset: {y: -0}, gridUnits: true})
+                .scaleToObject(4)
+                .fadeOut(1000, {ease: "easeInExpo"})
+                .zIndex(5)
+                
+                .pause(100)
+            
+            this.castCommon()
+                .delay(100)
+                .file("animated-spell-effects-cartoon.smoke.11")
+                .playbackRate(0.65)
+                .fadeIn(250)
+                .fadeOut(1500)
+                .scaleToObject(4)
+                .randomRotation()
+                .opacity(0.5)
+                .filter("ColorMatrix", { brightness: 0.8 })
+                .zIndex(4)
+            
+            .animation()
+                .delay(1000)
+                .on(this.caster)
+                .fadeIn(200)
+                .pause(500)
+            
+            this.castCommon()
+                .file("jb2a.burrow.out.01.still_frame.0")
+                .atLocation(position)
+                .scaleIn(0, 200, {ease: "easeOutCubic"})
+                .belowTokens()
+                .scaleToObject(5)
+                .duration(1200)
+                .fadeIn(200, {ease: "easeOutCirc", delay: 200})
+                .fadeOut(300, {ease: "linear"})
+                .filter("ColorMatrix", { saturate: -1, brightness: 2 })
+                .filter("Blur", { blurX: 5, blurY: 10 })
+                .zIndex(0.1)
+            
+            this.castCommon()
+                .file("jb2a.burrow.out.01.still_frame.0")
+                .atLocation(position)
+                .filter("ColorMatrix", { saturate: 0.8, brightness: 0.85 })
+                .scaleIn(0, 200, {ease: "easeOutCubic"})
+                .belowTokens()
+                .scaleToObject(5)
+                .fadeOut(5000, {ease: "easeOutQuint"})
+                .duration(10000)
+            return this
+        }
+
+        swing({caster:caste,positin}={}){
+            if(!caster){
+                throw new Error("Caster is required for swing")
+            }
+        }
+
+        teleport({caster:caster, position}={}){
+            if(!position){
+                throw new Error("Position is required for teleport")
+            }
+            super.castCommon({caster:caster, affected:caster})
+                .file("jb2a.misty_step.01.orange")
+                .scaleToObject(1.5)
+            .filter("ColorMatrix", { hue: hue })
+            .opacity(0.8)
+
+            .animation()
+                .on(this.caster)
+                .teleportTo(position)
+                .snapToGrid()
+                .fadeOut(50)
+                .fadeIn(50)
+                .offset({ x: -1, y: -1 })
+                .waitUntilFinished(100)
+
+            super.castCommon()
+                .file(`jb2a.swirling_leaves.complete.02.${leaves}`)
+                .scaleToObject(2.25)
+                .fadeOut(300)
+                .filter("ColorMatrix", { saturate: saturate })
+                .animateProperty("sprite", "width", { from: token.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
+                .animateProperty("sprite", "height", { from: token.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
+                .animateProperty("sprite", "width", { from: 0, to: token.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
+                .animateProperty("sprite", "height", { from: 0, to: token.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
+                .playbackRate(2)
+                .belowTokens()
+                .tint(tint)
+
+            .pause(1000)
+
+            super.castCommon()
+                .file("jb2a.misty_step.02.orange")
+                .atLocation(token)
+                .filter("ColorMatrix", { hue: hue })
+                .opacity(0.8)
+                .scaleToObject(1.5)
+
+            .animation()
+                .delay(1400)
+                .on(token)
+                .fadeIn(200)
+                .waitUntilFinished(-750)
+
+            super.castCommon()
+                .file("jb2a.ground_cracks.orange.01")
+                .atLocation(token)
+                .opacity(0.9)
+                .scaleToObject(3)
+                .duration(3000)
+                .fadeIn(100)
+                .fadeOut(1000)
+                .belowTokens()
+
+            super.castCommon()
+                .file("jb2a.impact.ground_crack.still_frame.01")
+                .atLocation(token)
+                .opacity(0.9)
+                .scaleToObject(3)
+                .duration(4000)
+                .fadeIn(100)
+                .fadeOut(1000)
+                .belowTokens()
         }
     }
 
@@ -1616,6 +2011,517 @@ Hooks.on("ready", () => {
             return this
          }
     }
+
+ 
+    class TemplatedDescriptorEffect extends PowerEffectSection{
+        
+        cast({caster, affected}={}){
+            super.castCommon({caster:caster, affected:affected})
+            this.descriptorCast()
+            return this
+        }
+
+        meleeCast({caster, affected}={}){
+            super.meleeCastCommon({caster:caster, affected:affected})
+            this.descriptorMeleeCast()
+            return this
+        }
+
+        project({caster, target}={}){
+            super.projectCommon({caster:caster, target:target})
+            this.descriptorProject()
+            return this
+        }
+        projectToCone({caster, affected}={}){
+            super.projectToConeCommon()
+            this.descriptorProjectToConeCommon()
+            return this
+        }  
+
+        projectToLine({caster, affected}={}){
+            super.projectToLineCommon()
+            this.descriptorProjectToLineCommon()
+            return this
+        }
+
+        burst({affected}={}){
+            super.burstCommon({affected:affected})
+            this.descriptorBurst()
+            return this
+        }
+
+        line({affected}={}){
+            super.lineCommon({affected:affected})
+            this.descriptorLine()
+            return this
+        }
+
+        cone({affected}={}){
+            super.coneCommon({affected:affected})
+            this.descriptorCone()
+        }
+
+        affect({affected}={}){
+            super.affectCommon({affected:affected})
+            this.descriptorAffect()
+            return this;
+        }
+
+        affectAura({affected = this.affected|| this.firstSelected}={}){
+            super.affectCommon({affected:affected})
+            .pause(1000)
+            this.descriptorAffectAura()
+            return this
+        }
+
+        affectAffliction({affected}={}){
+            this.affect({affected:affected})
+            super.affectAffliction({affected:this.affected})
+            return this
+        }
+        affectCreate({affected}={}){
+            this.affect({affected:affected})
+            super.affectCreate({affected:this.affected})
+            return this
+        }
+
+
+        affectConcealment({affected}={})
+        {
+            this.affectAura({affected:affected, persist:true})
+            super.affectConcealment({affected:this.affected})
+            return this;
+        }
+
+        affectDamage({affected}={}){
+            this.affect({affected:affected})
+            super.affectDamage({affected:this.affected})
+            return this
+        }
+
+        affectHealing({affected}={}){
+            this.affectAura({affected:affected, persist:true})
+            super.affectHealing({affected:this.affected})
+            return this
+        }
+        
+        affectIllusion({affected}={}){
+            this.affect({affected:affected})
+            super.affectIllusion({affected:this.affected})
+            return this
+        }
+
+        affectMindControl({affected}={}){
+            this.affect({affected:affected})
+            super.affectMindControl({affected:this.affected})
+            return this
+        }
+        // descriptor-ranged-move object
+        affectMoveObject({affected}={}){
+            this.affect({affected:affected})
+            super.affectMoveObject({affected:this.affected})
+            return this
+        }
+       
+        affectNullify({affected}={}){
+            this.affect({affected:affected})
+            super.affectNullify({affected:this.affected})
+            return this
+        }
+
+        affectProtection({affected}={}){
+            this.affectAura({affected:affected})
+            super.affectProtection({affected:this.affected})
+            return this
+        }
+
+        affectSummon({affected}={}){
+            this.affect({affected:affected})
+            super.affectSummon({affected:this.affected})       
+            return this
+        }
+
+        affectTransform({affected}={}){
+            this.affect({affected:affected})
+            super.affectTransform({affected:this.affected})
+            return this
+        }
+
+        affectWeaken({affected}={}){
+            this.affect({affected:affected})
+            super.affectWeaken({affected:this.affected})
+            return this
+        }
+
+     
+
+        // descriptor-personal-burrowing
+        startFly({caster}={}){
+            this.cast({caster:caster})
+            super.startFly({caster:this.caster})
+            
+            return this
+        }
+        
+        endFly({caster}={}){
+            this.cast({caster:caster})
+            super.endFly({caster:this.caster})
+            return this;
+        }
+
+        leaping({caster, position, height}={}){
+            this.cast({caster:caster})
+            super.leap({caster:this.caster, position:position, height:height})
+            this.affect({affected:this.caster})
+            return this
+        }
+
+        speed({caster}={}){
+            this.cast({caster:caster})
+            super.speed({caster:this.caster})
+            this.affectAura({affected:this.caster})
+            return this
+        }
+
+        burrowing({caster}={}){
+            this.cast({caster:caster})
+            super.burrow({caster:this.caster})
+            this.affectAura({affected:this.caster})
+
+            return this
+        }
+
+        swinging({caster}={}){
+            this.cast({caster:caster})
+            super.swing({caster:this.caster})
+            this.affectAura({affected:this.caster})
+            return this
+        }
+
+        teleport({caster}={}){
+            this.cast({caster:caster})
+            super.teleport({caster:this.caster})
+            this.affectAura({affected:this.caster})
+            return this
+        }
+
+ 
+
+
+        
+        // descriptor-personal-swimming
+        // descriptor-personal-leaping
+        // descriptor-personal-flight
+        // descriptor-personal-swinging
+        // descriptor-personal-flight
+        // descriptor-personal-speed
+        // descriptor-personal-teleport
+
+        // descriptor-personal-concealment
+        // descriptor-personal-deflect
+        // descriptor-personal-growth
+        // descriptor-personal-regeneration
+        // descriptor-personal-Insubstantiality
+        // descriptor-personal-morph
+        // descriptor-personal-protection
+        // descriptor-personal-quickness
+        // descriptor-personal-sense
+        // descriptor-personal-remote senses
+        // descriptor-personal-shrinking
+
+        
+    }
+
+    class NoDescriptorEffectSection extends TemplatedDescriptorEffect {
+        descriptorCast(){
+            return this
+        }
+
+        descriptorMeleeCast(){
+            return this
+        }
+
+        descriptorProject(){
+            return this
+        }
+
+        descriptorProjectToCone(){
+            return this
+        }
+
+        descriptorProjectToLine(){
+            return this
+        }
+
+        descriptorBurst(){
+            return this
+        }
+
+        descriptorLine(){
+            return this
+        }   
+
+        descriptorCone(){
+            return this
+        }
+
+        descriptorAffect(){
+            return this
+        }
+
+        descriptorAffectAura(){
+            return this
+        }
+    }
+
+
+     class SuperSpeedEffectSection extends TemplatedDescriptorEffect {
+        descriptorCast(){
+             this.vibrate()
+            .castCommon()
+                .file('jb2a.flurry_of_blows.no_hit.yellow')
+                .filter("ColorMatrix", { hue: 100,saturation: 0, brightness:1.3})
+                .from(this.caster)
+                .scale(2.5)
+                .spriteOffset({x:-50, y: 0})
+                .atLocation(this.caster)
+                .repeats(6,500)
+            .castCommon() 
+                 .playSound('modules/mm3e-animations/sounds/action/powers/Flurry.ogg')  
+                .pause(2500)
+            .castCommon()
+                .file('animated-spell-effects-cartoon.simple.63')
+                .scale(.5)
+            
+        }
+
+         
+        getCircularTemplatePoints(template) {
+            const points = [];
+            const stepCount = 4; // Number of pairs across the circle
+            const angleStep = (2 * Math.PI) / stepCount; // Angle between each pair in radians
+
+            for (let i = 0; i < stepCount; i++) {
+                // Calculate the angle for this step
+                const angle = i * angleStep;
+
+                // Calculate the point on one side of the circle
+                const x1 = template.x + Math.cos(angle) * template.shape.radius;
+                const y1 = template.y + Math.sin(angle) * template.shape.radius;
+
+                // Calculate the opposite point directly across the circle
+                const x2 = template.x + Math.cos(angle + Math.PI) * template.shape.radius;
+                const y2 = template.y + Math.sin(angle + Math.PI) * template.shape.radius;
+
+                // Add both points
+                points.push({ x: x1, y: y1 });
+                points.push({ x: x2, y: y2 });
+            }
+
+            return points;
+        }
+
+        runThroughBurstTemplate( points) { 
+        
+            const token = this.caster; 
+            if (!token) {
+                console.error("No token selected.");
+                return;
+            }
+        
+            const tokenPosition = { x: token.x, y: token.y };
+            let farthestPoint = points[0];
+            let maxDistance = 0;
+        
+            points.forEach((point) => {
+                const distance = Math.sqrt(
+                    Math.pow(point.x - tokenPosition.x, 2) +
+                    Math.pow(point.y - tokenPosition.y, 2)
+                );
+                if (distance > maxDistance) {
+                    maxDistance = distance;
+                    farthestPoint = point;
+                }
+            });
+
+            const reorganizedPoints = [tokenPosition, farthestPoint, ...points, tokenPosition];
+            
+            this.effect()
+                .animation()
+                .opacity(0)
+                .on(token)
+                .duration(0);
+                
+            for (let i = 0; i < reorganizedPoints.length-1; i++) {
+                this.effect()
+                    .file(token.document.texture.src) 
+                    .scale(token.document.texture.scaleX) 
+                    .opacity(1) 
+                    .from(token)
+                    .atLocation(reorganizedPoints[i])
+            
+                    .moveTowards(reorganizedPoints[i+1], { ease: "easeInOutCubic", rotate: true })
+                    .duration(500) 
+                    .wait(200)
+                    
+                .effect()
+                        .file("animated-spell-effects-cartoon.energy.16") // Trail animation
+                        .scale(4)
+                        .atLocation(reorganizedPoints[i])
+                        .stretchTo(reorganizedPoints[i+1], { gridUnits: true, proportional: true })
+                        .belowTokens()
+                        .opacity(0.75)
+                        .spriteOffset({ x: -5 }, { gridUnits: true })
+                        .filter("ColorMatrix", { brightness: 1.2 })
+                        .filter("ColorMatrix", { hue: 330 })
+                        .randomizeMirrorY()
+                        .fadeOut(200)
+                        .zIndex(0.2)
+                .effect()
+                        .file("animated-spell-effects-cartoon.simple.23")
+                        .filter("ColorMatrix", { hue: 180 })
+                        .playbackRate(0.9)
+                        .atLocation(reorganizedPoints[i])
+                        .stretchTo(reorganizedPoints[i+1], {onlyX:true, offest:{x:-3,y:0} })
+                         .scale(.6)
+             
+                        .belowTokens()
+                        .opacity(0.5)
+                        .zIndex(0.3)
+                        .fadeOut(300)
+                .effect()
+                        .file("animated-spell-effects-cartoon.simple.29")
+                        .atLocation(reorganizedPoints[i])
+                        .rotateTowards(reorganizedPoints[i+1])
+                        .scale(0.5 * token.document.texture.scaleX)
+                        .belowTokens()
+                        .opacity(0.85)
+                        .scaleIn(0, 300, { ease: "easeOutExpo" })
+                        .spriteRotation(-90)
+                        .spriteOffset({ x: -3, y: -0.1 }, { gridUnits: true })
+                .effect()
+                    .delay(100)
+                    .file("animated-spell-effects-cartoon.simple.05")
+                    .filter("Glow", { color: 0x29c9ff })
+                    .spriteOffset({x: 0.5, y: 0.5}, {gridUnits:true})
+                    .randomRotation()
+                    .scale(.3)
+                    .atLocation(reorganizedPoints[i])   
+                .sound('modules/mm3e-animations/sounds/power/super%20speed/move%20quick.ogg')
+            }
+            
+            this.effect()
+                .animation()
+                .opacity(0)
+                .on(token)
+                .duration(0)
+            .effect()
+                .animation()
+                .opacity(1)
+                .on(token)
+                .duration(0);
+        }
+
+         vibrate()
+         {
+             this.playSound('modules/mm3e-animations/sounds/power/super%20speed/wiff.ogg')
+             .castCommon({rotation:false})
+                 .file('animated-spell-effects-cartoon.simple.117')
+                 .scale(.5)
+            .castCommon({rotation:false})
+               .from(this.caster)
+               .fadeIn(200)
+               .fadeOut(500)
+               .loopProperty("sprite", "position.x", { from: -0.10, to: 0.10, duration: 50, pingPong: true, gridUnits: true})
+               .scaleToObject(this.caster.document.texture.scaleX)
+               .duration(3000)
+               .opacity(0.25)
+            return this;
+         }
+         
+        descriptorMeleeCast(){
+            let filter =GameHelper.GreyTransparentFilter
+            this.vibrate()
+            .castCommon()
+                .file('jb2a.flurry_of_blows.physical.orange')
+                .filter("ColorMatrix", { hue: 100,saturation: 0, brightness:1.3})
+                .from(this.caster)
+                .scale(2.5)
+                .spriteOffset({x:-50, y: 0})
+                .atLocation(this.caster)
+                .repeats(6,500)
+            .castCommon() 
+                 .playSound('modules/mm3e-animations/sounds/action/powers/flurryhits.ogg')  
+                .pause(2000)
+            .castCommon()
+                .file('animated-spell-effects-cartoon.simple.63')
+                .scale(.5)
+            
+            return this
+        }
+
+        affectDamage({affected}={}){
+             super.affectDamage({affected:affected})
+             this.caster = this.affected
+             this.vibrate()
+            return this
+         }
+
+          affectAffliction({affected}={}){
+             super.affectAffliction({affected:affected})
+             this.caster = this.affected
+             this.vibrate()
+            return this
+         }
+
+        descriptorProject(){
+            return this
+        }
+
+        descriptorProjectToCone(){
+            return this
+        }
+
+        descriptorProjectToLine(){
+            return this
+        }
+
+        descriptorBurst(){
+            let points = this.getCircularTemplatePoints(this.affected)
+            this.vibrate()
+            this.runThroughBurstTemplate(points)
+            return this
+        }
+
+        descriptorLine(){
+            return this
+        }   
+
+        descriptorCone(){
+            return this
+        }
+
+        descriptorAffect(){
+            return this
+        }
+
+        descriptorAffectAura(){
+           this.playSound('modules/mm3e-animations/sounds/power/super%20speed/wiff.ogg')
+            .castCommon()
+               .file('animated-spell-effects-cartoon.simple.117')
+               .scale(.5)
+           .castCommon()
+               .from(this.affected)
+               .fadeIn(200)
+               .fadeOut(500)
+               .loopProperty("sprite", "position.x", { from: -0.10, to: 0.10, duration: 50, pingPong: true, gridUnits: true})
+               .scaleToObject(this.affected.document.texture.scaleX)
+                .persist()
+               .playSound('modules/mm3e-animations/sounds/power/super%20speed/vibration%20long.ogg')
+               .opacity(0.25)
+            return this;
+        }
+    }
     
     class FlightEffect  {
         constructor(originalEffectSection){
@@ -1837,11 +2743,183 @@ Hooks.on("ready", () => {
                 .opacity(0.25)
             return this
         } 
+
+        start({caster}={}){
+            this.originalEffectSection.castCommon({caster:caster, affected:caster})
+                .loopUp({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
+                .file("animated-spell-effects-cartoon.energy.16")
+                .rotate(90)
+                .scaleToObject(1)
+                .filter("ColorMatrix" , {
+                     hue: 500, 
+                     contrast: 0, 
+                     saturate: 0,
+                     brightness: 1
+                 })
+                .repeatEffect()    //inherit last effect with any modifications we want below
+                    .spriteOffset({x:0, y: 25})
+                    .playSound("modules/mm3e-animations/sounds/action/powers/whoosh9.ogg")
+                .repeatEffect()   //inherit last effect with any modifications we want below
+                    .spriteOffset({x:0, y: -25})
+                    .pause(900)
+                return this.originalEffectSection;
+            }
+        
+        end({caster}={}){
+             this.originalEffectSection.castCommon({caster:caster, affected:caster})
+                .loopDown({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
+ 
+                .castCommon()
+                .file("animated-spell-effects-cartoon.energy.16")
+                .rotate(270)
+                .scaleToObject(1)
+                .filter("ColorMatrix" , {
+                     hue: 500, 
+                     contrast: 0, 
+                     saturate: 0,
+                     brightness: 1
+                 })
+            .repeatEffect()   //inherit last effect with any modifications we want below
+                .spriteOffset({x:0, y: 25})
+            .repeatEffect()   //inherit last effect with any modifications we want below
+                .playSound("modules/mm3e-animations/sounds/action/powers/Whoosh2.ogg")
+                .spriteOffset({x:0, y: -25})
+                .pause(300)
+            .endMovement()
+            return this.originalEffectSection;
+        }
     }
 
     Sequencer.SectionManager.registerSection("myModule", "mm3eEffect", BaseEffectSection)
     Sequencer.SectionManager.registerSection("myModule", "powerEffect", PowerEffectSection)
     Sequencer.SectionManager.registerSection("myModule", "insectEffect", InsectEffectSection)
     Sequencer.SectionManager.registerSection("myModule", "superStrengthEffect", SuperStrengthSection)
+    Sequencer.SectionManager.registerSection("myModule", "noDescriptorEffect", NoDescriptorEffectSection)
+    Sequencer.SectionManager.registerSection("myModule", "superSpeedEffect",SuperSpeedEffectSection)
+    
 
 });
+
+class GameHelper{ 
+  
+    //make static getters for the selected token and the target token
+    static get selected(){
+        return canvas.tokens.controlled[0];
+    }
+
+    static get targeted(){
+        return Array.from(game.user.targets)[0];
+    }
+
+   static get target(){
+        return Array.from(game.user.targets)[0];
+    }
+
+    //make static getters for the all selected tokens and the all target tokens
+    static get selectedTokens(){
+        return canvas.tokens.controlled;
+    }
+
+    static get selecteds(){
+        return canvas.tokens.controlled;
+    }
+    static get targetedTokens(){
+        return Array.from(game.user.targets); 
+    }
+
+    static async targetWithCrossHair( {icon ='icons/skills/movement/feet-winged-boots-brown.webp', label ='target'}={}){
+
+        let config = {
+            size: 1,
+            icon: icon,
+            label: label,
+            drawIcon: true,
+            drawOutline: true,
+            interval: 1 % 2 === 0 ? 1 : -1,
+        }
+        let position =   await warpgate.crosshairs.show(config);
+        return position
+    }
+
+    static get targets(){
+        return Array.from(game.user.targets);
+    }
+
+     static get template(){
+        return canvas.templates.placeables[0];
+     }
+
+     static async  sleep (ms) {
+        await new Promise(resolve => setTimeout(resolve, ms));
+    } 
+
+    static async placeSummonedActor({actor}={}){
+        let position = await GameHelper.targetWithCrossHair({icon:actor.data.token.img, label:actor.name})
+        let summmon
+        if(actor){
+            summon = await actor.sheet.actor.createEmbeddedDocuments("Token", [{x:position.x, y:position.y}])
+        }
+        else{ 
+            actor = await Actor.create({ name: "Summoned", type: "personnage" });
+        }
+        const tokenData = actor.getTokenData();
+        tokenData.update({
+            x: position.x,
+            y: position.y,
+            vision: true, 
+            scale: 1,
+            disposition: CONST.TOKEN_DISPOSITIONS.FRIENDLY
+        });
+        const scene = game.scenes.active;
+        await TokenDocument.create(tokenData, { parent: scene });
+    }
+
+    static async placeEffectTargeter (){
+        let position = await GameHelper.targetWithCrossHair({icon:'modules/mm3e-animations/power-icons/' + power +'.webp', label:power})
+        return position;
+    }
+
+
+    static async placeCreationTile({power, animation, tint, width=150, height=150}={}){
+        let position = await GameHelper.targetWithCrossHair({icon:'modules/mm3e-animations/power-icons/' + power +'.webp', label:power})
+        const swingPointAnimation =Sequencer.Database.getEntry(animation).originalData
+        const tileData = {
+            img: swingPointAnimation, 
+            x: position.x-width/2,  
+            y: position.y-height/2,
+            width: width,
+            height: height,
+            flags: {
+                tag: this.name 
+            },
+        };
+        const [tile] = await canvas.scene.createEmbeddedDocuments("Tile", [tileData]);
+        await tile.update({"texture.tint":tint})
+        return tile
+    }
+
+    static get whiteColorFilter() {
+        let f =  
+        {
+                filterType: "ColorMatrix",
+                filterId: "whiteColorFilter",
+                values: {
+                    saturation: 0, 
+                    brightness: 1.5 
+                }
+        };
+        return f;
+    }
+
+    static get GreyTransparentFilter(){
+        let f = 
+        {
+                filterType: "ColorMatrix",
+                filterId: "GreyTransparentFilter",
+                values: {
+                    saturation: 0, // Desaturate completely to make it grey
+                }
+        }
+        return f;
+    }
+}
