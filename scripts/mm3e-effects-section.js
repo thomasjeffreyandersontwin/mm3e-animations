@@ -39,6 +39,33 @@ Hooks.on("ready", () => {
     static get targets() {
         return Array.from(game.user.targets);
     }
+
+    getTokenCenter(token)
+    {
+        return {
+            x: token.x + ( token.width ) / 2,
+            y: token.y + (token.height ) / 2
+        }
+    }
+
+    getNearestTokenSide(start, token){
+        let tokenCenter = this.getTokenCenter(token)
+        let x = tokenCenter.x - start.x;
+        let y = tokenCenter.y - start.y;
+        let angle = Math.atan2(y, x) * 180 / Math.PI;
+        let side = Math.round((angle + 180) / 90) % 4;
+        //return a {x,y} object with the center of the side
+        switch (side) {
+            case 0:
+                return { x: tokenCenter.x, y: token.y };
+            case 1:
+                return { x: token.x + token.width, y: tokenCenter.y };
+            case 2:
+                return { x: tokenCenter.x, y: token.y + token.height };
+            case 3:
+                return { x: token.x, y: tokenCenter.y };
+        }
+    }
     static get Tiles() {
         return canvas.tiles.placeables;
     }
@@ -74,7 +101,10 @@ Hooks.on("ready", () => {
         return this;
     }
 
-    /* commands that need to be overridden for each power --------------------------------------------------------------------------*/
+    /* commands that are  overridden for each power if an animation is desired*/
+    affect({caster, affected}={}){
+        return this.affectCommon({caster:caster, affected:affected})
+    }  
     affectCommon({caster = this.caster || this.firstSelected, affected = this.affected | this.firstTarget}={}){
         if(affected!=0){ //if we passed in a affected
             this.affected = affected
@@ -91,45 +121,32 @@ Hooks.on("ready", () => {
         .atLocation(this.affected); 
         }
     }
-    affect({caster, affected}={}){
-        return this.affectCommon({caster:caster, affected:affected})
-    }  
 
-    affectAfflictionCommon({caster, affected}={}){
+    cone({caster, affected}={}){
+        return this.coneCommon({affected:affected})
     }
-    affectAffliction({caster, affected}={}){
-        this.affectAfflictionCommon({caster:caster, affected:affected})
-    }
-
     coneCommon({caster = this.caster, affected =  this.firstTemplate}={}){
         if(affected!=0){ //if we passed in a affected
             this.affected = affected
         }
-        const coneStart = { x: this.affected.data.x, y: this.affected.data.y };
+        const coneStart = { x: this.affected.x, y: this.affected.y };
         this.affectLocation = coneStart
         this.mm3eEffect()
             .atLocation(coneStart)
             .stretchTo(this.affected)
         return this 
     }
-    cone({caster, affected}={}){
-        return this.coneCommon({affected:affected})
-    }
 
-    affectDamageCommon({caster, affected}={}){
-
-    }
-    affectDamage({caster, affected}={}){
-        this.affectDamageCommon({caster:caster, affected:affected})
-    }
-
-    lineCommon({affected = this.affected | this.firstTemplate}={}){
-        return this.coneCommon({affected:affected})
-    }
     line({affected}={}){
         return this.lineCommon({affected:affected})
     }
+    lineCommon({affected =  this.firstTemplate}={}){
+        return this.coneCommon({affected:affected})
+    }
 
+    burst({affected}={}){
+        return this.burstCommon({affected:affected})
+    }
     burstCommon({affected = this.firstTemplate}={}){
         
         if(!affected==0){
@@ -138,10 +155,9 @@ Hooks.on("ready", () => {
         return this.affectCommon({affected:affected})
     }
 
-    burst({affected}={}){
-        return this.burstCommon({affected:affected})
+    cast({caster , affected}={}){
+        return this.castCommon({caster:caster, affected:affected})
     }
-
     castCommon({caster = (this.caster || this.firstSelected), affected = (this.affected || this.firstTarget), rotation = true}={}){
         if(caster!=0)
             this.caster = caster
@@ -157,23 +173,21 @@ Hooks.on("ready", () => {
                 this.rotateTowards(this.affected)
         return this
     }
-    cast({caster , affected}={}){
-        this.castCommon({caster:caster, affected:affected})
-    }
-
     castToTemplate({caster =(this.caster)}={}){
         return this.cast({caster:caster, affected:this.firstTemplate})
-    }
-
-    meleeCastCommon({caster = (this.caster || this.firstSelected), affected = (this.affected || this.firstTarget)}={}){
-        return this.castCommon({caster:caster, affected:affected})
     }
     meleeCast({caster , affected}={}){
         return this.meleeCastCommon({caster:caster, affected:affected})
     }
+    meleeCastCommon({caster = (this.caster || this.firstSelected), affected = (this.affected || this.firstTarget)}={}){
+        return this.castCommon({caster:caster, affected:affected})
+    }
 
+    project({caster , affected}={}){
+        return this.projectCommon({caster:caster, affected:affected})
+    }
     projectCommon({caster = (this.caster || this.firstSelected), affected = (this.affected || this.firstTarget)}={}){
-        this.castCommon({caster:caster, affected:affected})
+        this.castCommon({caster:caster, affected:affected,rotation:false})
         let stretchToLocation=affected;
         if(this.affectLocation){
             stretchToLocation = this.affectLocation
@@ -187,29 +201,20 @@ Hooks.on("ready", () => {
 
         return this; 
     }
-    project({caster , affected}={}){
-        this.projectCommon({caster:caster, affected:affected})
-    }
-
     projectToConeCommon({caster = (this.caster || this.firstSelected), affected = ( this.firstTemplate || this.affected)}={}){
         this.castCommon({caster:caster, affected:affected})
         const coneStart = { x: this.affected.data.x, y: this.affected.data.y };
         this.stretchTo(coneStart)
         this.affectLocation = coneStart
         return this;
-    }
-        
+    } 
     projectToCone({caster , affected}={}){
         return this.projectToConeCommon({caster:caster, affected:affected})
     }
-
     projectToLine({caster , affected}={}){
         return this.projectToConeCommon({caster:caster, affected:affected})
     }
     
-    
-    /*methods for addtl functionality --------------------------------------------------------------------------*/
-
     knockDown({affected:affected}){
         this.startMovement(affected)
         .turnLeft({affected:affected, distance:90,  duration:400})  //simpler move api
@@ -251,13 +256,11 @@ Hooks.on("ready", () => {
         this.repeatEffect()
         return this;
     }
-
     pause(waiting) {
         this._effect = this._effect ? this._effect : this.effect();
         this._effect.wait(waiting)
         return this;
     }
-
     playSound(inSound,repeats = undefined) {
         this.logMethodCall('playSound', inSound);
         this._effect = this._effect ? this._effect : this.effect();
@@ -275,14 +278,12 @@ Hooks.on("ready", () => {
         this._effect.animation()//.on(token).opacity(0);
         return this;
     }
-
     hideToken(token = this.selected)
     {
         this._effect =  this._effect ? this._effect : this.effect();
         this._effect.animation().on(token).opacity(0)
         return this
     }
-
     showToken(token = this.selected)
     {
         this._effect = this._effect ? this._effect : this.effect();
@@ -321,7 +322,7 @@ Hooks.on("ready", () => {
     this._effect.effect()
         .from(this.caster)
         .atLocation(this.caster)
-        .mirrorX(this.caster.document.data.mirrorX)
+        .mirrorX(this.caster.document.mirrorX)
         .animateProperty("sprite", "position.x", { from: 0, to: this.middleposition.x, duration: duration, ease:"easeOutExpo"})
         .animateProperty("sprite", "position.y", { from: 0, to: this.middleposition.y, duration: duration, ease:"easeOutExpo"})
         .animateProperty("sprite", "position.x", { from: 0, to: -this.middleposition.x, duration: duration, ease:"easeInOutQuad", fromEnd:true})
@@ -339,7 +340,6 @@ Hooks.on("ready", () => {
         
         return this;
     }
-
     recoilAwayFromSelected({affected = this.affected, distance =.25, duration= 100, repeats=1}={}){
         this.calculateFrontAndCenterPos(affected,distance)
         
@@ -352,7 +352,7 @@ Hooks.on("ready", () => {
         .effect()
             .from(affected)
             .atLocation(affected)
-            .mirrorX(affected.document.data.mirrorX)
+            .mirrorX(affected.document.mirrorX)
             .animateProperty("sprite", "position.x", { from: 0, to: this.middleposition.x, duration: duration, ease:"easeOutExpo"})
             .animateProperty("sprite", "position.y", { from: 0, to: this.middleposition.y, duration: duration, ease:"easeOutExpo"})
             .animateProperty("sprite", "position.x", { from: 0, to: -this.middleposition.x, duration: duration, ease:"easeInOutQuad", fromEnd:true})
@@ -369,8 +369,6 @@ Hooks.on("ready", () => {
             .opacity(1)
         return this;
     }
-
-
 
     resistAndStruggle(target = this.affected){
         this.mm3eEffect()
@@ -401,7 +399,6 @@ Hooks.on("ready", () => {
         this._effect.effect().animation().on(token).opacity(0)
         return this;
     }
-
     endMovement(token=this.affected) {
         this._effect = this._effect ? this._effect : this.effect();
         this._effect.thenDo( () => {
@@ -421,7 +418,6 @@ Hooks.on("ready", () => {
     turnLeft({token=this.affected, distance=0, duration=0, ease="easeInOutCubic"}={}) {
         return this.turnSprite("left", token, distance, duration, ease)
     }
-
     turnRight({token=this.affected, distance=0, duration= 0, ease="easeInOutCubic"}={}) {
         return this.turnSprite("right", token, distance, duration, ease)
     }
@@ -444,19 +440,15 @@ Hooks.on("ready", () => {
         }).wait(duration * .8)
         return this;
     } 
-
     moveLeft({token=this.effected, distance, duration, speed=100, ease="easeInOutCubic"}={}) {
         return this.moveSprite(token, "left", distance, duration, ease, speed)
     }
-
     moveUp({token=this.effected, distance, duration, speed=100, ease="easeInOutCubic"}={}) {
         return this.moveSprite(token, "up", distance, duration, ease, speed, pause)
     }
-
     moveDown({token=this.effected, distance, duration, speed=100, ease="easeInOutCubic"}={}) {
         return this.moveSprite(token, "down", distance, duration, ease, speed)
     }
-
     moveRight({token=this.effected, distance, duration, speed=100, ease="easeInOutCubic"}={}) {
         return this.moveSprite(token, "right", distance, duration, ease, speed)
     }
@@ -959,6 +951,13 @@ Hooks.on("ready", () => {
         this._effect.size(inSize);
         return this;
     }
+    spriteRotation(spriteRotation) {
+        this.logMethodCall('spriteRotation', spriteRotation);
+        this._effect = this._effect ? this._effect : this.effect();
+        this._effect.spriteRotation(spriteRotation);
+        return this;
+    }
+    
 
 
     affected(inTemplate) {
@@ -1181,76 +1180,79 @@ Hooks.on("ready", () => {
 
     class PowerEffectSection extends BaseEffectSection {
         
+        static async placeCreationTile({animation='animated-spell-effects-cartoon.energy.01', tint="#745002"}={}){
+            let creationTile = await GameHelper.placeCreationTile({power: this.getClass().getName(), animation:animation, tint:tint, height:300, width:300}) 
+        }
+         affectConcealment({affected = (this.affected|this.firstSelected),filter= GameHelper.whiteColorFilter}= {}){
+                
+            return this.affectCommon({affected:affected})
+                .scaleToObject(1.5)
+                .file("jb2a.shimmer.01.blue")
+                .filter(filter.filterType, filter.values)
+                .playSound('modules/mm3e-animations/sounds/action/powers/invisible1.ogg')
+                .thenDo( ()=>{
+                    this.affected.document.update({ "alpha": 0.1 });
+                })   
+            
+        }
 
         affectAffliction({affected = this.affected}={}){
             return this.affectCommon({affected:affected})
-            .file('jb2a.condition.curse')
+            .affliction()
+        }
+        affliction(){
+            return this.file('jb2a.condition.curse')
             .scaleToObject(2)
             .persist(true)
             .playSound('modules/mm3e-animations/sounds/Spells/Debuff/spell-*.mp3')
         }
 
-        static async placeCreationTile({animation='animated-spell-effects-cartoon.energy.01', tint="#745002"}={}){
-            let creationTile = await GameHelper.placeCreationTile({power: this.getClass().getName(), animation:animation, tint:tint, height:300, width:300}) 
-        }
-
-        //this doesnt matter
-        /*
-        affectDamage({affected = this.affected}={})
-        {
-            return this.affectCommon({affected:affected})
-        }*/
-
-        async affectConcealment({affected = (this.affected|this.firstSelected),filter= GameHelper.whiteColorFilter}= {}){
-                
+        affectDamage({affected = this.affected}={}){
             this.affectCommon({affected:affected})
-                .scaleToObject(1.5)
-                .file("jb2a.shimmer.01.blue")
-                .filter(filter.filterType, filter.values)
-                .thenDo(async ()=>{
-                    this.affected.document.update({ "alpha": 0.1 });
-                })
-                this.playSound('modules/mm3e-animations/sounds/action/powers/invisible1.ogg')
-            return this;
+            return this.damage()
         }
-
-
-
-        affectDamage({affected = this.affected}={})
-        {
-            return this.affectCommon({affected:affected})
-            .file('animated-spell-effects-cartoon.energy.flash')
+        damage(){
+            return this.file('animated-spell-effects-cartoon.energy.flash')
             .scaleToObject(1)
             .playSound('modules/mm3e-animations/sounds/Combat/Melee%20Natural/melee-hit-1.mp3')
         }
 
+        affectHealing({affected = this.firstSelected}={}){
 
-        affectHealing({affected = this.firstSelected}={})
-        {
             this.affectCommon({affected:affected})
-            .file('jb2a.healing_generic.200px.yellow02')
+            .healing()
+            return this;
+        }
+        healing(){
+            this.file('jb2a.healing_generic.200px.yellow02')
             .playSound('modules/mm3e-animations/sounds/Spells/Buff/spell-buff-long-3.mp3')
             return this;
         }
 
-
         affectIllusion({affected = this.affected}={})
         {
-            this.affectCommon({affected:affected})
-                .file('jb2a.markers.stun.dark_teal.02')
-                .filter("ColorMatrix", { saturate: 0, brightness:.5 , hue: 200  })
-                .scaleToObject(1)
-                .spriteOffset({x:0, y:-25})
-                .belowTokens(true)
-                .persist(true)
-                .playSound('modules/mm3e-animations/sounds/action/powers/Seers_AuraVoicesL_Loop.ogg')
+            this. affectCommon({affected:affected})
+            .illusion()
             return this;
+        }
+        illusion(){
+            return this .file('jb2a.markers.stun.dark_teal.02')
+            .filter("ColorMatrix", { saturate: 0, brightness:.5 , hue: 200  })
+            .scaleToObject(1)
+            .spriteOffset({x:0, y:-25})
+            .belowTokens(true)
+            .persist(true)
+            .playSound('modules/mm3e-animations/sounds/action/powers/Seers_AuraVoicesL_Loop.ogg')
+            return this
         }
 
         affectMindControl({affected = this.affected}={})
-        {
+        { 
             return this.affectCommon({affected:affected})
-            .file("jaamod.spells_effects.confusion")
+            .mindControl()
+        }
+        mindControl(){
+            this.file("jaamod.spells_effects.confusion")
             .scaleToObject(.5)
             .spriteOffset({x:0, y:-30})
             .belowTokens()
@@ -1264,20 +1266,27 @@ Hooks.on("ready", () => {
             })
             .persist()
             .playSound('modules/mm3e-animations/sounds/action/powers/Seers_SootheMind_Hit.ogg')
+            return this;
         }
 
         affectNullify({affected = this.affected}={})
         {
             return this.affectCommon({affected:affected})
-            .file("jb2a.condition.curse.01.012")
-            .playSound('modules/mm3e-animations/sounds/Spells/Debuff/spell-decrescendo-short-1.mp3')
+            .nullify()
            
+        }
+        nullify(){
+            return this.file("jb2a.condition.curse.01.012")
+            .playSound('modules/mm3e-animations/sounds/Spells/Debuff/spell-decrescendo-short-1.mp3')
         }
 
         affectProtection({affected = this.affected}={})
         {
             return this.affectCommon({affected:affected})
-            .file("jb2a.shield")
+            .protection()
+        }
+        protection(){
+            this.file("jb2a.shield")
             .persist( true)
             .playSound('modules/mm3e-animations/sounds/action/powers/ForcefieldOn.ogg')
             .pause(1000)
@@ -1302,8 +1311,11 @@ Hooks.on("ready", () => {
              return this;
         }
 
-
         affectWeaken({affected = (this.affected|this.firstSelected)}={}){
+            this.affectCommon({affected:affected})
+            return this.weaken()
+        }
+        weaken(){
             let tintColor = '#808080'
             let hue = 350
             if(affected!=0){
@@ -1317,11 +1329,7 @@ Hooks.on("ready", () => {
                 .filter("ColorMatrix", { saturate:-1})
                 .scaleToObject(1, {considerTokenScale: true})
                 .persist()
-                .fadeIn(3000)
-            //  .fadeOut(1000)
-            //  .duration(5000)
-
-            
+                .fadeIn(3000)       
             .affectCommon()
                 .delay(150)
                 .file("jb2a.impact.004.green")
@@ -1391,7 +1399,6 @@ Hooks.on("ready", () => {
                     .pause(900)
                 return this
         }
-        
         endFly({caster:caster}={}){
              this.castCommon({caster:caster, affected:caster})
                 .loopDown({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
@@ -1416,7 +1423,6 @@ Hooks.on("ready", () => {
             return this;
         }
 
-         //put into macro -->let position= GameHelper.placeEffectTargeter(); then do speed, burrow, or leap
         leap({token = this.affected, position, height=1.25}={}){
             if(!position){
                 throw new Error("Position is required for leap")
@@ -1451,46 +1457,46 @@ Hooks.on("ready", () => {
         return this
         }
 
-       
         speed({caster, position}={}){
             if(!position){
                 throw new Error("Position is required for speed")
             }
             this.castCommon({caster:caster, affected:caster})
-                .animation()
+            .animation()
                 .on(this.caster)
-                .fadeOut(500)
-                .waitUntilFinished(-150)
-            this.castCommon()
-                .file("animated-spell-effects-cartoon.air.puff.01")
-                .tint("#1c1c1c")
-                .scaleToObject(4)
-                .waitUntilFinished(-2000)
+                .fadeOut(0)
+                .waitUntilFinished()
+            .effect()
+                .file(this.caster.document.texture.src) 
+                .scale(this.caster.document.texture.scaleX) 
+                .opacity(1) 
+                .from(this.caster)
+                .atLocation(this.caster)
+                .moveSpeed(1000)
+                .moveTowards(position, { ease: "easeInOutCubic", rotate: true })
+                .duration(300) 
+                .wait(100)
+            
+            this.descriptorSpeed(position)
 
             .animation()
                 .on(this.caster)
                 .teleportTo(position)
                 .snapToGrid()
                 .offset({ x: -1, y: -1 })
-                .waitUntilFinished(-1400)
-            this.castCommon()
-                .file("animated-spell-effects-cartoon.smoke.99")
-                .tint("#1c1c1c")
-                .filter("ColorMatrix", {brightness: 1, contrast: 1.5})
-                .spriteOffset({ x: -3, y: -1 }, { gridUnits: true })
-                .atLocation(position)
-                .rotateTowards(this.caster)
-                .rotate(90)
-                .scaleToObject(5, {considerTokenScale: true})
-                .waitUntilFinished(-1500)
+                .waitUntilFinished(-1800) 
         
             .animation()
                 .on(this.caster)
-                .fadeIn(100)
-                .waitUntilFinished()
+              //  .fadeIn(100)
+                .opacity(1)
+                .waitUntilFinished(-1800)
 
+            return this
 
-
+        }
+        descriptorSpeed(){
+            return this
         }
 
         burrow({caster, position}={}){
@@ -1728,6 +1734,811 @@ Hooks.on("ready", () => {
                 .fadeIn(100)
                 .fadeOut(1000)
                 .belowTokens()
+        }
+    }
+    class TemplatedDescriptorEffect extends PowerEffectSection{
+        
+        cast({caster, affected}={}){
+            super.castCommon({caster:caster, affected:affected})
+            this.descriptorCast()
+            return this
+        }
+
+        meleeCast({caster, affected}={}){
+            super.castCommon({caster:caster, affected:affected})
+            this.descriptorMeleeCast()
+            return this
+        }
+
+        project({caster, target}={}){
+            super.projectCommon({caster:caster, target:target})
+            this.descriptorProject()
+            return this
+        }
+        projectToCone({caster, affected}={}){
+            super.projectToConeCommon()
+            this.descriptorProjectToCone()
+            return this
+        }  
+
+        projectToLine({caster, affected}={}){
+            super.projectToLineCommon()
+            this.descriptorProjectToLine()
+            return this
+        }
+
+        burst({affected}={}){
+            super.burstCommon({affected:affected})
+            this.descriptorBurst()
+            return this
+        }
+
+        line({affected}={}){
+            super.lineCommon({affected:affected})
+            this.descriptorLine()
+            return this
+        }
+
+        cone({affected}={}){
+            super.coneCommon({affected:affected})
+            this.descriptorCone()
+            return this
+        }
+
+        affect({affected}={}){
+            super.affectCommon({affected:affected})
+            this.descriptorAffect()
+            return this;
+        }
+
+        affectAura({affected = this.affected|| this.firstSelected, persist}={}){
+            super.affectCommon({affected:affected})
+            .pause(1000)
+            this.descriptorAffectAura(persist)
+            return this
+        }
+
+        affectAffliction({affected}={}){
+            super.affectCommon({affected:affected})
+            this.descriptorAffect()
+            this.descriptorAffliction()
+            return this
+        }
+        descriptorAffliction(){ //optionally override for custom sequence effect 
+            super.affliction({affected:this.affected})
+            return this
+        }
+
+        affectCreate({affected}={}){
+           super.affectCommon({affected:affected})
+           this.descriptorAffect()
+           this.descriptorCreate()
+           return this
+        }
+        descriptorCreate(){ //optionally override for custom sequence effect
+            super.affectCreate({affected:this.affected})
+            return this
+        }
+
+        affectConcealment({affected}={})
+        {
+            super.affectCommon({affected:affected})
+            super.affectConcealment({affected:this.affected})
+            this.affectAura({affected:affected, persist:true})
+            return this;
+        }
+        descriptorConcealment(){
+            super.concealment({affected:this.affected})
+            return this;
+        }
+
+        affectDamage({affected}={}){
+            super.affectCommon({affected:affected})
+            this.descriptorAffect()
+            this.descriptorDamage()
+            return this
+        }
+        descriptorDamage(){
+            super.damage({affected:this.affected})
+            return this
+        }
+
+        affectHealing({affected}={}){
+           super.affectCommon({affected:affected})
+           this.descriptorHealing()
+           this.affectAura({affected:affected})
+           return this
+        }
+        descriptorHealing(){
+            super.healing({affected:this.affected})
+            return this
+        }
+        
+        affectIllusion({affected}={}){
+            super.affectCommon({affected:affected})
+            this.descriptorIllusion()
+            this.affectAura({affected:affected, persist:true})
+            return this
+        }
+        descriptorIllusion(){
+            super.illusion({affected:this.affected})
+            return this
+        }
+
+        affectMindControl({affected}={}){
+            super.affectCommon({affected:affected})
+            this.descriptorMindControl()
+            this.affectAura({affected:affected, persist:true})
+            return this
+        }
+        descriptorMindControl(){
+            super.mindControl({affected:this.affected})
+            return this
+        }
+
+        affectMoveObject({affected}={}){
+            super.affect({affected:affected})
+            super.affectMoveObject({affected:this.affected})
+            return this
+        }
+       
+        affectNullify({affected}={}){
+            super.affectCommon({affected:affected})
+            this.descriptorAffectNullify()
+            this.affectAura({affected:affected})
+            return this
+        }
+        descriptorNullify(){
+            super.nullify({affected:this.affected})
+            return this
+        }
+
+        affectProtection({affected}={}){
+            super.affectCommon({affected:affected})
+            this.descriptorAffectProtect()
+            this.affectAura({affected:affected, persist:true})
+            return this
+        }
+        descriptorProtection(){
+            super.protection({affected:this.affected})
+            return this
+        }
+
+        affectSummon({affected}={}){
+            super.affectCommon({affected:affected})
+            this.descriptorAffectSummon()
+            this.affectAura({affected:affected, persist:true})
+            return this
+        }
+        descriptorSummon(){
+            super.summon({affected:this.affected})
+            return this
+        }
+
+        affectTransform({affected}={}){
+            super.affectCommon({affected:affected})
+            this.descriptorAffectTransform()
+            this.affectAura({affected:affected, persist:true})
+            return this
+        }
+        descriptorTransform(){
+            super.transform({affected:this.affected})
+            return this
+        }
+
+        affectWeaken({affected}={}){
+            super.affectCommon({affected:affected})
+            this.descriptorAffectWeaken()
+            this.affectAura({affected:affected, persist:true})
+            return this
+        }
+        descriptorWeaken(){
+            super.weaken({affected:this.affected})
+            return this
+        }
+
+     
+
+        startFly({caster}={}){
+            this.cast({caster:caster})
+            super.startFly({caster:this.caster})
+            
+            return this
+        }
+        
+        endFly({caster}={}){
+            this.cast({caster:caster})
+            super.endFly({caster:this.caster})
+            return this;
+        }
+
+        leaping({caster, position, height}={}){
+            this.cast({caster:caster})
+            super.leap({caster:this.caster, position:position, height:height})
+            this.affect({affected:this.caster})
+            return this
+        }
+
+        speed({caster,position}={}){
+            this.cast({caster:caster})
+            super.speed({caster:this.caste,position:position})
+            return this
+        }
+
+        burrowing({caster}={}){
+            this.cast({caster:caster})
+            super.burrow({caster:this.caster})
+            this.affectAura({affected:this.caster})
+
+            return this
+        }
+
+        swinging({caster}={}){
+            this.cast({caster:caster})
+            super.swing({caster:this.caster})
+            this.affectAura({affected:this.caster})
+            return this
+        }
+
+        teleport({caster}={}){
+            this.cast({caster:caster})
+            super.teleport({caster:this.caster})
+            this.affectAura({affected:this.caster})
+            return this
+        }
+        
+        // descriptor-personal-swimming
+        // descriptor-personal-leaping
+        // descriptor-personal-flight
+        // descriptor-personal-swinging
+        // descriptor-personal-flight
+        // descriptor-personal-speed
+        // descriptor-personal-teleport
+
+        // descriptor-personal-concealment
+        // descriptor-personal-deflect
+        // descriptor-personal-growth
+        // descriptor-personal-regeneration
+        // descriptor-personal-Insubstantiality
+        // descriptor-personal-morph
+        // descriptor-personal-protection
+        // descriptor-personal-quickness
+        // descriptor-personal-sense
+        // descriptor-personal-remote senses
+        // descriptor-personal-shrinking
+
+        
+    }
+    class NoDescriptorEffectSection extends TemplatedDescriptorEffect {
+        descriptorCast(){
+            return this
+        }
+
+        descriptorMeleeCast(){
+            return this
+        }
+
+        descriptorProject(){
+            return this
+        }
+
+        descriptorProjectToCone(){
+            return this
+        }
+
+        descriptorProjectToLine(){
+            return this
+        }
+
+        descriptorBurst(){
+            return this
+        }
+
+        descriptorLine(){
+            return this
+        }   
+
+        descriptorCone(){
+            return this
+        }
+
+        descriptorAffect(){
+            return this
+        }
+
+        descriptorAffectAura(){
+            return this
+        }
+    }
+    class SuperSpeedEffectSection extends TemplatedDescriptorEffect {
+        meleeDamageCast({caster, affected}) {
+            super.castCommon({caster, affected})
+            .file('jb2a.flurry_of_blows.physical.orange')
+            .filter("ColorMatrix", { hue: 100,saturation: 0, brightness:1.3})
+            .from(this.caster)
+            .scale(2.5)
+            .spriteOffset({x:-50, y: 0})
+            .atLocation(this.caster)
+            .repeats(6,500)
+        .castCommon() 
+             .playSound('modules/mm3e-animations/sounds/action/powers/flurryhits.ogg')  
+            .pause(2000)
+        .castCommon()
+            .file('animated-spell-effects-cartoon.simple.63')
+            .scale(.5)
+
+            return this;
+        }
+        
+        descriptorCast(){
+             this.vibrate(1000)
+        }
+        descriptorMeleeCast(){
+           this.vibrate(1000)
+           super.castCommon()  
+                .file('jb2a.flurry_of_blows.no_hit.yellow')
+                .filter("ColorMatrix", { hue: 100,saturation: 0, brightness:1.3})
+                .from(this.caster)
+                .scale(2.5)
+                .spriteOffset({x:-50, y: 0})
+                .repeats(9,500)
+            .castCommon() 
+                 .playSound('modules/mm3e-animations/sounds/action/powers/Flurry.ogg')  
+                .pause(2500)
+            .castCommon()
+                .file('animated-spell-effects-cartoon.simple.63')
+                .scale(.5)
+            return this
+        }
+        descriptorBurst(){
+            let points = this.getCircularTemplatePoints(this.affected)
+            this.vibrate()
+            this.runThroughTemplate(points)
+            return this
+        }
+        descriptorLine(){
+            const points = this.getLineTemplatePoints(this.affected);
+            this.vibrate();
+            this.runThroughTemplate(points);
+            return this;
+        }   
+        descriptorCone(){
+            const points = this.getConeTemplatePoints(this.affected);
+            this.vibrate();
+            this.runThroughTemplate(points);
+            return this;
+        }
+        getCircularTemplatePoints(template) {
+            const points = [];
+            const stepCount = 4; // Number of pairs across the circle
+            const angleStep = (2 * Math.PI) / stepCount; // Angle between each pair in radians
+
+            for (let i = 0; i < stepCount; i++) {
+                // Calculate the angle for this step
+                const angle = i * angleStep;
+
+                // Calculate the point on one side of the circle
+                const x1 = template.x + Math.cos(angle) * template.shape.radius;
+                const y1 = template.y + Math.sin(angle) * template.shape.radius;
+
+                // Calculate the opposite point directly across the circle
+                const x2 = template.x + Math.cos(angle + Math.PI) * template.shape.radius;
+                const y2 = template.y + Math.sin(angle + Math.PI) * template.shape.radius;
+
+                // Add both points
+                points.push({ x: x1, y: y1 });
+                points.push({ x: x2, y: y2 });
+            }
+
+            return points;
+        }
+        getConeTemplatePoints(template) {
+            const points = [];
+            const gridSize = canvas.grid.size; // Size of one grid square in pixels
+            const length = template.document.distance * gridSize *2/3; // Convert distance to pixels
+            const halfAngle = (template.document.angle / 2) * (Math.PI / 180); // Half of the cone's angle in radians
+            const direction = template.document.direction * (Math.PI / 180); // Central direction in radians
+        
+            // Start with the cone's origin (in grid units)
+            const origin = { x: template.x, y: template.y };
+            points.push(origin);
+        
+            // Calculate the leftmost edge point
+            const leftX = template.x + Math.cos(direction - halfAngle) * length;
+            const leftY = template.y + Math.sin(direction - halfAngle) * length;
+            const leftPoint = { x: leftX, y: leftY };
+            points.push(leftPoint);
+        
+            // Calculate the rightmost edge point
+            const rightX = template.x + Math.cos(direction + halfAngle) * length;
+            const rightY = template.y + Math.sin(direction + halfAngle) * length;
+            const rightPoint = { x: rightX, y: rightY };
+            points.push(rightPoint);
+        
+            // Calculate the midpoint of the triangle (average of left and right points)
+            const midPoint = {
+                x: (leftX + rightX) / 2,
+                y: (leftY + rightY) / 2,
+            };
+            points.push(midPoint);
+        
+            // Calculate the opposite side point (reflect midpoint across origin and scale properly)
+            const oppositeX = template.x - (midPoint.x - template.x) * (length / (length + 1));
+            const oppositeY = template.y - (midPoint.y - template.y) * (length / (length + 1));
+            const oppositePoint = { x: oppositeX, y: oppositeY };
+            points.push(oppositePoint);
+        
+            // Add the final point back to the origin
+            points.push(origin);
+        
+            return points;
+        }
+        getLineTemplatePoints(template) {
+            const points = [];
+            const gridSize = canvas.grid.size; // Size of one grid square in pixels
+            const length = template.document.distance * gridSize *2/3; // Line length in pixels
+            const direction = template.document.direction * (Math.PI / 180); // Line direction in radians
+        
+            // Start with the line's origin
+            const origin = { x: template.x, y: template.y };
+            points.push(origin);
+        
+            // Calculate the endpoint of the line
+            const endX = template.x + Math.cos(direction) * length;
+            const endY = template.y + Math.sin(direction) * length;
+            const endPoint = { x: endX, y: endY };
+            points.push(endPoint);
+        
+            // Add the return point (back to origin)
+            points.push(origin);
+        
+            return points;
+        }
+        runThroughTemplate( points) { 
+        
+            const token = this.caster; 
+        
+            const tokenPosition = { x: token.x, y: token.y };
+            let farthestPoint = points[0];
+            let maxDistance = 0;
+        
+            points.forEach((point) => {
+                const distance = Math.sqrt(
+                    Math.pow(point.x - tokenPosition.x, 2) +
+                    Math.pow(point.y - tokenPosition.y, 2)
+                );
+                if (distance > maxDistance) {
+                    maxDistance = distance;
+                    farthestPoint = point;
+                }
+            });
+
+            const reorganizedPoints = [tokenPosition, farthestPoint, ...points, tokenPosition];
+            
+            super.mm3eEffect()
+                .animation()
+                .opacity(0)
+                .on(token)
+                .duration(0);
+                
+            for (let i = 0; i < reorganizedPoints.length-1; i++) {
+                super.mm3eEffect()
+                    .file(token.document.texture.src) 
+                    .scale(token.document.texture.scaleX) 
+                    .opacity(1) 
+                    .from(token)
+                    .atLocation(reorganizedPoints[i])
+                    .moveTowards(reorganizedPoints[i+1], { ease: "easeInOutCubic", rotate: true })
+                    .duration(500) 
+                    .pause(200)
+                    
+                super.mm3eEffect()
+                    .file("animated-spell-effects-cartoon.energy.16") // Trail animation
+                    .scale(4)
+                    .atLocation(reorganizedPoints[i])
+                    .stretchTo(reorganizedPoints[i+1], { gridUnits: true, proportional: true })
+                    .belowTokens()
+                    .opacity(0.75)
+                    .spriteOffset({ x: -5 }, { gridUnits: true })
+                    .filter("ColorMatrix", { brightness: 1.2 })
+                    .filter("ColorMatrix", { hue: 330 })
+                    .randomizeMirrorY()
+                    .fadeOut(200)
+                    .zIndex(0.2)
+                super.mm3eEffect()
+                    .file("animated-spell-effects-cartoon.simple.23")
+                    .filter("ColorMatrix", { hue: 180 })
+                    .playbackRate(0.9)
+                    .atLocation(reorganizedPoints[i])
+                    .stretchTo(reorganizedPoints[i+1], {onlyX:true, offest:{x:-3,y:0} })
+                        .scale(.6)
+                    .belowTokens()
+                    .opacity(0.5)
+                    .zIndex(0.3)
+                    .fadeOut(300)
+                super.mm3eEffect()
+                    .file("animated-spell-effects-cartoon.simple.29")
+                    .atLocation(reorganizedPoints[i])
+                    .rotateTowards(reorganizedPoints[i+1])
+                    .scale(0.5 * token.document.texture.scaleX)
+                    .belowTokens()
+                    .opacity(0.85)
+                    .scaleIn(0, 300, { ease: "easeOutExpo" })
+                    .spriteRotation(-90)
+                    .spriteOffset({ x: -3, y: -0.1 }, { gridUnits: true })
+                super.mm3eEffect()
+                    .delay(100)
+                    .file("animated-spell-effects-cartoon.simple.05")
+                    .filter("Glow", { color: 0x29c9ff })
+                    .spriteOffset({x: 0.5, y: 0.5}, {gridUnits:true})
+                    .randomRotation()
+                    .scale(.3)
+                    .atLocation(reorganizedPoints[i])   
+               .sound('modules/mm3e-animations/sounds/power/super%20speed/move%20quick.ogg')
+            }
+            
+            this.mm3eEffect()
+                .animation()
+                .opacity(0)
+                .on(token)
+                .duration(0)
+            this.mm3eEffect()
+                .animation()
+                .opacity(1)
+                .on(token)
+                .duration(0);
+        }
+        vibrate(duration=3000)
+         {
+             this.playSound('modules/mm3e-animations/sounds/power/super%20speed/wiff.ogg')
+             .castCommon({rotation:false})
+                 .file('animated-spell-effects-cartoon.simple.117')
+                 .scale(.5)
+            .castCommon({rotation:false})
+               .from(this.caster)
+               .fadeIn(200)
+               .fadeOut(500)
+               .loopProperty("sprite", "position.x", { from: -0.10, to: 0.10, duration: 50, pingPong: true, gridUnits: true})
+               .scaleToObject(this.caster.document.texture.scaleX)
+               .duration(3000)
+               .opacity(0.25)
+            return this;
+        }
+
+        descriptorProject(){
+           let origin = this.getTokenCenter(this.caster);
+            let destination =this.getNearestTokenSide(origin, this.affected)
+            this.speed({caster:this.caster, position:destination})
+            function timerPromise(delay) {return new Promise((resolve) => setTimeout(resolve, delay));}  
+            //give the attack sequence time to run
+            timerPromise(1500).then(() => 
+            new Sequence().superSpeedEffect().cast(this.caster).speed({caster:this.caster, position:origin}).play()
+            )
+
+        }
+        descriptorProjectToCone(){
+            return this
+        }
+        descriptorProjectToLine(){
+            return this
+        }
+
+        descriptorAffect(){
+            this.descriptorAffectAura()
+        }
+        descriptorAffectAura(persist){
+            let duration
+            if(!persist)
+            {
+                duration = 3000
+            }
+           this.playSound('modules/mm3e-animations/sounds/power/super%20speed/wiff.ogg')
+            .fluctuate(duration)
+           
+            return this;
+        }
+        descriptorAffliction({affected}={}){
+            this.playSound('modules/mm3e-animations/sounds/action/powers/phase2.ogg')
+            .fluctuate()
+            super.affectCommon()
+            .file('animated-spell-effects-cartoon.cantrips.mending.blue')
+            .scale(.4)
+            .filter("ColorMatrix" , { hue:500,contrast: 0, saturate: 0,brightness: 1})
+            .persist()
+            return this
+        }
+        fluctuate(duration){
+             this.thenDo(async ()=>{
+                let filter = "fluctuating" + Math.random().toString()
+                let params =
+                [{
+                    filterType: "images",
+                    filterId: filter,
+                    time: 0,
+                    nbImage:4,
+                    alphaImg: 1.0,
+                    alphaChr: 0.0,
+                    blend: 4,
+                    ampX: 0.2,
+                    ampY: 0.2,
+                    padding: 10,
+                    zOrder: 20,
+                    animated :
+                    {
+                      time: 
+                      { 
+                        active: true, 
+                        speed: 0.1110, 
+                        animType: "move" 
+                      },
+                      ampX:
+                      {
+                        active: true,
+                        val1: 0.00,
+                        val2: 0.0030,
+                        chaosFactor: 0.03,
+                        animType: "syncChaoticOscillation",
+                        loopDuration: 2000
+                      },
+                      ampY:
+                      {
+                        active: true,
+                        val1: 0.00,
+                        val2: 0.030,
+                        chaosFactor: 0.04,
+                        animType: "syncChaoticOscillation",
+                        loopDuration: 1650
+                      },
+                      alphaChr:        
+                      { 
+                        active: true, 
+                        animType: "randomNumberPerLoop", 
+                        val1: 0.0, 
+                        val2: 1,
+                        loopDuration: 250
+                      },
+                      alphaImg:        
+                      { 
+                        active: true, 
+                        animType: "randomNumberPerLoop", 
+                        val1: 0.8, 
+                        val2: 0.1,
+                        loopDuration: 250
+                      },
+                      nbImage:
+                      {
+                        active: true,
+                        val1: 1,
+                        val2: 4,
+                        animType: "syncSinOscillation",
+                        loopDuration: 1400
+                      }
+                    }
+                }];
+                
+                 this.affected.TMFXaddFilters(params);
+                 if(duration){
+                     function timerPromise(delay) {return new Promise((resolve) => setTimeout(resolve, delay));}  //give the rest of the sequence time to run
+                     
+                     timerPromise(duration).then(() => 
+                         TokenMagic.deleteFilters(this.affected,filter));
+                 }
+             })
+        }
+
+        descriptorSpeed(position){
+            this.castCommon()
+            .file("animated-spell-effects-cartoon.smoke.01")
+            .rotateTowards(position)
+            .scaleToObject(1.75)
+            .belowTokens()
+            .opacity(0.65)
+            .scaleIn(0, 300, {ease: "easeOutExpo"})
+            .filter("ColorMatrix", { saturate: 0, brightness: 1 })
+            .spriteRotation(-90)
+            .spriteOffset({x:-1}, {gridUnits :true})
+
+            this.castCommon()
+                .file("jb2a.smoke.puff.side.dark_black.4")
+                .scaleToObject(2)
+                .rotateTowards(position)
+                .fadeOut(200)
+                .opacity(1)
+                .filter("ColorMatrix", { saturate: 0, brightness: 1 })
+                .moveTowards(position,{rotate:false, ease:"easeOutCirc"})
+                .spriteRotation(180)
+                .spriteOffset({x:-1.75}, {gridUnits :true})
+                .moveSpeed(1500)
+                .zIndex(0.3)
+    
+            this.castCommon()
+                .file("jb2a.energy_strands.range.standard.grey")
+                .stretchTo(position)
+                .belowTokens()
+                .opacity(0.5)
+                .repeats(3,50,50)
+                .spriteOffset({x:0}, {gridUnits :true})
+                .filter("ColorMatrix", { saturate: 0, brightness: 2 })
+                .randomizeMirrorY() 
+                .fadeOut(200)
+                .zIndex(0.2)
+
+            .effect()
+                .file("animated-spell-effects-cartoon.magic.mind sliver")
+                .delay(50)
+                .atLocation(this.caster)
+                .stretchTo(position)
+                .belowTokens()
+                .opacity(1)
+                .spriteOffset({x:0}, {gridUnits :true})
+                .filter("ColorMatrix", { saturate: 0, brightness: 1,contrast:0 })
+                .randomizeMirrorY()
+                .fadeOut(200)
+                .zIndex(0.21)
+    
+            this.castCommon()
+                .file("animated-spell-effects-cartoon.smoke.99")
+                .filter("ColorMatrix", {brightness: 1, contrast: 1.5, saturate:0})
+                .spriteOffset({ x: -3, y: -1 }, { gridUnits: true })
+                .atLocation(position)
+                .rotateTowards(this.caster)
+                .rotate(90)
+                .scaleToObject(5, {considerTokenScale: true})
+
+        return this;
+       
+        }
+
+    }
+    
+    class FlightEffect  {
+        constructor(originalEffectSection){
+            this.originalEffectSection = originalEffectSection
+        }
+
+        start({caster}={}){
+            this.originalEffectSection.castCommon({caster:caster, affected:caster})
+                .loopUp({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
+                .file("animated-spell-effects-cartoon.energy.16")
+                .rotate(90)
+                .scaleToObject(1)
+                .filter("ColorMatrix" , {
+                     hue: 500, 
+                     contrast: 0, 
+                     saturate: 0,
+                     brightness: 1
+                 })
+                .repeatEffect()    //inherit last effect with any modifications we want below
+                    .spriteOffset({x:0, y: 25})
+                    .playSound("modules/mm3e-animations/sounds/action/powers/whoosh9.ogg")
+                .repeatEffect()   //inherit last effect with any modifications we want below
+                    .spriteOffset({x:0, y: -25})
+                    .pause(900)
+                return this.originalEffectSection;
+            }
+        
+        end({caster}={}){
+             this.originalEffectSection.castCommon({caster:caster, affected:caster})
+                .loopDown({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
+ 
+                .castCommon()
+                .file("animated-spell-effects-cartoon.energy.16")
+                .rotate(270)
+                .scaleToObject(1)
+                .filter("ColorMatrix" , {
+                     hue: 500, 
+                     contrast: 0, 
+                     saturate: 0,
+                     brightness: 1
+                 })
+            .repeatEffect()   //inherit last effect with any modifications we want below
+                .spriteOffset({x:0, y: 25})
+            .repeatEffect()   //inherit last effect with any modifications we want below
+                .playSound("modules/mm3e-animations/sounds/action/powers/Whoosh2.ogg")
+                .spriteOffset({x:0, y: -25})
+                .pause(300)
+            .endMovement()
+            return this.originalEffectSection;
         }
     }
 
@@ -2011,569 +2822,6 @@ Hooks.on("ready", () => {
             return this
          }
     }
-
- 
-    class TemplatedDescriptorEffect extends PowerEffectSection{
-        
-        cast({caster, affected}={}){
-            super.castCommon({caster:caster, affected:affected})
-            this.descriptorCast()
-            return this
-        }
-
-        meleeCast({caster, affected}={}){
-            super.meleeCastCommon({caster:caster, affected:affected})
-            this.descriptorMeleeCast()
-            return this
-        }
-
-        project({caster, target}={}){
-            super.projectCommon({caster:caster, target:target})
-            this.descriptorProject()
-            return this
-        }
-        projectToCone({caster, affected}={}){
-            super.projectToConeCommon()
-            this.descriptorProjectToConeCommon()
-            return this
-        }  
-
-        projectToLine({caster, affected}={}){
-            super.projectToLineCommon()
-            this.descriptorProjectToLineCommon()
-            return this
-        }
-
-        burst({affected}={}){
-            super.burstCommon({affected:affected})
-            this.descriptorBurst()
-            return this
-        }
-
-        line({affected}={}){
-            super.lineCommon({affected:affected})
-            this.descriptorLine()
-            return this
-        }
-
-        cone({affected}={}){
-            super.coneCommon({affected:affected})
-            this.descriptorCone()
-        }
-
-        affect({affected}={}){
-            super.affectCommon({affected:affected})
-            this.descriptorAffect()
-            return this;
-        }
-
-        affectAura({affected = this.affected|| this.firstSelected}={}){
-            super.affectCommon({affected:affected})
-            .pause(1000)
-            this.descriptorAffectAura()
-            return this
-        }
-
-        affectAffliction({affected}={}){
-            this.affect({affected:affected})
-            super.affectAffliction({affected:this.affected})
-            return this
-        }
-        affectCreate({affected}={}){
-            this.affect({affected:affected})
-            super.affectCreate({affected:this.affected})
-            return this
-        }
-
-
-        affectConcealment({affected}={})
-        {
-            this.affectAura({affected:affected, persist:true})
-            super.affectConcealment({affected:this.affected})
-            return this;
-        }
-
-        affectDamage({affected}={}){
-            this.affect({affected:affected})
-            super.affectDamage({affected:this.affected})
-            return this
-        }
-
-        affectHealing({affected}={}){
-            this.affectAura({affected:affected, persist:true})
-            super.affectHealing({affected:this.affected})
-            return this
-        }
-        
-        affectIllusion({affected}={}){
-            this.affect({affected:affected})
-            super.affectIllusion({affected:this.affected})
-            return this
-        }
-
-        affectMindControl({affected}={}){
-            this.affect({affected:affected})
-            super.affectMindControl({affected:this.affected})
-            return this
-        }
-        // descriptor-ranged-move object
-        affectMoveObject({affected}={}){
-            this.affect({affected:affected})
-            super.affectMoveObject({affected:this.affected})
-            return this
-        }
-       
-        affectNullify({affected}={}){
-            this.affect({affected:affected})
-            super.affectNullify({affected:this.affected})
-            return this
-        }
-
-        affectProtection({affected}={}){
-            this.affectAura({affected:affected})
-            super.affectProtection({affected:this.affected})
-            return this
-        }
-
-        affectSummon({affected}={}){
-            this.affect({affected:affected})
-            super.affectSummon({affected:this.affected})       
-            return this
-        }
-
-        affectTransform({affected}={}){
-            this.affect({affected:affected})
-            super.affectTransform({affected:this.affected})
-            return this
-        }
-
-        affectWeaken({affected}={}){
-            this.affect({affected:affected})
-            super.affectWeaken({affected:this.affected})
-            return this
-        }
-
-     
-
-        // descriptor-personal-burrowing
-        startFly({caster}={}){
-            this.cast({caster:caster})
-            super.startFly({caster:this.caster})
-            
-            return this
-        }
-        
-        endFly({caster}={}){
-            this.cast({caster:caster})
-            super.endFly({caster:this.caster})
-            return this;
-        }
-
-        leaping({caster, position, height}={}){
-            this.cast({caster:caster})
-            super.leap({caster:this.caster, position:position, height:height})
-            this.affect({affected:this.caster})
-            return this
-        }
-
-        speed({caster}={}){
-            this.cast({caster:caster})
-            super.speed({caster:this.caster})
-            this.affectAura({affected:this.caster})
-            return this
-        }
-
-        burrowing({caster}={}){
-            this.cast({caster:caster})
-            super.burrow({caster:this.caster})
-            this.affectAura({affected:this.caster})
-
-            return this
-        }
-
-        swinging({caster}={}){
-            this.cast({caster:caster})
-            super.swing({caster:this.caster})
-            this.affectAura({affected:this.caster})
-            return this
-        }
-
-        teleport({caster}={}){
-            this.cast({caster:caster})
-            super.teleport({caster:this.caster})
-            this.affectAura({affected:this.caster})
-            return this
-        }
-
- 
-
-
-        
-        // descriptor-personal-swimming
-        // descriptor-personal-leaping
-        // descriptor-personal-flight
-        // descriptor-personal-swinging
-        // descriptor-personal-flight
-        // descriptor-personal-speed
-        // descriptor-personal-teleport
-
-        // descriptor-personal-concealment
-        // descriptor-personal-deflect
-        // descriptor-personal-growth
-        // descriptor-personal-regeneration
-        // descriptor-personal-Insubstantiality
-        // descriptor-personal-morph
-        // descriptor-personal-protection
-        // descriptor-personal-quickness
-        // descriptor-personal-sense
-        // descriptor-personal-remote senses
-        // descriptor-personal-shrinking
-
-        
-    }
-
-    class NoDescriptorEffectSection extends TemplatedDescriptorEffect {
-        descriptorCast(){
-            return this
-        }
-
-        descriptorMeleeCast(){
-            return this
-        }
-
-        descriptorProject(){
-            return this
-        }
-
-        descriptorProjectToCone(){
-            return this
-        }
-
-        descriptorProjectToLine(){
-            return this
-        }
-
-        descriptorBurst(){
-            return this
-        }
-
-        descriptorLine(){
-            return this
-        }   
-
-        descriptorCone(){
-            return this
-        }
-
-        descriptorAffect(){
-            return this
-        }
-
-        descriptorAffectAura(){
-            return this
-        }
-    }
-
-
-     class SuperSpeedEffectSection extends TemplatedDescriptorEffect {
-        descriptorCast(){
-             this.vibrate()
-            .castCommon()
-                .file('jb2a.flurry_of_blows.no_hit.yellow')
-                .filter("ColorMatrix", { hue: 100,saturation: 0, brightness:1.3})
-                .from(this.caster)
-                .scale(2.5)
-                .spriteOffset({x:-50, y: 0})
-                .atLocation(this.caster)
-                .repeats(6,500)
-            .castCommon() 
-                 .playSound('modules/mm3e-animations/sounds/action/powers/Flurry.ogg')  
-                .pause(2500)
-            .castCommon()
-                .file('animated-spell-effects-cartoon.simple.63')
-                .scale(.5)
-            
-        }
-
-         
-        getCircularTemplatePoints(template) {
-            const points = [];
-            const stepCount = 4; // Number of pairs across the circle
-            const angleStep = (2 * Math.PI) / stepCount; // Angle between each pair in radians
-
-            for (let i = 0; i < stepCount; i++) {
-                // Calculate the angle for this step
-                const angle = i * angleStep;
-
-                // Calculate the point on one side of the circle
-                const x1 = template.x + Math.cos(angle) * template.shape.radius;
-                const y1 = template.y + Math.sin(angle) * template.shape.radius;
-
-                // Calculate the opposite point directly across the circle
-                const x2 = template.x + Math.cos(angle + Math.PI) * template.shape.radius;
-                const y2 = template.y + Math.sin(angle + Math.PI) * template.shape.radius;
-
-                // Add both points
-                points.push({ x: x1, y: y1 });
-                points.push({ x: x2, y: y2 });
-            }
-
-            return points;
-        }
-
-        runThroughBurstTemplate( points) { 
-        
-            const token = this.caster; 
-            if (!token) {
-                console.error("No token selected.");
-                return;
-            }
-        
-            const tokenPosition = { x: token.x, y: token.y };
-            let farthestPoint = points[0];
-            let maxDistance = 0;
-        
-            points.forEach((point) => {
-                const distance = Math.sqrt(
-                    Math.pow(point.x - tokenPosition.x, 2) +
-                    Math.pow(point.y - tokenPosition.y, 2)
-                );
-                if (distance > maxDistance) {
-                    maxDistance = distance;
-                    farthestPoint = point;
-                }
-            });
-
-            const reorganizedPoints = [tokenPosition, farthestPoint, ...points, tokenPosition];
-            
-            this.effect()
-                .animation()
-                .opacity(0)
-                .on(token)
-                .duration(0);
-                
-            for (let i = 0; i < reorganizedPoints.length-1; i++) {
-                this.effect()
-                    .file(token.document.texture.src) 
-                    .scale(token.document.texture.scaleX) 
-                    .opacity(1) 
-                    .from(token)
-                    .atLocation(reorganizedPoints[i])
-            
-                    .moveTowards(reorganizedPoints[i+1], { ease: "easeInOutCubic", rotate: true })
-                    .duration(500) 
-                    .wait(200)
-                    
-                .effect()
-                        .file("animated-spell-effects-cartoon.energy.16") // Trail animation
-                        .scale(4)
-                        .atLocation(reorganizedPoints[i])
-                        .stretchTo(reorganizedPoints[i+1], { gridUnits: true, proportional: true })
-                        .belowTokens()
-                        .opacity(0.75)
-                        .spriteOffset({ x: -5 }, { gridUnits: true })
-                        .filter("ColorMatrix", { brightness: 1.2 })
-                        .filter("ColorMatrix", { hue: 330 })
-                        .randomizeMirrorY()
-                        .fadeOut(200)
-                        .zIndex(0.2)
-                .effect()
-                        .file("animated-spell-effects-cartoon.simple.23")
-                        .filter("ColorMatrix", { hue: 180 })
-                        .playbackRate(0.9)
-                        .atLocation(reorganizedPoints[i])
-                        .stretchTo(reorganizedPoints[i+1], {onlyX:true, offest:{x:-3,y:0} })
-                         .scale(.6)
-             
-                        .belowTokens()
-                        .opacity(0.5)
-                        .zIndex(0.3)
-                        .fadeOut(300)
-                .effect()
-                        .file("animated-spell-effects-cartoon.simple.29")
-                        .atLocation(reorganizedPoints[i])
-                        .rotateTowards(reorganizedPoints[i+1])
-                        .scale(0.5 * token.document.texture.scaleX)
-                        .belowTokens()
-                        .opacity(0.85)
-                        .scaleIn(0, 300, { ease: "easeOutExpo" })
-                        .spriteRotation(-90)
-                        .spriteOffset({ x: -3, y: -0.1 }, { gridUnits: true })
-                .effect()
-                    .delay(100)
-                    .file("animated-spell-effects-cartoon.simple.05")
-                    .filter("Glow", { color: 0x29c9ff })
-                    .spriteOffset({x: 0.5, y: 0.5}, {gridUnits:true})
-                    .randomRotation()
-                    .scale(.3)
-                    .atLocation(reorganizedPoints[i])   
-                .sound('modules/mm3e-animations/sounds/power/super%20speed/move%20quick.ogg')
-            }
-            
-            this.effect()
-                .animation()
-                .opacity(0)
-                .on(token)
-                .duration(0)
-            .effect()
-                .animation()
-                .opacity(1)
-                .on(token)
-                .duration(0);
-        }
-
-         vibrate()
-         {
-             this.playSound('modules/mm3e-animations/sounds/power/super%20speed/wiff.ogg')
-             .castCommon({rotation:false})
-                 .file('animated-spell-effects-cartoon.simple.117')
-                 .scale(.5)
-            .castCommon({rotation:false})
-               .from(this.caster)
-               .fadeIn(200)
-               .fadeOut(500)
-               .loopProperty("sprite", "position.x", { from: -0.10, to: 0.10, duration: 50, pingPong: true, gridUnits: true})
-               .scaleToObject(this.caster.document.texture.scaleX)
-               .duration(3000)
-               .opacity(0.25)
-            return this;
-         }
-         
-        descriptorMeleeCast(){
-            let filter =GameHelper.GreyTransparentFilter
-            this.vibrate()
-            .castCommon()
-                .file('jb2a.flurry_of_blows.physical.orange')
-                .filter("ColorMatrix", { hue: 100,saturation: 0, brightness:1.3})
-                .from(this.caster)
-                .scale(2.5)
-                .spriteOffset({x:-50, y: 0})
-                .atLocation(this.caster)
-                .repeats(6,500)
-            .castCommon() 
-                 .playSound('modules/mm3e-animations/sounds/action/powers/flurryhits.ogg')  
-                .pause(2000)
-            .castCommon()
-                .file('animated-spell-effects-cartoon.simple.63')
-                .scale(.5)
-            
-            return this
-        }
-
-        affectDamage({affected}={}){
-             super.affectDamage({affected:affected})
-             this.caster = this.affected
-             this.vibrate()
-            return this
-         }
-
-          affectAffliction({affected}={}){
-             super.affectAffliction({affected:affected})
-             this.caster = this.affected
-             this.vibrate()
-            return this
-         }
-
-        descriptorProject(){
-            return this
-        }
-
-        descriptorProjectToCone(){
-            return this
-        }
-
-        descriptorProjectToLine(){
-            return this
-        }
-
-        descriptorBurst(){
-            let points = this.getCircularTemplatePoints(this.affected)
-            this.vibrate()
-            this.runThroughBurstTemplate(points)
-            return this
-        }
-
-        descriptorLine(){
-            return this
-        }   
-
-        descriptorCone(){
-            return this
-        }
-
-        descriptorAffect(){
-            return this
-        }
-
-        descriptorAffectAura(){
-           this.playSound('modules/mm3e-animations/sounds/power/super%20speed/wiff.ogg')
-            .castCommon()
-               .file('animated-spell-effects-cartoon.simple.117')
-               .scale(.5)
-           .castCommon()
-               .from(this.affected)
-               .fadeIn(200)
-               .fadeOut(500)
-               .loopProperty("sprite", "position.x", { from: -0.10, to: 0.10, duration: 50, pingPong: true, gridUnits: true})
-               .scaleToObject(this.affected.document.texture.scaleX)
-                .persist()
-               .playSound('modules/mm3e-animations/sounds/power/super%20speed/vibration%20long.ogg')
-               .opacity(0.25)
-            return this;
-        }
-    }
-    
-    class FlightEffect  {
-        constructor(originalEffectSection){
-            this.originalEffectSection = originalEffectSection
-        }
-
-        start({caster}={}){
-            this.originalEffectSection.castCommon({caster:caster, affected:caster})
-                .loopUp({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
-                .file("animated-spell-effects-cartoon.energy.16")
-                .rotate(90)
-                .scaleToObject(1)
-                .filter("ColorMatrix" , {
-                     hue: 500, 
-                     contrast: 0, 
-                     saturate: 0,
-                     brightness: 1
-                 })
-                .repeatEffect()    //inherit last effect with any modifications we want below
-                    .spriteOffset({x:0, y: 25})
-                    .playSound("modules/mm3e-animations/sounds/action/powers/whoosh9.ogg")
-                .repeatEffect()   //inherit last effect with any modifications we want below
-                    .spriteOffset({x:0, y: -25})
-                    .pause(900)
-                return this.originalEffectSection;
-            }
-        
-        end({caster}={}){
-             this.originalEffectSection.castCommon({caster:caster, affected:caster})
-                .loopDown({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
- 
-                .castCommon()
-                .file("animated-spell-effects-cartoon.energy.16")
-                .rotate(270)
-                .scaleToObject(1)
-                .filter("ColorMatrix" , {
-                     hue: 500, 
-                     contrast: 0, 
-                     saturate: 0,
-                     brightness: 1
-                 })
-            .repeatEffect()   //inherit last effect with any modifications we want below
-                .spriteOffset({x:0, y: 25})
-            .repeatEffect()   //inherit last effect with any modifications we want below
-                .playSound("modules/mm3e-animations/sounds/action/powers/Whoosh2.ogg")
-                .spriteOffset({x:0, y: -25})
-                .pause(300)
-            .endMovement()
-            return this.originalEffectSection;
-        }
-    }
-  
     class SuperStrengthSection extends PowerEffectSection {
         castSlam({caster}={}){
                 super.castCommon({caster:caster, affected:caster}) 
@@ -2597,7 +2845,6 @@ Hooks.on("ready", () => {
             .lungeTowardTarget({scale:1})
             return this;
         }
-
 
         cast({caster, affected}={}){
             this.castCommon({caster:caster, affected:affected})
@@ -2634,7 +2881,6 @@ Hooks.on("ready", () => {
         }
 
         burstSlam({caster,affected}={}){
-            
             super.shake({strength:150, duration:1500, rotation:false, fadeOutDuration:1000})
             super.burstCommon({caster:caster, affected:affected})
                 .file("jb2a.impact.ground_crack.02.white")
@@ -2650,8 +2896,6 @@ Hooks.on("ready", () => {
                     saturate: 0,    
                     brightness: 5   
                 })  
-        
-              //  .spriteOffset({x:-190,y:0})
                 .duration(600)
                 .playSound('modules/mm3e-animations/sounds/action/powers/Shadowpunch4.ogg')
                 .pause(600)
@@ -2921,5 +3165,318 @@ class GameHelper{
                 }
         }
         return f;
+    }
+
+    static SequenceRunnerHelper() {
+    const effects = {
+        "mm3eEffect": "mm3eEffect",
+        "powerEffect": "powerEffect",
+        "insectEffect": "insectEffect",
+        "superStrengthEffect": "superStrengthEffect",
+        "noDescriptorEffect": "noDescriptorEffect",
+        "superSpeedEffect": "superSpeedEffect"
+    };
+
+    function getAllMethodsFromClass(classInstance) {
+        return Object.getOwnPropertyNames(classInstance.prototype).filter(name =>
+            typeof classInstance.prototype[name] === "function"
+        );
+    }
+
+    function getCastMethodsFromClass(classInstance) {
+        const allMethods = getAllMethodsFromClass(classInstance);
+        let castMethods = allMethods.filter(method => method.toLowerCase().includes("cast"));
+        if (!castMethods.includes("cast")) {
+            castMethods.unshift("cast");
+        }
+        castMethods = castMethods.filter((method, index, self) =>
+            self.findIndex(m => m.toLowerCase() === method.toLowerCase()) === index
+        );
+        const index = castMethods.indexOf("descriptorCast");
+        castMethods.splice(index, 1);
+
+
+        castMethods= castMethods.map(method => ({
+            original: method.replace(/descriptor/i, ""),
+            display: method.replace(/descriptor/i, "") 
+        }));
+        castMethods = castMethods.map(method => ({
+            original: method.original.charAt(0).toLowerCase() + method.original.slice(1),
+            display: method.display.charAt(0).toLowerCase() + method.display.slice(1)
+        }));
+        return castMethods;
+    }
+
+    function getAffectMethodsFromClass(classInstance) {
+        const allMethods = getAllMethodsFromClass(classInstance);
+        // Filter methods starting with "affect" and format for display
+        return allMethods
+            .filter(method => method.startsWith("affect"))
+            .map(method => ({
+                original: method,
+                display: method.replace(/^affect/i, "") // Remove "affect" from display
+            }));
+    }
+
+    async function updateAffectTypes(effectKey) {
+        const affectSelect = document.querySelector("#affect-types");
+        affectSelect.innerHTML = ""; // Clear previous options
+
+        // Always fetch the PowerEffect class
+        const powerEffectClass = Sequencer.SectionManager.externalSections["powerEffect"];
+        if (!powerEffectClass) {
+            console.warn(`PowerEffect class not found in SectionManager.externalSections.`);
+            affectSelect.innerHTML = `<option value="" disabled>PowerEffect class not found</option>`;
+            return;
+        }
+
+        const affectMethods = getAffectMethodsFromClass(powerEffectClass);
+        if (affectMethods.length > 0) {
+            affectMethods.forEach(({ original, display }) => {
+                const option = document.createElement("option");
+                option.value = original;
+                option.textContent = display;
+                affectSelect.appendChild(option);
+            });
+        } else {
+            affectSelect.innerHTML = `<option value="" disabled>No affect methods available</option>`;
+        }
+    }
+
+    function getProjectMethodsFromClass(classInstance) {
+        const allMethods = getAllMethodsFromClass(classInstance);
+
+        let p = allMethods
+            .filter(method => method.toLowerCase().includes("project")) 
+            .map(method => {
+                const transformedMethod = method
+                    .replace(/descriptor/gi, "")
+                    .replace(/Project/g, "project"); 
+
+                return {
+                    original: transformedMethod, 
+                    display: transformedMethod 
+                };
+            });
+
+        return p;
+    }
+
+    async function updateMethods(effectKey, html) {
+        const castMethodsContainer = document.querySelector("#cast-methods");
+        const projectMethodsContainer = document.querySelector("#project-methods");
+        castMethodsContainer.innerHTML = ""; 
+        projectMethodsContainer.innerHTML = ""; 
+
+        const effectClass = Sequencer.SectionManager.externalSections[effectKey];
+        if (!effectClass) {
+            console.warn(`Effect class "${effectKey}" not found in SectionManager.externalSections.`);
+            castMethodsContainer.innerHTML = `<p>No class found for the selected effect.</p>`;
+            projectMethodsContainer.innerHTML = `<p>No class found for the selected effect.</p>`;
+            return;
+        }
+
+        const castMethods = getCastMethodsFromClass(effectClass);
+        if (castMethods.length > 0) {
+            castMethods.forEach(({ original, display }) => {
+                castMethodsContainer.innerHTML += `
+                    <div>
+                        <input type="radio" id="cast-${original}" name="castMethod" value="${original}">
+                        <label for="cast-${original}">${display}</label>
+                    </div>
+                `;
+            });
+             html.find("input[type='radio'][name='castMethod']").on("change", async () => await generateScript(html));
+        
+        } else {
+            castMethodsContainer.innerHTML = `
+                <p>No methods containing "cast" found for this effect.</p>
+            `;
+        }
+        
+        const projectMethods = getProjectMethodsFromClass(effectClass);
+        if (projectMethods.length > 0) {
+            projectMethods.forEach(({ original, display }) => {
+                projectMethodsContainer.innerHTML += `
+                    <div>
+                        <input type="radio" id="project-${original}" name="projectMethod" value="${original}">
+                        <label for="project-${original}">${display}</label>
+                    </div>
+                `;
+            });
+    
+            projectMethodsContainer.innerHTML += `
+                <div>
+                    <input type="radio" id="project-none" name="projectMethod" value="none">
+                    <label for="project-none">None</label>
+                </div>
+            `;
+            html.find("input[type='radio'][name='projectMethod']").on("change", async () => await generateScript(html));
+        } else {
+            projectMethodsContainer.innerHTML = `
+                <p>No methods containing "project" found for this effect.</p>
+            `;
+        }
+    }
+
+    async function generateScript(html) {
+        const effect = html.find('[name="effect"]').val();
+        const castMethod = html.find('[name="castMethod"]:checked').val();
+        let projectMethod="";
+        html.find('[name="projectMethod"]').each((index, element) => {
+        if ($(element).is(':checked')) {
+             projectMethod = $(element).val();
+        }}); 
+                
+        const areaType = html.find('[name="areaType"]:checked').val();
+        const affectedType = html.find('[name="affectedType"]:checked').val();
+        const affectType = html.find('[name="affectType"]').val();
+
+        let script = `
+const selectedTargets = Array.from(game.user.targets);
+const selected = GameHelper.selected;
+`;
+
+        if (areaType === "none" && affectedType === "target") {
+            script += `
+for (let target of selectedTargets) {
+    new Sequence()
+        .${effect}()
+        .${castMethod}({affected: target})`
+        script += projectMethod !== "none" ? `.${projectMethod}()` : "";
+        script += `
+        .${affectType}({affected: target})
+        .play();
+}
+`;
+        } else {
+            script += `
+let target = Array.from(game.user.targets)[0];
+new Sequence()
+    .${effect}()
+    .${castMethod}({affected: ${affectedType}})`
+        script += projectMethod !== "none" ? `.${projectMethod}()` : "";
+        script += `
+    ${areaType !== "none" ? `.${areaType}()` : ""}
+    .play()
+
+await new Promise(resolve => setTimeout(resolve, 2000));
+for (let target of selectedTargets) {
+    new Sequence()
+    .${effect}()
+    .${affectType}({affected: ${affectedType}})
+    .play();
+}
+`;
+        }
+
+        // Update the script in the output area
+        const outputArea = html.find("#script-output");
+        outputArea.val(script);
+        const asyncWrapper = new Function(`return (async () => { ${script} })();`);
+        await asyncWrapper();
+    }
+
+    let dialogContent = `
+    <form>
+        <div>
+            <label for="effect">Select Effect:</label>
+            <select id="effect" name="effect">
+                <option value="" disabled selected>Choose an effect</option>
+                ${Object.keys(effects).map(effect => `<option value="${effect}">${effect}</option>`).join("")}
+            </select>
+        </div>
+        <fieldset>
+            <legend>Cast Methods</legend>
+            <div id="cast-methods" style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+                <p>Select an effect to see available methods containing "cast"</p>
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend>Project Methods</legend>
+            <div id="project-methods" style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+                <p>Select an effect to see available methods containing "project"</p>
+            </div>
+        </fieldset>
+        <fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+            <legend>Area Type</legend>
+            <div>
+                <input type="radio" id="area-none" name="areaType" value="none" checked>
+                <label for="area-none">None</label>
+            </div>
+            <div>
+                <input type="radio" id="area-burst" name="areaType" value="burst">
+                <label for="area-burst">Burst</label>
+            </div>
+            <div>
+                <input type="radio" id="area-cone" name="areaType" value="cone">
+                <label for="area-cone">Cone</label>
+            </div>
+            <div>
+                <input type="radio" id="area-line" name="areaType" value="line">
+                <label for="area-line">Line</label>
+            </div>
+        </fieldset>
+        <fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+            <legend>Who is Affected</legend>
+            <div>
+                <input type="radio" id="affected-target" name="affectedType" value="target" checked>
+                <label for="affected-target">Target</label>
+            </div>
+            <div>
+                <input type="radio" id="affected-selected" name="affectedType" value="selected">
+                <label for="affected-selected">Selected</label>
+            </div>
+        </fieldset>
+        <fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+            <legend>Effect Type</legend>
+            <div>
+                <label for="affect-types">Select an Effect Type:</label>
+                <select id="affect-types" name="affectType">
+                    <option value="" disabled selected>Choose an effect type</option>
+                </select>
+            </div>
+        </fieldset>
+        <fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+            <legend>Script Execution</legend>
+            <textarea id="script-output" style="width: 100%; height: 150px;" readonly></textarea>
+        </fieldset>
+    </form>
+    `;
+
+    new Dialog({
+        title: "Select Effect, Cast, and Project Methods",
+        content: dialogContent,
+        buttons: {
+            run: {
+                label: "Run",
+                callback: async (html) => {
+                    const outputArea = html.find("#script-output");
+                    try {
+                        eval(outputArea.val()); // Execute the script
+                    } catch (error) {
+                        outputArea.val(outputArea.val() + `\n\nError: ${error.message}`);
+                        console.error("Script Execution Error:", error);
+                    }
+                    return false; 
+                }
+            },
+            cancel: {
+                label: "Cancel"
+            }
+        },
+        render: (html) => { 
+            // Attach onchange listeners to update the script dynamically
+            html.find("#effect").on("change", async (event) => {
+                const effectKey = event.target.value;
+                await updateMethods(effectKey,html);
+                await updateAffectTypes(effectKey);
+                await generateScript(html);
+            });
+
+            html.find("input[type='radio'], select").on("change", async() => await generateScript(html));
+        }}, {
+            resizable: true // Enable resizing for the dialog
+        }).render(true);
     }
 }
