@@ -1,5 +1,5 @@
 Hooks.on("ready", () => { 
-    
+        
     class BaseEffectSection extends Sequencer.BaseSection {
     constructor(inSequence) {
         super(inSequence);
@@ -98,6 +98,7 @@ Hooks.on("ready", () => {
         this._methodLog = [];
         this._effect = this._effect ? this._effect : this.effect();
         this._effect = this.effect();
+        this.atLocation(this.caster)
         return this;
     }
 
@@ -117,6 +118,13 @@ Hooks.on("ready", () => {
             return this.atLocation(this.affectLocation)
         }
         else{
+            if(this.caster){
+                this.atLocation(this.caster)
+            }
+             if(this.affected){
+                this.atLocation(this.caster)
+            }
+            
         return this.mm3eEffect()
         .atLocation(this.affected); 
         }
@@ -161,6 +169,7 @@ Hooks.on("ready", () => {
     castCommon({caster = (this.caster || this.firstSelected), affected = (this.affected || this.firstTarget), rotation = true}={}){
         if(caster!=0)
             this.caster = caster
+            this.atLocation(this.caster)
         if(affected && affected!=0)
             this.affected = affected;
         if(!this.affected) 
@@ -168,7 +177,7 @@ Hooks.on("ready", () => {
             this.affected = this.caster
         }
         this.mm3eEffect()
-            this.atLocation(this.caster)
+             //this.atLocation(this.caster)
             if(this.affected && this.affected!=this.caster && rotation)
                 this.rotateTowards(this.affected)
         return this
@@ -203,7 +212,7 @@ Hooks.on("ready", () => {
     }
     projectToConeCommon({caster = (this.caster || this.firstSelected), affected = ( this.firstTemplate || this.affected)}={}){
         this.castCommon({caster:caster, affected:affected})
-        const coneStart = { x: this.affected.data.x, y: this.affected.data.y };
+        const coneStart = { x: this.affected.x, y: this.affected.y };
         this.stretchTo(coneStart)
         this.affectLocation = coneStart
         return this;
@@ -264,6 +273,7 @@ Hooks.on("ready", () => {
     playSound(inSound,repeats = undefined) {
         this.logMethodCall('playSound', inSound);
         this._effect = this._effect ? this._effect : this.effect();
+        this.atLocation(this.caster)
         if(!repeats)
             this._effect.sound(inSound);
         else 
@@ -2548,9 +2558,10 @@ Hooks.on("ready", () => {
                 .file("jaamod.assets.flies")
                 .scaleToObject( .6 )
                 .repeats(30)
+                .filter("ColorMatrix", {hue: 520,brightness: 0,contrast:0, saturate:0} )  
                 .playSound("modules/mm3e-animations/sounds/action/powers/BM_CallSwarm_Attack_01.ogg")
                 .pause(duration)
-             .filter("ColorMatrix", {hue: 520,brightness: 0,contrast:0, saturate:0} )  
+             
              return this
         } 
 
@@ -2823,7 +2834,8 @@ Hooks.on("ready", () => {
          }
     }
     class SuperStrengthSection extends PowerEffectSection {
-        castSlam({caster}={}){
+        castSlam({caster}={}){  
+                
                 super.castCommon({caster:caster, affected:caster}) 
                 let fs = new FlightEffect(this);
                 fs.start({caster:this.caster})
@@ -2858,10 +2870,10 @@ Hooks.on("ready", () => {
                     brightness: 3 
                 })        
             .repeatEffect()
-                .mirrorY()
-                .pause(400)
+         //       .mirrorY()
+         //       .pause(400)
             .castCommon()
-                .file("jb2a.impact.001.orange")
+           //     .file("jb2a.impact.001.orange")
                 .scaleToObject(2)
                 .filter("ColorMatrix", {
                     hue: 50,
@@ -2869,7 +2881,7 @@ Hooks.on("ready", () => {
                     saturate: 0,
                     brightness: 1
                 })
-            .playSound("modules/mm3e-animations/sounds/action/powers/Hit6.ogg")
+          //  .playSound("modules/mm3e-animations/sounds/action/powers/Hit6.ogg")
             return this;
         }
 
@@ -2913,7 +2925,7 @@ Hooks.on("ready", () => {
         projectToCone({caster, affected}={}){
             super.projectToConeCommon()
           //  affected = canvas.templates.placeables[0]
-            const coneStart = { x: this.affected.data.x, y: this.affected.data.y };
+            const coneStart = { x: this.affected.x, y: this.affected.y };
             this.mm3eEffect() 
                 .atLocation(this.caster)
                 .aboveLighting()
@@ -3167,223 +3179,370 @@ class GameHelper{
         return f;
     }
 
-    static SequenceRunnerHelper() {
-    const effects = {
-        "mm3eEffect": "mm3eEffect",
-        "powerEffect": "powerEffect",
-        "insectEffect": "insectEffect",
-        "superStrengthEffect": "superStrengthEffect",
-        "noDescriptorEffect": "noDescriptorEffect",
-        "superSpeedEffect": "superSpeedEffect"
+    static effects = {
+            "insectEffect": "Insect",
+            "noDescriptorEffect": "No Descriptor",
+            "superSpeedEffect": "Super Speed",
+            "superStrengthEffect": "Super Strength",
     };
 
-    function getAllMethodsFromClass(classInstance) {
-        return Object.getOwnPropertyNames(classInstance.prototype).filter(name =>
-            typeof classInstance.prototype[name] === "function"
-        );
-    }
+    static SequenceRunnerHelper() {
+        
 
-    function getCastMethodsFromClass(classInstance) {
-        const allMethods = getAllMethodsFromClass(classInstance);
-        let castMethods = allMethods.filter(method => method.toLowerCase().includes("cast"));
-        if (!castMethods.includes("cast")) {
-            castMethods.unshift("cast");
+        function getAllMethodsFromClass(classInstance) {
+            return Object.getOwnPropertyNames(classInstance.prototype).filter(name =>
+                typeof classInstance.prototype[name] === "function"
+            );
         }
-        castMethods = castMethods.filter((method, index, self) =>
-            self.findIndex(m => m.toLowerCase() === method.toLowerCase()) === index
-        );
-        const index = castMethods.indexOf("descriptorCast");
-        castMethods.splice(index, 1);
+
+        function getCastMethodsFromClass(classInstance) {
+            const allMethods = getAllMethodsFromClass(classInstance);
+            let castMethods = allMethods.filter(method => method.toLowerCase().includes("cast"));
+            if (!castMethods.includes("cast")) {
+                castMethods.unshift("cast");
+            }
+            castMethods = castMethods.filter((method, index, self) =>
+                self.findIndex(m => m.toLowerCase() === method.toLowerCase()) === index
+            );
+            const index = castMethods.indexOf("descriptorCast");
+            if(index!=-1){
+                castMethods.splice(index, 1);
+            }
 
 
-        castMethods= castMethods.map(method => ({
-            original: method.replace(/descriptor/i, ""),
-            display: method.replace(/descriptor/i, "") 
-        }));
-        castMethods = castMethods.map(method => ({
-            original: method.original.charAt(0).toLowerCase() + method.original.slice(1),
-            display: method.display.charAt(0).toLowerCase() + method.display.slice(1)
-        }));
-        return castMethods;
-    }
-
-    function getAffectMethodsFromClass(classInstance) {
-        const allMethods = getAllMethodsFromClass(classInstance);
-        // Filter methods starting with "affect" and format for display
-        return allMethods
-            .filter(method => method.startsWith("affect"))
-            .map(method => ({
-                original: method,
-                display: method.replace(/^affect/i, "") // Remove "affect" from display
+            castMethods= castMethods.map(method => ({
+                original: method.replace(/descriptor/i, ""),
+                display: method.replace(/descriptor/i, "") 
             }));
-    }
-
-    async function updateAffectTypes(effectKey) {
-        const affectSelect = document.querySelector("#affect-types");
-        affectSelect.innerHTML = ""; // Clear previous options
-
-        // Always fetch the PowerEffect class
-        const powerEffectClass = Sequencer.SectionManager.externalSections["powerEffect"];
-        if (!powerEffectClass) {
-            console.warn(`PowerEffect class not found in SectionManager.externalSections.`);
-            affectSelect.innerHTML = `<option value="" disabled>PowerEffect class not found</option>`;
-            return;
+            castMethods = castMethods.map(method => ({
+                original: method.original.charAt(0).toLowerCase() + method.original.slice(1),
+                display: method.display.charAt(0).toLowerCase() + method.display.slice(1)
+            }));
+            
+            return castMethods;
         }
-
-        const affectMethods = getAffectMethodsFromClass(powerEffectClass);
-        if (affectMethods.length > 0) {
+        // Initialize the Affect Types system
+        async function initializeAffectTypes(html) {
+            const affectTable = document.querySelector("#affect-types-table");
+            const addRowButton = document.querySelector("#add-affect-row");
+        
+            if (!affectTable || !addRowButton) {
+                console.error("Affect Types table or add-row button not found.");
+                return;
+            }
+        
+            // Fetch the PowerEffect class dynamically
+            const powerEffectClass = Sequencer.SectionManager.externalSections["powerEffect"];
+            if (!powerEffectClass) {
+                console.warn(`PowerEffect class not found in SectionManager.externalSections.`);
+                const row = affectTable.querySelector("tbody").insertRow();
+                row.innerHTML = `<td colspan="2">PowerEffect class not found</td>`;
+                return;
+            }
+        
+            // Retrieve affect methods dynamically
+            const affectMethods = getAffectMethodsFromClass(powerEffectClass);
+            if (affectMethods.length === 0) {
+                const row = affectTable.querySelector("tbody").insertRow();
+                row.innerHTML = `<td colspan="2">No affect methods available</td>`;
+                return;
+            }
+        
+            // Add event listener for the "Add Selection" button
+            addRowButton.addEventListener("click", () => addAffectRow(affectTable, affectMethods, html));
+        }
+        function addAffectRow(affectTable, affectMethods, html) {
+            const tbody = affectTable.querySelector("tbody");
+            const row = tbody.insertRow();
+        
+            // Dropdown for selecting affect method
+            const selectCell = row.insertCell();
+            const select = document.createElement("select");
+            select.name = "affect-method";
+            select.style.width = "100%";
             affectMethods.forEach(({ original, display }) => {
                 const option = document.createElement("option");
                 option.value = original;
                 option.textContent = display;
-                affectSelect.appendChild(option);
+                select.appendChild(option);
             });
-        } else {
-            affectSelect.innerHTML = `<option value="" disabled>No affect methods available</option>`;
-        }
-    }
-
-    function getProjectMethodsFromClass(classInstance) {
-        const allMethods = getAllMethodsFromClass(classInstance);
-
-        let p = allMethods
-            .filter(method => method.toLowerCase().includes("project")) 
-            .map(method => {
-                const transformedMethod = method
-                    .replace(/descriptor/gi, "")
-                    .replace(/Project/g, "project"); 
-
-                return {
-                    original: transformedMethod, 
-                    display: transformedMethod 
-                };
+            selectCell.appendChild(select);
+            select.addEventListener("change", () => {
+                generateScript(html);
             });
+        
+            // Remove button
+            const removeCell = row.insertCell();
+            const removeButton = document.createElement("button");
+            removeButton.textContent = "− Remove";
+            removeButton.type = "button";
+            removeButton.style.color = "red";
+            removeButton.style.marginLeft = "10px";
+            removeButton.addEventListener("click", () => {
+                row.remove();
+                    generateScript(html); // Re-trigger script generation when a row is removed
+                });
+                removeCell.appendChild(removeButton);
+                generateScript(html);
+            }
+        function getAffectMethodsFromClass(effectClass) {
+            // Get all methods from the class prototype
+            const methodNames = Object.getOwnPropertyNames(effectClass.prototype)
+                .filter((methodName) => 
+                    // Only include methods that start with 'affect' and are functions
+                    methodName.startsWith("affect") && 
+                    typeof effectClass.prototype[methodName] === "function"
+                );
+        
+            // Transform method names into user-friendly labels by stripping "affect"
+            return methodNames.map((methodName) => ({
+                original: methodName, // Original method name
+                display: methodName.replace(/^affect/, "").replace(/([A-Z])/g, " $1").trim() // Strip "affect" and format
+            }));
+        }
+        function getProjectMethodsFromClass(classInstance) {
+            const allMethods = getAllMethodsFromClass(classInstance);
 
-        return p;
-    }
+            let p = allMethods
+                .filter(method => method.toLowerCase().includes("project")) 
+                .map(method => {
+                    const transformedMethod = method
+                        .replace(/descriptor/gi, "")
+                        .replace(/Project/g, "project"); 
 
-    async function updateMethods(effectKey, html) {
-        const castMethodsContainer = document.querySelector("#cast-methods");
-        const projectMethodsContainer = document.querySelector("#project-methods");
-        castMethodsContainer.innerHTML = ""; 
-        projectMethodsContainer.innerHTML = ""; 
+                    return {
+                        original: transformedMethod, 
+                        display: transformedMethod 
+                    };
+                });
 
-        const effectClass = Sequencer.SectionManager.externalSections[effectKey];
-        if (!effectClass) {
-            console.warn(`Effect class "${effectKey}" not found in SectionManager.externalSections.`);
-            castMethodsContainer.innerHTML = `<p>No class found for the selected effect.</p>`;
-            projectMethodsContainer.innerHTML = `<p>No class found for the selected effect.</p>`;
-            return;
+            return p;
+        }
+        function getAreatMethodsFromClass(classInstance) {
+            const allMethods = getAllMethodsFromClass(classInstance);
+
+            let p = allMethods
+                .filter(method => method.toLowerCase().includes("burst") || method.toLowerCase().includes("cone") || method.toLowerCase().includes("line"))
+                .map(method => {
+                    const transformedMethod = method
+                        .replace(/descriptor/gi, "")
+                        .replace(/Burst/g, "burst")
+                        .replace(/Line/g, "line")
+                        .replace(/Cone/g, "cone")
+                    
+                    return {
+                        original: transformedMethod, 
+                        display: transformedMethod 
+                    };
+                });
+            //remove all project methods
+            p = p.filter(method => !method.original.toLowerCase().includes("project"));
+            p =p.filter(method => !method.original.toLowerCase().includes("get"))
+            return p;
         }
 
-        const castMethods = getCastMethodsFromClass(effectClass);
-        if (castMethods.length > 0) {
-            castMethods.forEach(({ original, display }) => {
-                castMethodsContainer.innerHTML += `
+        
+
+        async function updateMethods(effectKey, html) {
+            const castMethodsContainer = document.querySelector("#cast-methods");
+            const areaMethodsContainer = document.querySelector("#area-methods");
+            const projectMethodsContainer = document.querySelector("#project-methods");
+            castMethodsContainer.innerHTML = "Choose a sequencer effect that animates on the caster's token"; 
+            areaMethodsContainer.innerHTML="Choose a sequencer effect that animates on a template";
+            projectMethodsContainer.innerHTML = "Choose a sequencer effect that animates from the caster's otken to a template or targeted Token"; 
+            
+
+            const effectClass = Sequencer.SectionManager.externalSections[effectKey];
+            if (!effectClass) {
+                console.warn(`Effect class "${effectKey}" not found in SectionManager.externalSections.`);
+                castMethodsContainer.innerHTML = `<p>No class found for the selected effect.</p>`;
+                projectMethodsContainer.innerHTML = `<p>No class found for the selected effect.</p>`;
+                return;
+            }
+
+            const castMethods = getCastMethodsFromClass(effectClass);
+            if (castMethods.length > 0) {
+                castMethods.forEach(({ original, display }) => {
+                    castMethodsContainer.innerHTML += `
+                        <div>
+                            <input type="radio" id="cast-${original}" name="castMethod" value="${original}">
+                            <label for="cast-${original}">${display}</label>
+                        </div>
+                    `;
+                });
+                
+                html.find("input[type='radio'][name='castMethod']").on("change", async () => await generateScript(html));
+            
+            } else {
+                castMethodsContainer.innerHTML = `
+                    <p>No methods containing "cast" found for this effect.</p>
+                `;
+            }
+
+            const areaMethods = getAreatMethodsFromClass(effectClass);
+            if (areaMethods.length > 0) {
+                areaMethods.forEach(({ original, display }) => {
+                    areaMethodsContainer.innerHTML += `
+                        <div>
+                            <input type="radio" id="area-${original}" name="areaMethod" value="${original}">
+                            <label for="area-${original}">${display}</label>
+                        </div>
+                    `;
+                });
+               
+                 areaMethodsContainer.innerHTML += `
                     <div>
-                        <input type="radio" id="cast-${original}" name="castMethod" value="${original}">
-                        <label for="cast-${original}">${display}</label>
+                        <input type="radio" id="area-none" name="areaMethod" value="none" checked>
+                        <label for="area-none">None</label>
                     </div>
                 `;
-            });
-             html.find("input[type='radio'][name='castMethod']").on("change", async () => await generateScript(html));
+                 html.find("input[type='radio'][name='areaMethod']").on("change", async () => await generateScript(html));
+
+            } else {
+                castMethodsContainer.innerHTML = `
+                    <p>No methods containing "area" found for this effect.</p>
+                `;
+            }
+            
+            const projectMethods = getProjectMethodsFromClass(effectClass);
+            if (projectMethods.length > 0) {
+                projectMethods.forEach(({ original, display }) => {
+                    projectMethodsContainer.innerHTML += `
+                        <div>
+                            <input type="radio" id="project-${original}" name="projectMethod" value="${original}">
+                            <label for="project-${original}">${display}</label>
+                        </div>
+                    `;
+                });
         
-        } else {
-            castMethodsContainer.innerHTML = `
-                <p>No methods containing "cast" found for this effect.</p>
-            `;
-        }
-        
-        const projectMethods = getProjectMethodsFromClass(effectClass);
-        if (projectMethods.length > 0) {
-            projectMethods.forEach(({ original, display }) => {
                 projectMethodsContainer.innerHTML += `
                     <div>
-                        <input type="radio" id="project-${original}" name="projectMethod" value="${original}">
-                        <label for="project-${original}">${display}</label>
+                        <input type="radio" id="project-none" name="projectMethod" value="none" checked>
+                        <label for="project-none">None</label>
                     </div>
                 `;
-            });
-    
-            projectMethodsContainer.innerHTML += `
-                <div>
-                    <input type="radio" id="project-none" name="projectMethod" value="none">
-                    <label for="project-none">None</label>
-                </div>
-            `;
-            html.find("input[type='radio'][name='projectMethod']").on("change", async () => await generateScript(html));
-        } else {
-            projectMethodsContainer.innerHTML = `
-                <p>No methods containing "project" found for this effect.</p>
-            `;
+                html.find("input[type='radio'][name='projectMethod']").on("change", async () => await generateScript(html));
+            } else {
+                projectMethodsContainer.innerHTML = `
+                    <p>No methods containing "project" found for this effect.</p>
+                `;
+            }
         }
-    }
 
-    async function generateScript(html) {
-        const effect = html.find('[name="effect"]').val();
-        const castMethod = html.find('[name="castMethod"]:checked').val();
-        let projectMethod="";
-        html.find('[name="projectMethod"]').each((index, element) => {
-        if ($(element).is(':checked')) {
-             projectMethod = $(element).val();
-        }}); 
-                
-        const areaType = html.find('[name="areaType"]:checked').val();
-        const affectedType = html.find('[name="affectedType"]:checked').val();
-        const affectType = html.find('[name="affectType"]').val();
+        async function generateScript(html) {
+            const effect = html.find('[name="effect"]').val();
+            const castMethod = html.find('[name="castMethod"]:checked').val();
+            let projectMethod="";
+            html.find('[name="projectMethod"]').each((index, element) => {
+            if ($(element).is(':checked')) {
+                projectMethod = $(element).val();
+            }}); 
+                    
+            const areaMethod = html.find('[name="areaMethod"]:checked').val();
+            const affectedType = html.find('[name="affectedType"]:checked').val();
+            const affectTypes = [];
+            const effectRows = html.find("#affect-types-table tbody tr");
+            effectRows.each((index, row) => {
+                const affectType = $(row).find('select[name="affect-method"]').val();
+                if (affectType) affectTypes.push(affectType); // Collect valid affect methods
+            });
 
-        let script = `
+            const range = projectMethod && projectMethod !== "none" 
+                ? "Range" 
+                : affectedType === "selected" 
+                    ? "Personal" 
+                    : "Melee";
+
+            const area = areaMethod && areaMethod !== "none"
+                ? ["Cone", "Line", "Burst"].find(keyword => areaMethod.toLowerCase().includes(keyword.toLowerCase())) || ""
+                : "";
+
+            const effects = affectTypes.length > 0 
+                ? affectTypes.map(effect => effect.replace(/^affect/, "")).join("_") 
+                : "None";
+
+            const macroName = `${GameHelper.effects[effect]}-${range}${area ? `-${area}` : ""}-${effects}`;
+            html.find("#macro-name").val(macroName);
+
+            
+            let script = `
 const selectedTargets = Array.from(game.user.targets);
 const selected = GameHelper.selected;
 `;
 
-        if (areaType === "none" && affectedType === "target") {
-            script += `
+            if ((areaMethod === "none" || areaMethod === undefined)  && affectedType === "target") {
+                script += `
 for (let target of selectedTargets) {
     new Sequence()
         .${effect}()
-        .${castMethod}({affected: target})`
-        script += projectMethod !== "none" ? `.${projectMethod}()` : "";
-        script += `
+        .${castMethod?castMethod:"cast"}({affected: target})`
+                script += projectMethod !== "none" && projectMethod !=="" ? 
+`       
+        .${projectMethod}()` : "";
+            affectTypes.forEach((affectType) => {
+                script += 
+`       
         .${affectType}({affected: target})
-        .play();
-}
 `;
-        } else {
-            script += `
+            });
+            script +=
+`
+        .play(); 
+    }
+    `;
+            } else {
+                script += `
 let target = Array.from(game.user.targets)[0];
 new Sequence()
     .${effect}()
-    .${castMethod}({affected: ${affectedType}})`
-        script += projectMethod !== "none" ? `.${projectMethod}()` : "";
-        script += `
-    ${areaType !== "none" ? `.${areaType}()` : ""}
+    .${castMethod?castMethod:"cast"}({affected: target})`
+               script += projectMethod !== "none" && projectMethod !=="" ? 
+`   
+    .${projectMethod}()
+` : "";
+            script += 
+`   
+    .${areaMethod !== "none" ?`${areaMethod}()` : ""}
     .play()
 
 await new Promise(resolve => setTimeout(resolve, 2000));
 for (let target of selectedTargets) {
     new Sequence()
-    .${effect}()
-    .${affectType}({affected: ${affectedType}})
-    .play();
-}
+    .${effect}()`
+         affectTypes.forEach((affectType) => {
+                script += 
+`
+    .${affectType}({affected: target})
 `;
-        }
+            });
+        script += 
+`   .play();
+}
+    `;
+    }
 
         // Update the script in the output area
         const outputArea = html.find("#script-output");
         outputArea.val(script);
-        const asyncWrapper = new Function(`return (async () => { ${script} })();`);
-        await asyncWrapper();
-    }
+        try{
+            const asyncWrapper = new Function(`return (async () => { ${script} })();`);
+            await asyncWrapper();
+        }
+        catch (error) {
+            outputArea.val(outputArea.val() + `\n\n---------------------------Error executing script---------------------------:
+            ${error.message}
+            ${error.stack}`);
+            console.error("Script Execution Error:", error);
+        }
+        }
 
-    let dialogContent = `
-    <form>
+        let dialogContent = `
+        <form>
         <div>
             <label for="effect">Select Effect:</label>
             <select id="effect" name="effect">
                 <option value="" disabled selected>Choose an effect</option>
-                ${Object.keys(effects).map(effect => `<option value="${effect}">${effect}</option>`).join("")}
+                ${Object.keys(GameHelper.effects).map(effect => `<option value="${effect}">${Object(GameHelper.effects)[effect]}</option>`).join("")}
             </select>
         </div>
         <fieldset>
@@ -3399,26 +3558,13 @@ for (let target of selectedTargets) {
             </div>
         </fieldset>
         <fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
-            <legend>Area Type</legend>
-            <div>
-                <input type="radio" id="area-none" name="areaType" value="none" checked>
-                <label for="area-none">None</label>
-            </div>
-            <div>
-                <input type="radio" id="area-burst" name="areaType" value="burst">
-                <label for="area-burst">Burst</label>
-            </div>
-            <div>
-                <input type="radio" id="area-cone" name="areaType" value="cone">
-                <label for="area-cone">Cone</label>
-            </div>
-            <div>
-                <input type="radio" id="area-line" name="areaType" value="line">
-                <label for="area-line">Line</label>
+            <legend>Area Methods</legend>
+            <div id="area-methods" style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+                <p>Select an effect to see available methods containing "project"</p>
             </div>
         </fieldset>
         <fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
-            <legend>Who is Affected</legend>
+            <legend>Choose who the affected target will be, the selected ( caster) or targeted token Affected</legend>
             <div>
                 <input type="radio" id="affected-target" name="affectedType" value="target" checked>
                 <label for="affected-target">Target</label>
@@ -3428,55 +3574,128 @@ for (let target of selectedTargets) {
                 <label for="affected-selected">Selected</label>
             </div>
         </fieldset>
-        <fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
-            <legend>Effect Type</legend>
-            <div>
-                <label for="affect-types">Select an Effect Type:</label>
-                <select id="affect-types" name="affectType">
-                    <option value="" disabled selected>Choose an effect type</option>
-                </select>
+         <fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+             <legend>Power Effects</legend>
+            <div id="affect-types-container">
+                
+                <table id="affect-types-table" style="width: 100%; border-collapse: collapse;">
+                    <tbody>
+                        <!-- Rows will be dynamically added here -->
+                    </tbody>
+                </table>
+                <button id="add-affect-row" type="button" style="margin-top: 10px;">+ Add Selection</button>
             </div>
         </fieldset>
         <fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
-            <legend>Script Execution</legend>
-            <textarea id="script-output" style="width: 100%; height: 150px;" readonly></textarea>
+            <legend>Output</legend>
+            <input id="macro-name" type="text" style="width: 100%; margin-bottom: 10px;">
+            <textarea id="script-output" style="width: 100%; height: 300px;"></textarea>
+            <button id="run-macro" type="button" style="margin-top: 10px;">Run Macro</button>
         </fieldset>
     </form>
-    `;
+        `;
 
-    new Dialog({
-        title: "Select Effect, Cast, and Project Methods",
-        content: dialogContent,
-        buttons: {
-            run: {
-                label: "Run",
-                callback: async (html) => {
-                    const outputArea = html.find("#script-output");
-                    try {
-                        eval(outputArea.val()); // Execute the script
-                    } catch (error) {
-                        outputArea.val(outputArea.val() + `\n\nError: ${error.message}`);
-                        console.error("Script Execution Error:", error);
+        new Dialog({
+            title: "Select Effect, Cast, and Project Methods",
+            content: dialogContent,
+            buttons: {
+                save: {
+                    label: "Save",
+                    callback: async (html) => {
+                      
+                        const outputArea = html.find("#script-output").val(); // Get the generated script
+                        const effect = html.find('[name="effect"]').val(); // Descriptor
+                        const projectMethod = html.find('[name="projectMethod"]:checked').val(); // Check if there's a project method
+                        const areaMethod = html.find('[name="areaMethod"]:checked').val(); // Area type (Burst, Line, Cone, or None)
+                        const affectedType = html.find('[name="affectedType"]:checked').val(); // Affected type (target or selected)
+                        const affectTypes = [];
+                        const effectRows = html.find("#affect-types-table tbody tr");
+
+                        // Collect selected affect types
+                        effectRows.each((index, row) => {
+                            const affectType = $(row).find('select[name="affect-method"]').val();
+                            if (affectType) affectTypes.push(affectType);
+                        });
+
+                        // Determine naming components
+                        const range = projectMethod && projectMethod !== "none" 
+                            ? "Range" 
+                            : affectedType === "selected" 
+                                ? "Personal" 
+                                : "Melee";
+                       const area = areaMethod && areaMethod !== "none"
+                           ? ["Cone", "Line", "Burst"].find(keyword => areaMethod.toLowerCase().includes(keyword.toLowerCase())) || ""
+                           : "";
+                         
+                        const effects = affectTypes.length > 0 
+                            ? affectTypes.map(effect => effect.replace(/^affect/, "")).join("_") 
+                            : "None";
+
+                        // Construct macro name
+                        const macroName = `${GameHelper.effects[effect]}-${range}${area ? `-${area}` : ""}-${effects}`;
+
+                        // Save the macro
+                        try {
+                            let macro = game.macros.find(m => m.name === macroName);
+                            if (!macro) {
+                                macro = await Macro.create({
+                                    name: macroName,
+                                    type: "script",
+                                    scope: "global",
+                                    command: outputArea,
+                                });
+                                ui.notifications.info(`Macro "${macroName}" has been created.`);
+                            } else {
+                                // Update the existing macro
+                                await macro.update({ command: outputArea });
+                                ui.notifications.info(`Macro "${macroName}" has been updated.`);
+                            }
+                        } catch (error) {
+                            ui.notifications.error(`Error saving macro: ${error.message}`);
+                            console.error("Macro Save Error:", error);
+                        }
+
+                        return false;
                     }
-                    return false; 
+                },
+                cancel: {
+                    label: "Cancel"
                 }
-            },
-            cancel: {
-                label: "Cancel"
             }
-        },
-        render: (html) => { 
-            // Attach onchange listeners to update the script dynamically
-            html.find("#effect").on("change", async (event) => {
-                const effectKey = event.target.value;
-                await updateMethods(effectKey,html);
-                await updateAffectTypes(effectKey);
-                await generateScript(html);
-            });
-
-            html.find("input[type='radio'], select").on("change", async() => await generateScript(html));
-        }}, {
-            resizable: true // Enable resizing for the dialog
+            ,
+            render: (html) => { 
+                // Attach onchange listeners to update the script dynamically
+                html.find("#effect").on("change", async (event) => {
+                    const effectKey = event.target.value;
+                    await updateMethods(effectKey,html);
+                    await initializeAffectTypes(html);
+                    await generateScript(html);
+                });
+                html.find("#run-macro").on("click", async () => {
+                    const script = html.find("#script-output").val(); // Use the modified script
+                    try {
+                        const asyncWrapper = new Function(`return (async () => { ${script} })();`);
+                        await asyncWrapper();
+                    } catch (error) {
+                        console.error("Error executing macro:", error);
+                        ui.notifications.error(`Error running macro: ${error.message}`);
+                    }
+                });
+                const canvasWidth = canvas.screenDimensions[0]; // Get canvas width
+                const dialogWidth = 800; // Match the width defined for the dialog
+                const dialogHeight = 600; // Match the height defined for the dialog
+                html.closest(".dialog").css({
+                    position: "absolute",
+                    left: `${canvasWidth - dialogWidth - 10}px`, // Position 10px from the right edge
+                    top: `10px`, // Position 10px from the top
+                    width: `${dialogWidth}px`,
+                    height: `${dialogHeight}px`
+                });
+                html.find("input[type='radio'], select").on("change", async() => await generateScript(html));
+            }}, {
+                    width: 800,
+                    height: 1200, 
+                    resizable: true
         }).render(true);
     }
 }
