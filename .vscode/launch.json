@@ -13,5 +13,6 @@
             ],
             "program": "${workspaceFolder}\\scripts\\effect-controller.js"
         }
+       
     ]
 }
