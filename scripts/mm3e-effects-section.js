@@ -43,12 +43,19 @@ Hooks.on("ready", () => {
         } else {
         this.mirrorX = false;
         }
+        const minYOffset = -10; // Minimum offset
+        const maxYOffset = 10; // Maximum offset
+        this.randomYOffset = Math.random() * (maxYOffset - minYOffset) + minYOffset;
     }
     initializeTemplateVariables(){
         
         this.initalizeRandomNumbers()
         const startOffsetDistance = -0.5; // Adjust this value as needed
         this.center = {x:this.affected.center.x , y:this.affected.center.y}
+        if(this.affected.ray)
+        {
+            this.center = {x: (this.affected.ray.A.x + this.affected.ray.B.x)/2, y: (this.affected.ray.A.y + this.affected.ray.B.y)/2}
+        }
         
         const dx = this.affected.center.x - this.caster.center.x;
         const dy = this.affected.center.y - this.caster.center.y;
@@ -61,6 +68,7 @@ Hooks.on("ready", () => {
         this.end={ x: this.affected.x + this.affected.width, y: this.affected.y + this.affected.height };
         this.templateStart = { x: this.affected.x, y: this.affected.y };
     }
+    
     /* static accessors for foundry objects---------------------------------------------- */ 
     static get targets() {
         return Array.from(game.user.targets);
@@ -128,6 +136,12 @@ Hooks.on("ready", () => {
     }
 
     /* commands that are  overridden for each power if an animation is desired*/
+    animateProperty(property, sub,{from, to, duration, ease, fromEnd}={}) {
+        this.logMethodCall('animateProperty', [property, sub,{from, to, duration, ease, fromEnd}]);
+        this._effect = this._effect ? this._effect : this.effect();
+        this._effect.animateProperty(property, sub, {from, to, duration, ease, fromEnd});
+        return this;
+    }
     affect({caster, affected}={}){
         return this.affectCommon({caster:caster, affected:affected})
     }  
@@ -327,26 +341,27 @@ Hooks.on("ready", () => {
         this._effect.animation().on(token).opacity(1)
         return this
     }
-    calculateFrontAndCenterPos(affected, distance = 0.25)
+    calculateFrontAndCenterPos(distance = 0.25)
     {
-        this.targetCenter = {
-            x: affected.x+canvas.grid.size*affected.document.width/2,
-            y: affected.y+canvas.grid.size*affected.document.width/2,
+        this.affectedCenter = {
+            x: this.affected.x+canvas.grid.size*this.affected.document.width/2,
+            y: this.affected.y+canvas.grid.size*this.affected.document.width/2,
             };
             
-        this.tokenCenter = {
-        x: this.caster.x+canvas.grid.size*affected.document.width/2,
-        y: this.caster.y+canvas.grid.size*affected.document.width/2,
+        this.casterCenter = {
+        x: this.caster.x+canvas.grid.size*this.affected.document.width/2,
+        y: this.caster.y+canvas.grid.size*this.affected.document.width/2,
         };
         
         this.middleposition = {
             x: (this.affected.x - this.caster.x)*distance,
             y: (this.affected.y - this.caster.y)* distance,
         };
+        
     }
 
-    lungeTowardTarget({affected = (this.affected||this.firstTarget), scale =1, distance =.25, duration= 100, repeats=1}={}){
-        this.calculateFrontAndCenterPos(affected, distance)
+    lungeTowardTarget({ scale =1, distance =.25, duration= 100, repeats=1}={}){
+        this.calculateFrontAndCenterPos(distance)
         
         this._effect = this._effect ? this._effect : this.effect();   
         this._effect.animation()
@@ -818,6 +833,13 @@ Hooks.on("ready", () => {
         this.logMethodCall('endTime', inTime);
         this._effect = this._effect ? this._effect : this.effect();
         this._effect.endTime(inTime);
+        return this;
+    }
+
+    noLoop(inBool=true) {
+        this.logMethodCall('noLoop', inBool);
+        this._effect = this._effect ? this._effect : this.effect();
+        this._effect.noLoop(inBool);
         return this;
     }
 
@@ -1359,14 +1381,11 @@ Hooks.on("ready", () => {
 
         affectWeaken({affected = (this.affected|this.firstSelected)}={}){
             this.affectCommon({affected:affected})
-            return this.weaken()
+            return this.weaken(affected)
         }
-        weaken(){
+        weaken(affected){
             let tintColor = '#808080'
             let hue = 350
-            if(affected!=0){
-                this.affected =affected
-            }
 
             this.calculateFrontAndCenterPos(this.affected, this.affected.document.width/2)
             this.affectCommon({affected:this.affected})
@@ -1865,8 +1884,8 @@ Hooks.on("ready", () => {
 
         affectAffliction({affected}={}){
             super.affectCommon({affected:affected})
-            this.descriptorAffect()
-            this.descriptorAffliction()
+            .descriptorAffect()
+            .descriptorAffliction()
             return this
         }
         descriptorAffliction(){ //optionally override for custom sequence effect 
@@ -3763,14 +3782,108 @@ Hooks.on("ready", () => {
         }*/
     
         descriptorCast(){
-             return this
+             let targetCenter = {
+                x: this.affected.x+canvas.grid.size*this.affected.document.width/2,
+                y: this.affected.y+canvas.grid.size*this.affected.document.width/2,
+                };
+                
+                const tokenCenter = {
+                x: this.caster.x+canvas.grid.size*this.caster.document.width/2,
+                y: this.caster.y+canvas.grid.size*this.caster.document.width/2,
+                };
+                
+                const middleposition = {
+                  x: (targetCenter.x - tokenCenter.x)* 0.25,
+                  y: (targetCenter.y - tokenCenter.y)* 0.25,
+                };
+                
+                super.castCommon()
+                    .file("jb2a.unarmed_strike.no_hit.01.blue")
+                    .atLocation(this.caster, { edge: "outer" })
+                    .stretchTo(this.affected)
+                    .filter("Glow", { color: "#0d0d0c", distance: 1, outerStrength: 5, innerStrength: 0 })
+                    .scale(3)
+                    .playbackRate(0.5)
+                    .fadeOut(100)
+                    .zIndex(2)
+                
+                    .sound("https://assets.forge-vtt.com/bazaar/modules/lancer-weapon-fx/assets/soundfx/DD288Ready.ogg")
+                        .delay(0)
+                    
+                super.castCommon()
+                    .file("jb2a.token_border.circle.static.blue.012")
+                    .opacity(0.75)
+                    .scaleToObject(2)
+                    .filter("ColorMatrix", {saturate: 0})
+                    .fadeIn(500)
+                    .duration(1500)
+                    .belowTokens()
+                    .fadeOut(250)
+                
+                super.castCommon()
+                    .file("jb2a.particles.inward.blue.01.01")
+                    .opacity(0.35)
+                    .scaleToObject(1.5)
+                    .filter("ColorMatrix", {saturate: 1})
+                    .fadeIn(500)
+                    .duration(1500)
+                    .mask(this.caster)
+                    .fadeOut(250)
+                
+                super.castCommon()
+                    .file("animated-spell-effects-cartoon.cantrips.mending.yellow")
+                    .scaleToObject(3)
+                    .opacity(0.75)
+                    .filter("ColorMatrix", { saturate: -1, brightness: 2, hue: -185 })
+                    .zIndex(1)
+                    .waitUntilFinished(-1000)
+                    
+                    .wait(750)
+                    
+                    .canvasPan()
+                    .delay(250)
+                    .shake({duration: 250, strength: 2, rotation: false })
+                
+                super.castCommon()
+                    .file("jb2a.swirling_leaves.outburst.01.pink")
+                    .scaleIn(0, 500, {ease: "easeOutCubic"}) 
+                    .filter("ColorMatrix", { saturate: 1, hue: -105 })
+                    .scaleToObject(0.75)
+                    .fadeOut(2000)
+                    .zIndex(1)
+                
+                .animation()
+                    .on(this.caster)
+                    .opacity(0)
+                
+                super.castCommon()
+                    .from(this.caster)
+                    .atLocation(this.caster)
+                    .mirrorX(this.caster.document.mirrorX)
+                    .animateProperty("sprite", "position.x", { from: 0, to: middleposition.x, duration: 100, ease:"easeOutExpo"})
+                    .animateProperty("sprite", "position.y", { from: 0, to: middleposition.y, duration: 100, ease:"easeOutExpo"})
+                    .animateProperty("sprite", "position.x", { from: 0, to: -middleposition.x, duration: 350, ease:"easeInOutQuad", fromEnd:true})
+                    .animateProperty("sprite", "position.y", { from: 0, to: -middleposition.y, duration: 350, ease:"easeInOutQuad", fromEnd:true})
+                    .scaleToObject(1, {considerultramarineTokenScale: true})
+                    .duration(600)
+                
+                .animation()
+                    .on(this.caster)
+                    .opacity(1)
+                    .delay(600)
         }
         descriptorMeleeCast(){
             return this
         }
 
         descriptorProject() {
-            return this;
+            return this.file("jb2a.impact.010.blue")
+            .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+            .scaleToObject(2.5)
+            .atLocation(target)
+            .randomRotation()
+            .playSound("https://assets.forge-vtt.com/bazaar/modules/lancer-weapon-fx/assets/soundfx/HeavyImpact.ogg")
+	        .delay(1000)
         }
         descriptorProjectToLine() {
             return this.descriptorProject()
@@ -3796,10 +3909,41 @@ Hooks.on("ready", () => {
             return this
         }
         descriptorDamage(){
+             this.file("jb2a.impact.ground_crack.blue.02")
+            .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+            .scaleToObject(2.5)    
+            .randomRotation()
+            .belowTokens()        
+            .effect()
+            .delay(200)
+            .file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
+            .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+            .scaleToObject(1.75)
+            .opacity(0.5)
+     
+            .belowTokens()
+            
+            super.affectCommon()
+            .delay(200)
+            .file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
+            .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+            .scaleToObject(2.5)
+            .opacity(0.5)
+       
+            .belowTokens()
+            
+            super.affectCommon()
+            .from(target)
+            .fadeIn(200)
+            .fadeOut(500)
+            .loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
+            .scaleToObject(target.document.texture.scaleX)
+            .duration(1500)
+            .opacity(0.25);
+            
             return this;
         }
         descriptorHealing(){
-           
             return this
         }
 
@@ -6033,7 +6177,7 @@ Hooks.on("ready", () => {
                     "modules/mm3e-animations/sounds/action/powers/Quills2b.ogg",
                     "modules/mm3e-animations/sounds/action/powers/QuillsRipper.ogg"
                 ], {repeats:repeats/4, duration:500})
-                .lungeTowardTarget({affected:affected, distance : .5, duration:100, repeats:repeats})  
+                .lungeTowardTarget({ distance : .5, duration:100, repeats:repeats})  
             return this
         }
         
@@ -6458,7 +6602,8 @@ Hooks.on("ready", () => {
         }
 
         descriptorProject() {
-            return this;
+            return this
+
         }
         descriptorProjectToLine() {
             return this.descriptorProject()
@@ -6538,20 +6683,131 @@ Hooks.on("ready", () => {
     class WaterEffectSection extends TemplatedDescriptorEffect {
         constructor(inSequence) {
             super(inSequence);
+
         }
        /* castCone({affected, caster}={}){
             return this
         }*/
     
         descriptorCast(){
-             return this
+             super.castCommon({rotation:false})
+                .file("jb2a.particles.outward.blue.01.04")
+                .fadeIn(500)
+                .fadeOut(500)
+                .scaleToObject(6)
+                .duration(5000)
+                .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 3000})
+                .scaleOut(0, 5000, {ease: "easeOutQuint", delay: -3000})
+                .zIndex(1)
+            super.castCommon()
+                .file("jb2a.particles.outward.blue.01.03")
+                .anchor({x:0.4})
+                .scaleToObject(1.75)
+                .animateProperty("sprite", "position.x", { from: 0, to: -1000, duration: 15000})
+                .rotateTowards(this.affected, {cacheLocation: true})
+                .scaleIn(0, 500, {ease: "easeOutQuint"})
+                .duration(6000)
+                .playbackRate(2)
+                .fadeOut(2000)
+                .delay(4000)
+                .zIndex(2)
+            .sound().file("modules/dnd5e-animations/assets/sounds/Spells/Elemental/spell-water-jet-1.mp3")
+            .delay(10)
+            super.castCommon({rotation:false})
+                .file("animated-spell-effects-cartoon.mix.water.01")
+                .playbackRate(1.3)
+                .delay(2000)
+                .scaleToObject(2)
+                .waitUntilFinished(-2000)
+            return this;
         }
         descriptorMeleeCast(){
+            this.file("jb2a.cast_generic.water.02.blue")
+             .playbackRate(1.3)
+                .scale(1)
+                .belowTokens()
+                .waitUntilFinished(-1500)
+            .meleeCastCommon({rotation:false}) 
+              .file("animated-spell-effects-cartoon.water.79")
+              .attachTo(this.caster, { align: "center", edge: "outer", offset: { x: 0, y: 0 }, gridUnits: true, local:true })
+              .scale(0.3)
+              .delay(500)
+            .meleeCastCommon({rotation:false})
+                .file("jb2a.unarmed_strike.physical.02.blue")
+                .atLocation(this.caster, { edge: "outer" })
+                .stretchTo(this.affected)
+                .filter("ColorMatrix", { hue: 0, brightness: 1, contrast: 0, saturate: 0 })
+                .scale(3)
+                .delay(100)
+                .playbackRate(1.25)
+                .fadeOut(100)
+                .zIndex(2)
+            .pause(750) 
+            .meleeCastCommon({rotation:false})
+                .file("jb2a.swirling_leaves.outburst.01.pink")
+            .scaleIn(0, 500, {ease: "easeOutCubic"}) 
+            .filter("ColorMatrix", { saturate: 1, hue: -105 })
+            .scaleToObject(0.75)
+            .fadeOut(2000)
+            .zIndex(1)
+        .meleeCastCommon()   
+            .lungeTowardTarget()
+            .duration(600)
+            .scaleToObject(1, {considerTokenScale: true})
+            .delay(600)      
+         .canvasPan()
+                .delay(250)
+                .shake({duration: 250, strength: 2, rotation: false })
+
             return this
         }
-
+        castPersonal({caster,affected}={}){
+            super.castCommon({caster:caster,affected:affected}={})
+                .file("animated-spell-effects-cartoon.water.create.01")
+                .scale(0.4)
+                .aboveLighting()
+            super.castCommon()
+                .file("jb2a.impact.water.02.blue.0")
+                .playbackRate(1)
+                .scale(0.8)
+                .delay(400)
+            .sound()
+                .file("modules/dnd5e-animations/assets/sounds/Spells/Elemental/spell-water-jet-1.mp3")
+                .delay(10)
+            return this
+        }
+        castLine({caster, affected=this.firstTemplate}={}){
+            super.castCommon({caster:caster, affected:affected,rotation:false})
+            .file("jb2a.cast_generic.water.02.blue")
+            .playbackRate(1)
+            .scale(1)
+            .belowTokens()       
+        
+            super.castCommon()
+                .file("jb2a.liquid.splash_side.blue")
+                .attachTo(this.caster, { align: "center", edge: "on", offset: { x: -0.5, y: 0 }, gridUnits: true, local:true })
+                .rotateTowards(this.affected)
+                .delay(2000)
+        
+                super.castCommon()
+                .file("animated-spell-effects-cartoon.water.79")
+                .attachTo(this.caster, { align: "center", edge: "outer", offset: { x: 0, y: 0 }, gridUnits: true, local:true })
+                .rotateTowards({
+                    x:  this.affected.center.x,
+                    y:  this.affected.center.y + this.randomYOffset
+                    })
+                .scale(0.5)
+                .delay(2000)
+                return this
+        }
         descriptorProject() {
-            return this;
+            return this.file("jb2a.template_line_piercing.water.01.blue")
+                .delay(500)
+                .waitUntilFinished(-3000)
+                
+                .sound()
+                .file("modules/dnd5e-animations/assets/sounds/Spells/Ray/spell-ray-2.mp3")
+                .volume(1);;
         }
         descriptorProjectToLine() {
             return this.descriptorProject()
@@ -6559,37 +6815,339 @@ Hooks.on("ready", () => {
         descriptorProjectToCone() {
             return this.descriptorProject()
         }   
-
         descriptorBurst() {
+            return this.waterExplosion();
+        }
+
+        burstCreate({caster,affected}={}){
+             super.burstCommon({caster:caster,affected:affected}).file("animated-spell-effects-cartoon.mix.water.01")
+                .attachTo(this.affected)
+                .playbackRate(1.3)
+                .delay(0)
+                .opacity(0.8)
+                .scaleToObject(1)
+            super.burstCommon()
+                .file("animated-spell-effects-cartoon.water.create.01")
+                .attachTo(this.affected)
+                .playbackRate(0.8)
+                .delay(0)
+                .scaleToObject(1)
+            return this.waterExplosion();
+        }
+        burstTransform({affected, caster}={})
+        {
+            return this.burstCreate({affected:affected, caster:caster})
+                .file(`jb2a.impact.water.02.blue.0`)
+                .name("splash")
+                .scaleToObject(3)
+                .endTime(2600)
+                .randomRotation()
+                .noLoop()
+                .persist()
+                .belowTokens()
+                .fadeOut(1000)
+                .scaleIn(0, 600, {ease: "easeOutCubic"})
+         }
+        
+        burstDamage({caster,affected}={}){
+            let sound = 'modules/dnd5e-animations/assets/sounds/Spells/Create-or-Destroy-Water.mp3'
+            super.burstCommon({caster:caster, affected:affected})
+            this.waterExplosion({caster, affected, sound})
+            return this
+            
+        }
+        waterExplosion({affected,caster, sound="modules/dnd5e-animations/assets/sounds/Damage/Acid/acid-bubbling-2.mp3"}={}){
+            this.file("animated-spell-effects-cartoon.water.water splash.01")
+                .scaleToObject (1.7)
+                .scaleIn(0, 500, {ease: "easeOutQuint"})
+                .zIndex(2)
+                .sound()
+                .file(sound)
+                .delay(0)
+            super.affectCommon()
+                .file(`jb2a.impact.water.02.blue.0`)
+                .name("splash")
+                .scaleToObject(3)
+                .endTime(2600)
+                .noLoop()
+                .persist()
+                .belowTokens()
+                .fadeOut(1000)
+                .scaleIn(0, 600, {ease: "easeOutCubic"})
+            
+                let delayDuration = 10000;
+                let  splashFilters = {
+                  name: "splash"
+            };
+
+            function endEffectsWithDelay(filters, delay) {
+              setTimeout(() => {
+                Sequencer.EffectManager.endEffects(filters);
+              }, delay);
+            }
+            endEffectsWithDelay(splashFilters, delayDuration);
             return this;
         }
+        
+        burstHealing({caster,affected}={}){
+            super.burstCommon()
+                .file("animated-spell-effects-cartoon.water.water splash.01")
+                .scaleToObject (1.7)
+                .scaleIn(0, 500, {ease: "easeOutQuint"})
+                .zIndex(2)
+            .sound()
+                .file("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-buff-short-5.mp3")
+                .delay(1000)
+             super.burstCommon()
+                .file(" animated-spell-effects-cartoon.water.29")
+                .anchor({ x: 0.8, y: 0.45 })
+                .rotate(-35)
+                .playbackRate(1)
+                .scale(0.5)
+             super.burstCommon()
+                .file(" animated-spell-effects-cartoon.water.29")
+                .anchor({ x: 0.2, y: 0.45 })
+                .rotate(35)
+                .playbackRate(1)
+                .scale(0.5)
+                .mirrorX()
+             super.burstCommon()
+                .file(" animated-spell-effects-cartoon.water.29")
+                .anchor({ x: 0.8, y: 0.45 })
+                .rotate(90)
+                .playbackRate(1)
+                .scale(0.5)   
+             super.burstCommon()
+                .file(`jb2a.impact.water.02.blue.0`)
+                .name("splash")
+                  .scaleToObject(3)
+                  .endTime(2200)
+                  .noLoop()
+                  .persist()
+                  .belowTokens()
+                  .fadeOut(1000)
+                  .scaleIn(0, 600, {ease: "easeOutCubic"})
+            super.burstCommon()
+                  .file("jb2a.healing_generic.burst.bluewhite")        
+                  .opacity(1)
+                  .scaleToObject(1)
+            return this
+        }
+        waterSwirls(){
+            super.affectCommon()
+                .file("animated-spell-effects-cartoon.water.water splash.01")
+                .scaleToObject (1.7)
+                .scaleIn(0, 500, {ease: "easeOutQuint"})
+                .zIndex(2)
+            .sound()
+                .file("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-buff-short-5.mp3")
+                .delay(1000)
+             super.affectCommon()
+                .file(" animated-spell-effects-cartoon.water.29")
+                .anchor({ x: 0.8, y: 0.45 })
+                .rotate(-35)
+                .playbackRate(1)
+                .scale(0.5)
+             super.affectCommon()
+                .file(" animated-spell-effects-cartoon.water.29")
+                .anchor({ x: 0.2, y: 0.45 })
+                .rotate(35)
+                .playbackRate(1)
+                .scale(0.5)
+                .mirrorX()
+             super.affectCommon()
+                .file(" animated-spell-effects-cartoon.water.29")
+                .anchor({ x: 0.8, y: 0.45 })
+                .rotate(90)
+                .playbackRate(1)
+                .scale(0.5)   
+             super.affectCommon()
+                .file(`jb2a.impact.water.02.blue.0`)
+                .name("splash")
+                  .scaleToObject(3)
+                  .endTime(2200)
+                  .noLoop()
+                  .persist()
+                  .belowTokens()
+                  .fadeOut(1000)
+                  .scaleIn(0, 600, {ease: "easeOutCubic"})
+            super.affectCommon()
+                  .file("jb2a.healing_generic.burst.bluewhite")        
+                  .opacity(1)
+                  .scaleToObject(1)
+        }
         descriptorLine() {
+                 this.file("jb2a.impact.water.02.blue.0")
+                .atLocation(this.templateStart)
+                .scaleToObject(2)
+                .delay(2000)
+                .fadeIn(100)
+                .fadeOut(100)
+
+            this.atLocation(this.templateStart)
+            super.lineCommon()
+                this.file("jb2a.breath_weapons.acid.line.green")
+                .atLocation(this.templateStart)
+                .spriteScale(2)
+                .stretchTo(this.affected)
+                .aboveLighting()
+                .delay(-4000)
+                .filter("ColorMatrix", {hue:50, contrast: 0.7, saturate: -0.2,brightness: 0.4,})
+                .playbackRate(1)
+                .fadeIn(50)
+                .fadeOut(50)
+            return this
+ 
+        }
+
+        lineCreate(){
+            super.lineCommon()
+                .descriptor
+                .file("jb2a.impact.water.02.blue.0")
+                .atLocation(this.templateStart)
+                .scaleToObject(2)
+                .delay(2000)
+                .fadeIn(100)
+                .fadeOut(100)
+            super.affectCommon()
+                .file("jb2a.impact.water.02.blue.0")
+                .atLocation(this.center)
+                .scaleToObject(5)
+                .delay(2000)
+                .fadeIn(100)
+                .fadeOut(100)
             return this
         }
         descriptorCone() {
             return this;
         }
-        descriptorAffliction() {
-             
+
+        waterImpact()
+        {
+            super.affectCommon()
+                .file("animated-spell-effects-cartoon.water.85")
+                .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+                .scaleToObject(2.8)
+                .filter("ColorMatrix", {hue: 5, brightness: 1, contrast: 0, saturate: -0.8})
+                .randomRotation()
+                .sound()
+                .file("modules/lancer-weapon-fx/soundfx/Axe_Hit.ogg")
+                .fadeInAudio(500)
+                .fadeOutAudio(500)
+                .sound()
+                .file("modules/lancer-weapon-fx/soundfx/Axe_swing.ogg")
+                .fadeInAudio(500)
+                .fadeOutAudio(500)
+            super.affectCommon()
+                .file("animated-spell-effects-cartoon.water.water splash.01")
+                .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+                .scaleToObject(2.5)              
+                .randomRotation()
+                .belowTokens()
+            super.affectCommon()
+                .file("jb2a.impact.water.02.blue.0")
+                .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+                .scaleToObject(4)
+                .randomRotation()
+                .belowTokens()
+            return this
+        }
+        waterPulse()
+        {
+            super.affectCommon()
+                .delay(200)
+                .file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
+                .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+                .scaleToObject(1.75)
+                .opacity(0.5)
+                
+                .belowTokens()
+            super.affectCommon()
+                .delay(200)
+                .file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
+                .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+                .scaleToObject(2.5)
+                .opacity(0.5)
+                .belowTokens()
+            return this
+        }
+        waterBall(){
+             return super.affectCommon()
+                .file("animated-spell-effects-cartoon.water.ball")   
+                .attachTo(this.affected)
+                .playbackRate(1)
+                .scaleToObject()
+                .scale(1.2)
+                .fadeIn(500)
+                .fadeOut(500)
+                .rotateIn(180, 600, {ease: "easeOutCubic"})
+                .scaleIn(0, 600, {ease: "easeOutCubic"})
+                .persist()
+        }
+        descriptorAffliction() { 
+            this.waterExplosion()
+                .waterImpact()
+                .waterBall()
+            this.waterPulse()
+            super.affectCommon()
+            .from(this.affected)
+                .fadeIn(200)
+                .fadeOut(500)
+                .delay(2000)
+                .loopProperty("sprite", "position.x", { from: -0.1, to: 0.1, duration: 50, pingPong: true, gridUnits: true})
+                .scaleToObject(this.affected.document.texture.scaleX)
+                .duration(3000)
+                .opacity(0.25)
             return this;
         }
         descriptorAura(){
             return this
         }
         descriptorDamage(){
-            return this;
+            this.waterImpact()
+            this.from(this.affected)
+                .fadeIn(200)
+                .fadeOut(500)
+                .delay(3000)
+                .loopProperty("sprite", "position.x", { from: -0.1, to: 0.1, duration: 50, pingPong: true, gridUnits: true})
+                .scaleToObject(this.affected.document.texture.scaleX)
+                .duration(3000)
+                .opacity(0.25)
+            return this.waterPulse()
         }
-        descriptorHealing(){
-           
+        descriptorHealing(){ 
+            this.waterSwirls()
+            this.file("jb2a.impact.water.02.blue.0")
+                .scaleToObject(2)
+                .delay(1000)
+            super.affectCommon()
+                .file("jb2a.healing_generic.400px.blue")
+                .scaleToObject(2.5)
+                .delay(1200)
             return this
         }
 
-        /*
-       
+        descriptorCreate(){
+            return this.waterImpact()
+        }
         descriptorAura(){
-            return this
+            return this.file("animated-spell-effects-cartoon.water.create.01")
+            .scale(0.4)
+            .aboveLighting()
+            super.affectCommon()
+                .file("jb2a.impact.water.02.blue.0")
+                .playbackRate(1)
+                .scale(0.8)
+                .delay(400)
+            .sound()
+                .file("modules/dnd5e-animations/assets/sounds/Spells/Elemental/spell-water-jet-1.mp3")
+                .delay(10)
         }
-
+        descriptorProtection(){
+            return this.affectAura()
+                .waterBall()
+        }
+/*
         descriptorConcealment()
         {
             return this;
@@ -6614,9 +7172,7 @@ Hooks.on("ready", () => {
             return this
         }
 
-        descriptorProtection(){
-            return this
-        }
+
 
         descriptorTransform(){
             return this
