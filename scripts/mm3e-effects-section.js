@@ -4084,7 +4084,6 @@ Hooks.on("ready", () => {
     
     }
 
-  
 
     class HolyEffectSection extends TemplatedDescriptorEffect {
         constructor(inSequence) {
