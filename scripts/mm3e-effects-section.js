@@ -3,7 +3,7 @@ Hooks.on("ready", () => {
     class BaseEffectSection extends Sequencer.BaseSection {
     constructor(inSequence) {
         super(inSequence)
-        //jeff made a change   
+        //online  made a change   
         this._effect;
         this.sequence = new Sequence();
 
