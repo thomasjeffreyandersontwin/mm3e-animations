@@ -4844,6 +4844,184 @@ Hooks.on("ready", () => {
                 .fadeIn(100)
                 .fadeOut(50)
         }
+        cast({caster, affected , duration = 1}={}){
+            super.castCommon({caster:caster, affected:affected})
+           .file("animated-spell-effects-cartoon.fire.03")
+              .spriteOffset({ x: 15, y: 0 })
+              .playbackRate(1)
+              .scale(0.3)
+              .waitUntilFinished(-1000)
+          super.cast()
+              .file("modules/animated-spell-effects-cartoon/spell-effects/cartoon/fire/fire_55_800x800.webm")
+              .scale(0.08)
+              .zeroSpriteRotation(true)
+              .attachTo(this.caster, { bindVisibility: false })
+              .name("Fire_attack")
+              .duration(2000)
+              .fadeIn(100)
+              .fadeOut(50)
+              .spriteOffset({ x: 20, y: 0 })
+              .scaleIn(0, 500, {ease: "easeOutCubic"})
+              .zeroSpriteRotation(true)
+              .waitUntilFinished(-100)
+          return this;
+      }
+       cast2({caster, affected , duration = 1}={}){
+            super.castCommon({caster:caster, affected:affected})
+           .file("animated-spell-effects-cartoon.fire.03")
+              .playbackRate(1)
+              .spriteOffset({ x: -10, y: 0 })
+              .scale(0.5)
+              .waitUntilFinished(-1000)
+           return this;
+      }
+
+      castRange({caster, affected , duration = 1}={}){
+            super.cast({caster:caster, affected:affected})
+          .file("animated-spell-effects-cartoon.fire.19")
+          .playbackRate(1)
+          .scale(0.3)
+          .waitUntilFinished(-800)
+                
+          super.cast()
+          .file("jb2a.cast_generic.fire.side01.orange.0")
+          .playbackRate(1)
+          .scaleToObject(1.5)
+          .rotateTowards(this.affected)
+          .anchor({ x: 0.4, y: 0.5 })
+          .waitUntilFinished(-100)
+          .duration(600)
+          return this;
+      }
+      project({caster, target }={}){ 
+          super.projectCommon({caster:caster,target:target})
+               .file("animated-spell-effects-cartoon.fire.29")
+              .spriteOffset({ x: 20, y: 0 })
+              .playbackRate(1)
+              .scale(1)
+              .waitUntilFinished(-2000)
+        return this;
+      }
+
+      projectRange({caster, target }={}){ 
+          super.projectCommon({caster:caster,target:target})
+              .file("jb2a.fire_bolt.orange")
+              .playbackRate(1)
+              .waitUntilFinished(-100)
+              .duration(600)
+              .scale(1)
+        return this;
+      }
+
+      projectRay({caster, target }={}){ 
+          super.projectCommon({caster:caster,target:target})
+              .file("jb2a.scorching_ray.01.orange")
+              .playbackRate(1)
+              .scale(1.5)
+              .waitUntilFinished(-1000)
+        return this;
+      }
+      affectDamage({affected = this.affected, repeats=1}={} ){ 
+        this.affectCommon({affected: affected})
+       .affect()
+           .file("animated-spell-effects-cartoon.mix.fire earth explosion.06")
+           .delay(500)
+           .scale(0.8)
+           
+            .pause(500)
+
+       .affect()
+           .file(`jb2a.ground_cracks.orange.01`)
+           .scaleToObject(2)
+           .fadeIn(600)
+           .opacity(1)
+           .belowTokens()
+           .scaleIn(0, 600, {ease: "easeOutCubic"})
+           .filter("ColorMatrix", { hue: 0 })
+           .fadeOut(500)
+           .duration(8000)
+
+
+       .affect()
+           .file("jb2a.impact.ground_crack.still_frame.01")
+           .scaleToObject(2)
+           .fadeIn(600)
+           .opacity(1)
+           .belowTokens()
+           .scaleIn(0, 600, {ease: "easeOutCubic"})
+           .filter("ColorMatrix", { hue: 0 })
+           .fadeOut(500)
+           .duration(12000)
+
+           .canvasPan()
+           .shake({duration: 800, strength: 1, rotation: false })
+       return this
+   }
+   affectHealing({affected = this.affected|| this.firstSelected}={}){
+        super.affectCommon({affected:affected, persist:false})
+               .file("jb2a.healing_generic.loop.yellowwhite")
+               .playbackRate(1)
+               .scaleToObject()
+               .tint("#dc7118")
+               .scale(2)
+               .fadeIn(500)
+               .fadeOut(500)
+               .filter("Glow")
+               
+               .playSound("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-buff-long-4.mp3")
+       return this;
+   }
+   affectAffliction({affected}={})
+   {
+       super.affectCommon({affected:affected})
+           .file("animated-spell-effects-cartoon.fire.spiral")
+           .playbackRate(1)
+           .scale(0.5)
+           
+           .pause(800)
+           
+           
+           .affect()
+           .file("jb2a.shield_themed.below.fire.01.orange")
+           .attachTo(this.affected)
+           .playbackRate(1)
+           .scaleToObject()
+           .scale(1.8)
+           .fadeIn(500)
+           .rotateIn(180, 600, {ease: "easeOutCubic"})
+           .scaleIn(0, 600, {ease: "easeOutCubic"})
+           .loopProperty("sprite", "rotation", { from: 0, to: -360, duration: 10000})
+           .persist()
+           
+           .affect()
+           .file("jb2a.shield_themed.above.fire.03.orange")
+           .attachTo(this.affected)
+           .playbackRate(1)
+           .scaleToObject()
+           .scale(1.8)
+           .fadeIn(500)
+           .rotateIn(180, 600, {ease: "easeOutCubic"})
+           .scaleIn(0, 600, {ease: "easeOutCubic"})
+           .persist()
+       return this;
+   }
+   burst({affected,persist=true}={})
+  {
+       super.burstCommon({affected:affected})
+           .file("jb2a.impact.fire.01.orange.0")
+           .playbackRate(1)
+           .scaleToObject(2.5)
+       return this
+   }
+
+   burstheal({affected,persist=true}={})
+  {
+      super.burstCommon({affected:affected})
+           .file("jb2a.healing_generic.burst.yellowwhite")
+           .tint("#dc7118")
+           .scaleToObject(1.2)
+       return this
+   }
 
         descriptorCast(){
             return this.file("animated-spell-effects-cartoon.fire.19")
