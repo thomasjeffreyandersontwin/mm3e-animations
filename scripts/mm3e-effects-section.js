@@ -219,6 +219,13 @@ Hooks.on("ready", () => {
                 this.rotateTowards(this.affected)
         return this
     }
+    castRange({caster , affected}={}){
+        return this.cast({caster:caster, affected:affected})
+    }
+    cast2({caster , affected}={}){
+        return this.cast({caster:caster, affected:affected})
+    } 
+
     castToTemplate({caster =(this.caster)}={}){
         return this.cast({caster:caster, affected:this.firstTemplate})
     }
@@ -232,6 +239,14 @@ Hooks.on("ready", () => {
     project({caster , affected}={}){
         return this.projectCommon({caster:caster, affected:affected})
     }
+    projectRange({caster , affected}={}){
+        this.projectCommon({caster:caster, affected:affected})
+        return this
+    } 
+    projectRay({caster , affected}={}){
+        this.projectCommon({caster:caster, affected:affected})
+        return this
+    }      
     projectCommon({caster = (this.caster || this.firstSelected), affected = (this.affected || this.firstTarget)}={}){
         this.castCommon({caster:caster, affected:affected,rotation:false})
         let stretchToLocation=affected;
