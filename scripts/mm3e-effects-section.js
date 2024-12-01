@@ -4933,6 +4933,364 @@ Hooks.on("ready", () => {
         constructor(inSequence) {
             super(inSequence);
         }
+        cast({caster, affected , duration = 1}={}){ 
+            super.castCommon({caster:caster, affected:affected})
+                super.castCommon()
+                  .file(`jb2a.bless.400px.intro.yellow`)
+                  .opacity(0.9)
+                  .size({ width: 2.5, height: 2.5 }, {gridUnits: true})
+                  .fadeIn(1000, {ease: "easeInExpo"})
+                  .fadeOut(2500, {ease: "easeInExpo"})
+                  .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 18000})
+                  .scaleIn(0, 3000, {ease: "easeOutBack"})
+                  .scaleOut(0, 3000, {ease: "easeInBack"})
+                  .belowTokens()
+                  .duration(5000)
+                  .zIndex(1)
+                
+                super.castCommon()
+                  .file("jb2a.cast_generic.01.yellow.0") 
+                  .playbackRate(0.5)
+                  .scale(1)
+                  .opacity(0.6)
+                  .delay(500)
+                  .fadeIn(500)
+                  .fadeOut(800)
+                  .belowTokens() 
+                
+                
+                  .pause(1000)
+                
+                  super.castCommon()
+                  .file("jb2a.sacred_flame.source.yellow")
+                  .scaleToObject(2.5)
+                  .playbackRate(1)
+                  .zIndex(3)
+             return this
+        } 
+        castSpecificEffect({caster, affected , duration = 1}={}){
+            super.castCommon({caster:caster, affected:affected})
+            //place sequencer logic
+             return this
+        
+        }
+        meleeCast({caster, affected, repeats=1}={} ){
+            super.meleeCastCommon({caster:caster, affected:affected}) 
+            let target = Array.from(game.user.targets)[0];
+
+const targetCenter = {
+x: target.x+canvas.grid.size*target.document.width/2,
+y: target.y+canvas.grid.size*target.document.width/2,
+};
+
+const tokenCenter = {
+x: token.x+canvas.grid.size*token.document.width/2,
+y: token.y+canvas.grid.size*token.document.width/2,
+};
+
+const middleposition = {
+  x: (targetCenter.x - tokenCenter.x)* 0.25,
+  y: (targetCenter.y - tokenCenter.y)* 0.25,
+};
+
+
+  this.effect()
+  .file(`jb2a.bless.400px.intro.yellow`)
+  .atLocation(token)
+  .opacity(0.9)
+  .size({ width: 2.5, height: 2.5 }, {gridUnits: true})
+  .fadeIn(1000, {ease: "easeInExpo"})
+  .fadeOut(2500, {ease: "easeInExpo"})
+  .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 18000})
+  .scaleIn(0, 3000, {ease: "easeOutBack"})
+  .scaleOut(0, 3000, {ease: "easeInBack"})
+  .belowTokens()
+  .duration(5000)
+  .zIndex(1)
+
+  .wait(1000)
+
+    this.effect()
+  .file("jb2a.cast_generic.01.yellow.0")
+  .atLocation(token) 
+  .playbackRate(0.5)
+  .scaleToObject(1.5)
+  .delay(1000)
+  .fadeOut(800)
+  .waitUntilFinished(-1000) 
+  .zIndex(2)
+
+this.effect()
+  .file("jb2a.divine_smite.target.yellowwhite")
+  .atLocation(target)
+  .scaleToObject(2.5)
+  .delay(100)
+  .playbackRate(1.25)
+  .fadeOut(100)
+  .zIndex(2)
+ 
+
+
+
+.wait(750)
+
+.canvasPan()
+  .delay(250)
+  .shake({duration: 250, strength: 2, rotation: false })
+
+.animation()
+  .on(token)
+  .opacity(0)
+
+this.effect()
+  .from(token)
+  .atLocation(token)
+  .mirrorX(token.document.data.mirrorX)
+  .animateProperty("sprite", "position.x", { from: 0, to: middleposition.x, duration: 100, ease:"easeOutExpo"})
+  .animateProperty("sprite", "position.y", { from: 0, to: middleposition.y, duration: 100, ease:"easeOutExpo"})
+  .animateProperty("sprite", "position.x", { from: 0, to: -middleposition.x, duration: 350, ease:"easeInOutQuad", fromEnd:true})
+  .animateProperty("sprite", "position.y", { from: 0, to: -middleposition.y, duration: 350, ease:"easeInOutQuad", fromEnd:true})
+  .scaleToObject(1, {considerTokenScale: true})
+  .duration(600)
+
+.animation()
+  .on(token)
+  .opacity(1)
+  .delay(600)
+
+  .playsound()
+  .file("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-buff-short-6.mp3")
+  .fadeInAudio(500)
+  .fadeOutAudio(500)
+
+  .playsound()
+  .file("modules/lancer-weapon-fx/soundfx/Axe_swing.ogg")
+  .fadeInAudio(500)
+  .fadeOutAudio(500)
+
+this.effect()
+.file("jb2a.impact.ground_crack.white.01")
+.scaleToObject(3)
+.atLocation(target)
+.randomRotation()
+.belowTokens()
+
+this.effect()
+.delay(200)
+.file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
+.scaleIn(0, 100, {ease: "easeOutCubic"}) 
+.scaleToObject(1.75)
+.opacity(0.5)
+.atLocation(target)
+.belowTokens()
+
+this.effect()
+.delay(200)
+.file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
+.scaleIn(0, 100, {ease: "easeOutCubic"}) 
+.scaleToObject(2.5)
+.opacity(0.5)
+.atLocation(target)
+.belowTokens()
+
+this.effect()
+.from(target)
+.atLocation(target)
+.fadeIn(200)
+.fadeOut(500)
+.loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
+.scaleToObject(target.document.texture.scaleX)
+.duration(3000)
+.opacity(0.25)
+            return this
+        }
+
+        project({caster, target }={}){ 
+            super.projectCommon({caster:caster,target:target})
+            //play sequencer logic
+           return this;
+         }
+
+   
+       burst({affected,persist=true}={})
+       {
+            super.burstCommon({affected:affected})
+.file("jb2a.ground_cracks.orange.01")
+.scaleToObject(1.2)
+.fadeIn(600)
+.opacity(1)
+.belowTokens()
+.scaleIn(0, 60, {ease: "easeOutCubic"})
+.filter("ColorMatrix", { hue: 0 })
+.fadeOut(500)
+.delay(3000)
+.duration(8000)
+
+super.burstCommon()
+  .file("jb2a.sacred_flame.target.yellow")
+  .scaleToObject(1.5)
+  .playbackRate(1)
+  .delay(800)
+  .zIndex(3)
+  .aboveLighting()
+  .waitUntilFinished(-3000)
+
+super.burstCommon()
+.file("jb2a.template_circle.out_pulse.02.burst.yellowwhite")
+.scaleToObject (1.5)
+.scaleIn(0, 500, {ease: "easeOutQuint"})
+.zIndex(2)
+            return this
+        }
+
+        burstheal({affected,persist=true}={})
+       {
+            super.bursthealCommon({affected:affected})
+.file("jb2a.template_circle.out_pulse.02.burst.yellowwhite")
+.scaleToObject (1.5)
+.scaleIn(0, 500, {ease: "easeOutQuint"})
+.zIndex(2)
+            return this
+        }
+       line({affected}={}) {
+
+const template = canvas.templates.placeables.at(-1).document;
+
+const lineTemplate = canvas.templates.placeables.at(-1).document;
+
+const start = { x: lineTemplate.data.x, y: lineTemplate.data.y };
+            
+            super.lineCommon({affected:affected})
+    this.effect()
+  .file("jb2a.sacred_flame.target.yellow")
+  .atLocation(start) 
+  .scaleToObject(3.5)
+  .playbackRate(1)
+  .aboveLighting()
+  .zIndex(3)
+
+this.effect()
+.file("jb2a.eldritch_blast.yellow")
+.atLocation(start)
+.spriteScale(0.5)
+.stretchTo(template)
+.aboveLighting()
+.delay(1200)
+.fadeIn(50)
+.fadeOut(50)
+    
+            return this;
+        }
+       cone({affected} = {}) {
+            super.coneCommon({affected:affected})
+            //play sequencer logic
+            return this;
+        }
+    
+        affectAffliction({affected}={})
+        {
+            this.affectDamage({affected:affected})
+        .delay(300)
+        .file("jb2a.bless.400px.loop.yellow")
+        .attachTo(this.affected, { cacheLocation: true, offset: { y: 0 }, gridUnits: true, bindAlpha: false })
+        .scaleToObject(2, { considerTokenScale: true })
+        .fadeIn(1000)
+        .fadeOut(500)
+        .opacity(0.8)
+        .belowTokens()
+        .persist()
+            return this;
+        }
+
+        affectAura({affected, duration=1, persist=false, scaleToObject = 1, spriteOffest={x:0, y:0}}={}){
+            super.affectCommon({affected:affected})
+            //play sequencer logic
+            return this;
+        }
+
+        affectConcealment({affected}={})
+        {
+            this.affectAura({affected:affected, persist:true})
+            //play sequencer logic
+            return this;
+        }
+        
+        affectDamage({affected = this.affected, repeats=1}={} ){ 
+            this.affectCommon({affected: affected})
+                .from(this.affected)
+                .fadeIn(200)
+                .fadeOut(500)
+                .delay(800)
+                .loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
+                .scaleToObject(this.affected.document.texture.scaleX)
+                .duration(3000)
+                .opacity(0.25)
+  
+          super.affectCommon()
+          .file("jb2a.sacred_flame.target.yellow")
+          .scaleToObject(3)
+          .playbackRate(1)
+          .delay(800)
+          .zIndex(3)
+           return this;
+        }
+
+        affectHealing({affected = this.affected|| this.firstSelected}={}){
+             this.affectAura({affected:affected, persist:false})
+
+.pause(2000)
+
+super.affectCommon()
+.from(this.affected)
+.fadeIn(200)
+.fadeOut(500)
+.delay(800)
+.loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
+.scaleToObject(this.affected.document.texture.scaleX)
+.duration(3000)
+.opacity(0.25)
+  
+super.affectCommon()
+.file("jb2a.cure_wounds.400px.blue")
+.scale(0.8)
+.belowTokens()
+
+super.affectCommon()
+.file("jb2a.detect_magic.circle.yellow")
+.scaleToObject(1.6)
+.mask()
+.delay(500)
+
+.playSound("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-buff-long-4.mp3")
+            return this;
+        }
+
+        affectIllusion({affected = this.affected}={})
+        {
+            this.affectAura({affected:affected, persist:true})
+            .pause(1000)
+            //add extra custom sequencer logic
+            super.affectIllusion({affected:affected})
+
+            return this;
+        }
+
+        affectMindControl({affected = this.affected}={}){
+             this.affectAura({affected, scaleToObject:.6 , spriteOffest:{x:0, y:-30} , persist:true})
+             //add extra custom sequencer logic
+            .pause(2000)
+            super.affectMindControl(affected)
+            return this
+        }
+
+        affectWeaken({affected = this.affected}={}){
+             this.affectAura({affected,  persist:true})
+                //add extra custom sequencer logic
+                .pause(1000)
+                super.affectWeaken(affected)
+            return this
+        }
+    
        /* castCone({affected, caster}={}){
             return this
         }*/
