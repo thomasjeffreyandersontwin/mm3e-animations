@@ -4458,17 +4458,196 @@ Hooks.on("ready", () => {
             super(inSequence);
         }
         castDamage({affected,caster}={}) {
-           return super.castCommon({affected:affected, caster:caster, rotation:false})
-                .file("animated-spell-effects-cartoon.fire.03") // Fire casting animation
-                .spriteOffset({ x: 15, y: 0 })
-                .scale(0.3)
-                .waitUntilFinished(-1000)
-            .file("modules/animated-spell-effects-cartoon/assets/spell-effects/cartoon/fire/fire_55_800x800.webm") // Fireball projectile
-                .scale(0.08)
-                .zeroSpriteRotation(true)
-                .fadeIn(100)
-                .fadeOut(50)
-        }
+            return super.castCommon({affected:affected, caster:caster, rotation:false})
+                 .file("animated-spell-effects-cartoon.fire.03") // Fire casting animation
+                 .spriteOffset({ x: 15, y: 0 })
+                 .scale(0.3)
+                 .waitUntilFinished(-1000)
+             .file("modules/animated-spell-effects-cartoon/assets/spell-effects/cartoon/fire/fire_55_800x800.webm") // Fireball projectile
+                 .scale(0.08)
+                 .zeroSpriteRotation(true)
+                 .fadeIn(100)
+                 .fadeOut(50)
+         }
+         cast({caster, affected , duration = 1}={}){
+             super.castCommon({caster:caster, affected:affected})
+            .file("animated-spell-effects-cartoon.fire.03")
+               .spriteOffset({ x: 15, y: 0 })
+               .playbackRate(1)
+               .scale(0.3)
+               .waitUntilFinished(-1000)
+           super.cast()
+               .file("modules/animated-spell-effects-cartoon/spell-effects/cartoon/fire/fire_55_800x800.webm")
+               .scale(0.08)
+               .zeroSpriteRotation(true)
+               .attachTo(this.caster, { bindVisibility: false })
+               .name("Fire_attack")
+               .duration(2000)
+               .fadeIn(100)
+               .fadeOut(50)
+               .spriteOffset({ x: 20, y: 0 })
+               .scaleIn(0, 500, {ease: "easeOutCubic"})
+               .zeroSpriteRotation(true)
+               .waitUntilFinished(-100)
+           return this;
+       }
+        cast2({caster, affected , duration = 1}={}){
+             super.castCommon({caster:caster, affected:affected})
+            .file("animated-spell-effects-cartoon.fire.03")
+               .playbackRate(1)
+               .spriteOffset({ x: -10, y: 0 })
+               .scale(0.5)
+               .waitUntilFinished(-1000)
+            return this;
+       }
+ 
+       castRange({caster, affected , duration = 1}={}){
+             super.cast({caster:caster, affected:affected})
+           .file("animated-spell-effects-cartoon.fire.19")
+           .playbackRate(1)
+           .scale(0.3)
+           .waitUntilFinished(-800)
+                 
+           super.cast()
+           .file("jb2a.cast_generic.fire.side01.orange.0")
+           .playbackRate(1)
+           .scaleToObject(1.5)
+           .rotateTowards(this.affected)
+           .anchor({ x: 0.4, y: 0.5 })
+           .waitUntilFinished(-100)
+           .duration(600)
+           return this;
+       }
+       project({caster, target }={}){ 
+           super.projectCommon({caster:caster,target:target})
+                .file("animated-spell-effects-cartoon.fire.29")
+               .spriteOffset({ x: 20, y: 0 })
+               .playbackRate(1)
+               .scale(1)
+               .waitUntilFinished(-2000)
+         return this;
+       }
+ 
+       projectRange({caster, target }={}){ 
+           super.projectCommon({caster:caster,target:target})
+               .file("jb2a.fire_bolt.orange")
+               .playbackRate(1)
+               .waitUntilFinished(-100)
+               .duration(600)
+               .scale(1)
+         return this;
+       }
+ 
+       projectRay({caster, target }={}){ 
+           super.projectCommon({caster:caster,target:target})
+               .file("jb2a.scorching_ray.01.orange")
+               .playbackRate(1)
+               .scale(1.5)
+               .waitUntilFinished(-1000)
+         return this;
+       }
+       affectDamage({affected = this.affected, repeats=1}={} ){ 
+         this.affectCommon({affected: affected})
+        .affect()
+            .file("animated-spell-effects-cartoon.mix.fire earth explosion.06")
+            .delay(500)
+            .scale(0.8)
+            
+             .pause(500)
+ 
+        .affect()
+            .file(`jb2a.ground_cracks.orange.01`)
+            .scaleToObject(2)
+            .fadeIn(600)
+            .opacity(1)
+            .belowTokens()
+            .scaleIn(0, 600, {ease: "easeOutCubic"})
+            .filter("ColorMatrix", { hue: 0 })
+            .fadeOut(500)
+            .duration(8000)
+ 
+ 
+        .affect()
+            .file("jb2a.impact.ground_crack.still_frame.01")
+            .scaleToObject(2)
+            .fadeIn(600)
+            .opacity(1)
+            .belowTokens()
+            .scaleIn(0, 600, {ease: "easeOutCubic"})
+            .filter("ColorMatrix", { hue: 0 })
+            .fadeOut(500)
+            .duration(12000)
+ 
+            .canvasPan()
+            .shake({duration: 800, strength: 1, rotation: false })
+        return this
+    }
+    affectHealing({affected = this.affected|| this.firstSelected}={}){
+         super.affectCommon({affected:affected, persist:false})
+                .file("jb2a.healing_generic.loop.yellowwhite")
+                .playbackRate(1)
+                .scaleToObject()
+                .tint("#dc7118")
+                .scale(2)
+                .fadeIn(500)
+                .fadeOut(500)
+                .filter("Glow")
+                
+                .playSound("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-buff-long-4.mp3")
+        return this;
+    }
+    affectAffliction({affected}={})
+    {
+        super.affectCommon({affected:affected})
+            .file("animated-spell-effects-cartoon.fire.spiral")
+            .playbackRate(1)
+            .scale(0.5)
+            
+            .pause(800)
+            
+            
+            .affect()
+            .file("jb2a.shield_themed.below.fire.01.orange")
+            .attachTo(this.affected)
+            .playbackRate(1)
+            .scaleToObject()
+            .scale(1.8)
+            .fadeIn(500)
+            .rotateIn(180, 600, {ease: "easeOutCubic"})
+            .scaleIn(0, 600, {ease: "easeOutCubic"})
+            .loopProperty("sprite", "rotation", { from: 0, to: -360, duration: 10000})
+            .persist()
+            
+            .affect()
+            .file("jb2a.shield_themed.above.fire.03.orange")
+            .attachTo(this.affected)
+            .playbackRate(1)
+            .scaleToObject()
+            .scale(1.8)
+            .fadeIn(500)
+            .rotateIn(180, 600, {ease: "easeOutCubic"})
+            .scaleIn(0, 600, {ease: "easeOutCubic"})
+            .persist()
+        return this;
+    }
+    burst({affected,persist=true}={})
+   {
+        super.burstCommon({affected:affected})
+            .file("jb2a.impact.fire.01.orange.0")
+            .playbackRate(1)
+            .scaleToObject(2.5)
+        return this
+    }
+ 
+    burstheal({affected,persist=true}={})
+   {
+       super.burstCommon({affected:affected})
+            .file("jb2a.healing_generic.burst.yellowwhite")
+            .tint("#dc7118")
+            .scaleToObject(1.2)
+        return this
+    }
+          
         descriptorCast(){
             return this.file("animated-spell-effects-cartoon.fire.19")
                 .playbackRate(1)
@@ -5035,6 +5214,364 @@ Hooks.on("ready", () => {
         constructor(inSequence) {
             super(inSequence);
         }
+        cast({caster, affected , duration = 1}={}){ 
+            super.castCommon({caster:caster, affected:affected})
+                super.castCommon()
+                  .file(`jb2a.bless.400px.intro.yellow`)
+                  .opacity(0.9)
+                  .size({ width: 2.5, height: 2.5 }, {gridUnits: true})
+                  .fadeIn(1000, {ease: "easeInExpo"})
+                  .fadeOut(2500, {ease: "easeInExpo"})
+                  .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 18000})
+                  .scaleIn(0, 3000, {ease: "easeOutBack"})
+                  .scaleOut(0, 3000, {ease: "easeInBack"})
+                  .belowTokens()
+                  .duration(5000)
+                  .zIndex(1)
+                
+                super.castCommon()
+                  .file("jb2a.cast_generic.01.yellow.0") 
+                  .playbackRate(0.5)
+                  .scale(1)
+                  .opacity(0.6)
+                  .delay(500)
+                  .fadeIn(500)
+                  .fadeOut(800)
+                  .belowTokens() 
+                
+                
+                  .pause(1000)
+                
+                  super.castCommon()
+                  .file("jb2a.sacred_flame.source.yellow")
+                  .scaleToObject(2.5)
+                  .playbackRate(1)
+                  .zIndex(3)
+             return this
+        } 
+        castSpecificEffect({caster, affected , duration = 1}={}){
+            super.castCommon({caster:caster, affected:affected})
+            //place sequencer logic
+             return this
+        
+        }
+        meleeCast({caster, affected, repeats=1}={} ){
+            super.meleeCastCommon({caster:caster, affected:affected}) 
+            let target = Array.from(game.user.targets)[0];
+
+const targetCenter = {
+x: target.x+canvas.grid.size*target.document.width/2,
+y: target.y+canvas.grid.size*target.document.width/2,
+};
+
+const tokenCenter = {
+x: token.x+canvas.grid.size*token.document.width/2,
+y: token.y+canvas.grid.size*token.document.width/2,
+};
+
+const middleposition = {
+  x: (targetCenter.x - tokenCenter.x)* 0.25,
+  y: (targetCenter.y - tokenCenter.y)* 0.25,
+};
+
+
+  this.effect()
+  .file(`jb2a.bless.400px.intro.yellow`)
+  .atLocation(token)
+  .opacity(0.9)
+  .size({ width: 2.5, height: 2.5 }, {gridUnits: true})
+  .fadeIn(1000, {ease: "easeInExpo"})
+  .fadeOut(2500, {ease: "easeInExpo"})
+  .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 18000})
+  .scaleIn(0, 3000, {ease: "easeOutBack"})
+  .scaleOut(0, 3000, {ease: "easeInBack"})
+  .belowTokens()
+  .duration(5000)
+  .zIndex(1)
+
+  .wait(1000)
+
+    this.effect()
+  .file("jb2a.cast_generic.01.yellow.0")
+  .atLocation(token) 
+  .playbackRate(0.5)
+  .scaleToObject(1.5)
+  .delay(1000)
+  .fadeOut(800)
+  .waitUntilFinished(-1000) 
+  .zIndex(2)
+
+this.effect()
+  .file("jb2a.divine_smite.target.yellowwhite")
+  .atLocation(target)
+  .scaleToObject(2.5)
+  .delay(100)
+  .playbackRate(1.25)
+  .fadeOut(100)
+  .zIndex(2)
+ 
+
+
+
+.wait(750)
+
+.canvasPan()
+  .delay(250)
+  .shake({duration: 250, strength: 2, rotation: false })
+
+.animation()
+  .on(token)
+  .opacity(0)
+
+this.effect()
+  .from(token)
+  .atLocation(token)
+  .mirrorX(token.document.data.mirrorX)
+  .animateProperty("sprite", "position.x", { from: 0, to: middleposition.x, duration: 100, ease:"easeOutExpo"})
+  .animateProperty("sprite", "position.y", { from: 0, to: middleposition.y, duration: 100, ease:"easeOutExpo"})
+  .animateProperty("sprite", "position.x", { from: 0, to: -middleposition.x, duration: 350, ease:"easeInOutQuad", fromEnd:true})
+  .animateProperty("sprite", "position.y", { from: 0, to: -middleposition.y, duration: 350, ease:"easeInOutQuad", fromEnd:true})
+  .scaleToObject(1, {considerTokenScale: true})
+  .duration(600)
+
+.animation()
+  .on(token)
+  .opacity(1)
+  .delay(600)
+
+  .playsound()
+  .file("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-buff-short-6.mp3")
+  .fadeInAudio(500)
+  .fadeOutAudio(500)
+
+  .playsound()
+  .file("modules/lancer-weapon-fx/soundfx/Axe_swing.ogg")
+  .fadeInAudio(500)
+  .fadeOutAudio(500)
+
+this.effect()
+.file("jb2a.impact.ground_crack.white.01")
+.scaleToObject(3)
+.atLocation(target)
+.randomRotation()
+.belowTokens()
+
+this.effect()
+.delay(200)
+.file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
+.scaleIn(0, 100, {ease: "easeOutCubic"}) 
+.scaleToObject(1.75)
+.opacity(0.5)
+.atLocation(target)
+.belowTokens()
+
+this.effect()
+.delay(200)
+.file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
+.scaleIn(0, 100, {ease: "easeOutCubic"}) 
+.scaleToObject(2.5)
+.opacity(0.5)
+.atLocation(target)
+.belowTokens()
+
+this.effect()
+.from(target)
+.atLocation(target)
+.fadeIn(200)
+.fadeOut(500)
+.loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
+.scaleToObject(target.document.texture.scaleX)
+.duration(3000)
+.opacity(0.25)
+            return this
+        }
+
+        project({caster, target }={}){ 
+            super.projectCommon({caster:caster,target:target})
+            //play sequencer logic
+           return this;
+         }
+
+   
+       burst({affected,persist=true}={})
+       {
+            super.burstCommon({affected:affected})
+.file("jb2a.ground_cracks.orange.01")
+.scaleToObject(1.2)
+.fadeIn(600)
+.opacity(1)
+.belowTokens()
+.scaleIn(0, 60, {ease: "easeOutCubic"})
+.filter("ColorMatrix", { hue: 0 })
+.fadeOut(500)
+.delay(3000)
+.duration(8000)
+
+super.burstCommon()
+  .file("jb2a.sacred_flame.target.yellow")
+  .scaleToObject(1.5)
+  .playbackRate(1)
+  .delay(800)
+  .zIndex(3)
+  .aboveLighting()
+  .waitUntilFinished(-3000)
+
+super.burstCommon()
+.file("jb2a.template_circle.out_pulse.02.burst.yellowwhite")
+.scaleToObject (1.5)
+.scaleIn(0, 500, {ease: "easeOutQuint"})
+.zIndex(2)
+            return this
+        }
+
+        burstheal({affected,persist=true}={})
+       {
+            super.bursthealCommon({affected:affected})
+.file("jb2a.template_circle.out_pulse.02.burst.yellowwhite")
+.scaleToObject (1.5)
+.scaleIn(0, 500, {ease: "easeOutQuint"})
+.zIndex(2)
+            return this
+        }
+       line({affected}={}) {
+
+const template = canvas.templates.placeables.at(-1).document;
+
+const lineTemplate = canvas.templates.placeables.at(-1).document;
+
+const start = { x: lineTemplate.data.x, y: lineTemplate.data.y };
+            
+            super.lineCommon({affected:affected})
+    this.effect()
+  .file("jb2a.sacred_flame.target.yellow")
+  .atLocation(start) 
+  .scaleToObject(3.5)
+  .playbackRate(1)
+  .aboveLighting()
+  .zIndex(3)
+
+this.effect()
+.file("jb2a.eldritch_blast.yellow")
+.atLocation(start)
+.spriteScale(0.5)
+.stretchTo(template)
+.aboveLighting()
+.delay(1200)
+.fadeIn(50)
+.fadeOut(50)
+    
+            return this;
+        }
+       cone({affected} = {}) {
+            super.coneCommon({affected:affected})
+            //play sequencer logic
+            return this;
+        }
+    
+        affectAffliction({affected}={})
+        {
+            this.affectDamage({affected:affected})
+        .delay(300)
+        .file("jb2a.bless.400px.loop.yellow")
+        .attachTo(this.affected, { cacheLocation: true, offset: { y: 0 }, gridUnits: true, bindAlpha: false })
+        .scaleToObject(2, { considerTokenScale: true })
+        .fadeIn(1000)
+        .fadeOut(500)
+        .opacity(0.8)
+        .belowTokens()
+        .persist()
+            return this;
+        }
+
+        affectAura({affected, duration=1, persist=false, scaleToObject = 1, spriteOffest={x:0, y:0}}={}){
+            super.affectCommon({affected:affected})
+            //play sequencer logic
+            return this;
+        }
+
+        affectConcealment({affected}={})
+        {
+            this.affectAura({affected:affected, persist:true})
+            //play sequencer logic
+            return this;
+        }
+        
+        affectDamage({affected = this.affected, repeats=1}={} ){ 
+            this.affectCommon({affected: affected})
+                .from(this.affected)
+                .fadeIn(200)
+                .fadeOut(500)
+                .delay(800)
+                .loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
+                .scaleToObject(this.affected.document.texture.scaleX)
+                .duration(3000)
+                .opacity(0.25)
+  
+          super.affectCommon()
+          .file("jb2a.sacred_flame.target.yellow")
+          .scaleToObject(3)
+          .playbackRate(1)
+          .delay(800)
+          .zIndex(3)
+           return this;
+        }
+
+        affectHealing({affected = this.affected|| this.firstSelected}={}){
+             this.affectAura({affected:affected, persist:false})
+
+.pause(2000)
+
+super.affectCommon()
+.from(this.affected)
+.fadeIn(200)
+.fadeOut(500)
+.delay(800)
+.loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
+.scaleToObject(this.affected.document.texture.scaleX)
+.duration(3000)
+.opacity(0.25)
+  
+super.affectCommon()
+.file("jb2a.cure_wounds.400px.blue")
+.scale(0.8)
+.belowTokens()
+
+super.affectCommon()
+.file("jb2a.detect_magic.circle.yellow")
+.scaleToObject(1.6)
+.mask()
+.delay(500)
+
+.playSound("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-buff-long-4.mp3")
+            return this;
+        }
+
+        affectIllusion({affected = this.affected}={})
+        {
+            this.affectAura({affected:affected, persist:true})
+            .pause(1000)
+            //add extra custom sequencer logic
+            super.affectIllusion({affected:affected})
+
+            return this;
+        }
+
+        affectMindControl({affected = this.affected}={}){
+             this.affectAura({affected, scaleToObject:.6 , spriteOffest:{x:0, y:-30} , persist:true})
+             //add extra custom sequencer logic
+            .pause(2000)
+            super.affectMindControl(affected)
+            return this
+        }
+
+        affectWeaken({affected = this.affected}={}){
+             this.affectAura({affected,  persist:true})
+                //add extra custom sequencer logic
+                .pause(1000)
+                super.affectWeaken(affected)
+            return this
+        }
+    
        /* castCone({affected, caster}={}){
             return this
         }*/
