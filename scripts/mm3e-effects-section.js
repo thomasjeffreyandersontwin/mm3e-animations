@@ -36,6 +36,13 @@ Hooks.on("ready", () => {
 
     }
 
+    on(inObject) {
+        this.logMethodCall('on', inObject);
+        this._effect = this._effect ? this._effect : this.effect();
+        this._effect.on(inObject);
+        return this;
+    }
+
     initalizeRandomNumbers(){
         this.num = Math.floor(Math.random() * 2);
         this.mirrorX;
@@ -457,32 +464,31 @@ Hooks.on("ready", () => {
     }
 
     /*movement helpers --------------------------------------------------------------------------*/
-    startMovement(token=this.affected) {
+    startMovement() {
         this.tokenAnchor = {
-            x: token.document.x,
-            y: token.document.y,
+            x: this.affected.document.x,
+            y: this.affected.document.y,
             YdistanceTravelled:0,
             XdistanceTravelled:0,
-            rotation: token.document.rotation
+            rotation: this.affected.document.rotation
         }
         this.moving = true;
         this._effect = this._effect ? this._effect : this.effect();
-        this._effect.effect().animation().on(token).opacity(0)
+        this._effect.effect().delay(1000).animation().on(this.affected).opacity(0)
         return this;
     }
-    endMovement(token=this.affected) {
+    endMovement(position) {
         this._effect = this._effect ? this._effect : this.effect();
         this._effect.thenDo( () => {
-            token.document.update({
-                rotation: token.document.rotation + this.tokenAnchor.rotation
+            this.affected.document.update({
+                rotation: this.affected.document.rotation + this.tokenAnchor.rotation
             });
-        }
-        )
-
-        this._effect.effect().animation().on(token).teleportTo({
-            x: this.tokenAnchor.x,
-            y: this.tokenAnchor.y
-        }).opacity(1)
+        })
+        this._effect.effect().animation().on(this.affected).teleportTo({
+                x: position.x,
+                y: position.y
+            }).opacity(1)
+        
         return this;
     }
 
@@ -524,6 +530,16 @@ Hooks.on("ready", () => {
         return this.moveSprite(token, "right", distance, duration, ease, speed)
     }
 
+    moveTowardPosition({affected = this.affected, duration=1500, position})
+    {
+        this.animation()
+        .on(affected)
+        .duration(duration)
+        .moveTowards(position)//, { relativeToCenter: true })
+    	.waitUntilFinished(0)
+        return this
+    }
+
     moveSprite(token, position, distance, duration, ease, speed) {
         this._effect = this._effect ? this._effect : this.effect();
 
@@ -552,6 +568,27 @@ Hooks.on("ready", () => {
         return this
     }
 
+    float(height)
+    {
+        this.from(this.affected)
+        .attachTo(this.affected, { bindAlpha: false, followRotation: true, locale: true })
+        .scaleToObject(1, { considerTokenScale: true })
+        .opacity(1)
+        .animateProperty("sprite", "position.y", { from: 0, to: -height, duration: 500, ease: "easeOutBack" })
+        .loopProperty("sprite", "position.y", { from:-50, to: -(height/2), duration: 500, pingPong: true, delay: 1000 })
+        .zIndex(2)
+        .persist()
+        return this
+    }
+
+    land(height){
+        this.animateProperty("sprite", "position.y", { from: -height, to: 0, duration: 500, ease: "easeOutBack" })
+         
+        .thenDo(() => {
+           Sequencer.EffectManager.endEffects({ name: "Fly", object: this.affected });
+        })
+        return this
+    }
     loopLeft({token=this.affected, distance, duration, speed=100, ease="easeInOutCubic", pause=true}={}) {
         return this.loopSprite(token, "left", distance, duration, ease, speed, pause)
     }
@@ -741,6 +778,14 @@ Hooks.on("ready", () => {
         this._effect = this._effect ? this._effect : this.effect();
         this._effect.file(filePath);
         return this;
+    }
+
+    opacity(inO){
+             this.logMethodCall('opacity', inO);
+        this._effect = this._effect ? this._effect : this.effect();
+        this._effect.opacity(inO);
+        return this;
+    
     }
 
     scaleToObject(scale) {
@@ -1382,35 +1427,6 @@ Hooks.on("ready", () => {
             .playSound('modules/mm3e-animations/sounds/Combat/Melee%20Natural/melee-hit-1.mp3')
         }
 
-        affectHealing({affected = this.firstSelected}={}){
-
-            this.affectCommon({affected:affected})
-            .healing()
-            return this;
-        }
-        healing(){
-            this.file('jb2a.healing_generic.200px.yellow02')
-            .playSound('modules/mm3e-animations/sounds/Spells/Buff/spell-buff-long-3.mp3')
-            return this;
-        }
-
-        affectIllusion({affected = this.affected}={})
-        {
-            this. affectCommon({affected:affected})
-            .illusion()
-            return this;
-        }
-        illusion(){
-            return this .file('jb2a.markers.stun.dark_teal.02')
-            .filter("ColorMatrix", { saturate: 0, brightness:.5 , hue: 200  })
-            .scaleToObject(1)
-            .spriteOffset({x:0, y:-25})
-            .belowTokens(true)
-            .persist(true)
-            .playSound('modules/mm3e-animations/sounds/action/powers/Seers_AuraVoicesL_Loop.ogg')
-            return this
-        }
-
         affectDeflection({affected = this.affected}={})
         {
             this.affectCommon({affected:affected})
@@ -1441,6 +1457,60 @@ Hooks.on("ready", () => {
             return this
         }
 
+        castFlight({affected = this.affected, position}={}) {
+            this.affectCommon({affected:affected})
+            return this.startFlight(position)
+        }
+
+        affectFlight({affected = this.affected, position}={}){
+            this.affectCommon({affected:affected})
+            return this.endFlight(position)
+        }
+        startFlight(position){
+            this.name("Fly")
+            .startMovement()
+            .float(50)
+          //  this.endFlight(position)
+            return this
+        }
+
+        endFlight(position){
+            this.moveTowardPosition({position:position, duration: 2500})
+            .land(50)
+            .endMovement(position)
+            return this
+        }
+
+
+        affectHealing({affected = this.firstSelected}={}){
+
+            this.affectCommon({affected:affected})
+            .healing()
+            return this;
+        }
+        healing(){
+            this.file('jb2a.healing_generic.200px.yellow02')
+            .playSound('modules/mm3e-animations/sounds/Spells/Buff/spell-buff-long-3.mp3')
+            return this;
+        }
+
+        affectIllusion({affected = this.affected}={})
+        {
+            this. affectCommon({affected:affected})
+            .illusion()
+            return this;
+        }
+        illusion(){
+            return this .file('jb2a.markers.stun.dark_teal.02')
+            .filter("ColorMatrix", { saturate: 0, brightness:.5 , hue: 200  })
+            .scaleToObject(1)
+            .spriteOffset({x:0, y:-25})
+            .belowTokens(true)
+            .persist(true)
+            .playSound('modules/mm3e-animations/sounds/action/powers/Seers_AuraVoicesL_Loop.ogg')
+            return this
+        }
+
         affectInsubstantial({affected = this.affected}={})
         {
             return this.affectCommon({affected:affected})
@@ -1459,6 +1529,44 @@ Hooks.on("ready", () => {
                 }, 3000); // Delay of 1000 milliseconds (1 second)
             }
         }
+
+        
+        affectLeap({affected = this.affected}={}){
+            this.affectCommon({affected:affected})
+            return this.leap(position)
+        }
+
+        leap({token = this.affected, position, height=1.25}={}){
+            this.hideToken(token)
+            //.loopUp({distance:[50,0,50], duration:500, duration: 500, delay:0, pause:false})
+            .loopProperty("sprite", "position.y", { values: [50, 0, 50], duration: 500})
+            .loopScaleHeight({from:1,to:height, duration: 500, pingPong: true, delay:0})
+            .loopScaleWidth({from:1,to:height, duration: 500, pingPong: true, delay:0})
+            .moveTowards(position, {rotate:false})
+            .anchor({ x: 0.5, y: 1.5 })
+            .zIndex(2)
+    
+        .mm3eEffect()
+            .from(token)
+            .opacity(0.5)
+            .scale(0.9)
+            .belowTokens()
+            .duration(1000)
+            .anchor({ x: 0.5, y: 0.5 })
+            .filter("ColorMatrix", { brightness: -1 })
+            .filter("Blur", { blurX: 5, blurY: 10 })
+            .moveTowards(position, {rotate:false})
+            .zIndex(2)
+            .waitUntilFinished()
+    
+        .teleportTo(position)
+        .snapToGrid()
+        .waitUntilFinished()
+        .showToken(token)
+        
+        return this
+        }
+
 
         affectMindControl({affected = this.affected}={})
         { 
@@ -1516,6 +1624,82 @@ Hooks.on("ready", () => {
         {
             return this.affectCommon({affected:affected})
         }*/
+        
+        affectSpeed({affected = this.affected}={}){
+            return this.affectCommon({affected:affected})
+            .speed()
+        }
+        speed({caster, position}={}){
+            if(!position){
+                throw new Error("Position is required for speed")
+            }
+            this.castCommon({caster:caster, affected:caster})
+            .animation()
+                .on(this.caster)
+                .fadeOut(0)
+                .waitUntilFinished()
+            .effect()
+                .file(this.caster.document.texture.src) 
+                .scale(this.caster.document.texture.scaleX) 
+                .opacity(1) 
+                .from(this.caster)
+                .atLocation(this.caster)
+                .moveSpeed(1000)
+                .moveTowards(position, { ease: "easeInOutCubic", rotate: true })
+                .duration(300) 
+                .wait(100)
+            
+            this.descriptorSpeed(position)
+
+            .animation()
+                .on(this.caster)
+                .teleportTo(position)
+                .snapToGrid()
+                .offset({ x: -1, y: -1 })
+                .waitUntilFinished(-1800) 
+        
+            .animation()
+                .on(this.caster)
+                //  .fadeIn(100)
+                .opacity(1)
+                .waitUntilFinished(-1800)
+
+            return this
+
+        }
+
+        affectTeleport({affected = this.affected}={}){
+            return this.affectCommon({affected:affected})
+            .teleport()
+        }
+        teleport({caster:caster, position}={}){
+            if(!position){
+                throw new Error("Position is required for teleport")
+            }
+            super.castCommon({caster:caster, affected:caster})
+            .animation()
+                .on(this.caster)
+                .teleportTo(position)
+                .snapToGrid()
+                .fadeOut(50)
+                .fadeIn(50)
+                .offset({ x: -1, y: -1 })
+                .waitUntilFinished(100)
+
+            super.castCommon()
+                .file(`jb2a.swirling_leaves.complete.02.${leaves}`)
+                .scaleToObject(2.25)
+                .fadeOut(300)
+                .filter("ColorMatrix", { saturate: saturate })
+                .animateProperty("sprite", "width", { from: token.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
+                .animateProperty("sprite", "height", { from: token.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
+                .animateProperty("sprite", "width", { from: 0, to: token.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
+                .animateProperty("sprite", "height", { from: 0, to: token.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
+                .playbackRate(2)
+                .belowTokens()
+                .tint(tint)
+            .pause(1000)
+        }
 
         affectTransform({affected = this.affected, image=this.getClass().getName()+'.webm'}={})
         {
@@ -1594,122 +1778,7 @@ Hooks.on("ready", () => {
             return this;
         }
 
-        startFly({caster}={}){
-            this.castCommon({caster:caster, affected:caster})
-                .loopUp({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
-                .file("animated-spell-effects-cartoon.energy.16")
-                .rotate(90)
-                .scaleToObject(1)
-                .filter("ColorMatrix" , {
-                     hue: 500, 
-                     contrast: 0, 
-                     saturate: 0,
-                     brightness: 1
-                 })
-                .repeatEffect()    //inherit last effect with any modifications we want below
-                    .spriteOffset({x:0, y: 25})
-                    .playSound("modules/mm3e-animations/sounds/action/powers/whoosh9.ogg")
-                .repeatEffect()   //inherit last effect with any modifications we want below
-                    .spriteOffset({x:0, y: -25})
-                    .pause(900)
-                return this
-        }
-        endFly({caster:caster}={}){
-             this.castCommon({caster:caster, affected:caster})
-                .loopDown({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
- 
-                .castCommon()
-                .file("animated-spell-effects-cartoon.energy.16")
-                .rotate(270)
-                .scaleToObject(1)
-                .filter("ColorMatrix" , {
-                     hue: 500, 
-                     contrast: 0, 
-                     saturate: 0,
-                     brightness: 1
-                 })
-            .repeatEffect()   //inherit last effect with any modifications we want below
-                .spriteOffset({x:0, y: 25})
-            .repeatEffect()   //inherit last effect with any modifications we want below
-                .playSound("modules/mm3e-animations/sounds/action/powers/Whoosh2.ogg")
-                .spriteOffset({x:0, y: -25})
-                .pause(300)
-            .endMovement()
-            return this;
-        }
 
-        leap({token = this.affected, position, height=1.25}={}){
-            if(!position){
-                throw new Error("Position is required for leap")
-            }
-            this.hideToken(token)
-            //.loopUp({distance:[50,0,50], duration:500, duration: 500, delay:0, pause:false})
-            .loopProperty("sprite", "position.y", { values: [50, 0, 50], duration: 500})
-            .loopScaleHeight({from:1,to:height, duration: 500, pingPong: true, delay:0})
-            .loopScaleWidth({from:1,to:height, duration: 500, pingPong: true, delay:0})
-            .moveTowards(position, {rotate:false})
-            .anchor({ x: 0.5, y: 1.5 })
-            .zIndex(2)
-    
-        .mm3eEffect()
-            .from(token)
-            .opacity(0.5)
-            .scale(0.9)
-            .belowTokens()
-            .duration(1000)
-            .anchor({ x: 0.5, y: 0.5 })
-            .filter("ColorMatrix", { brightness: -1 })
-            .filter("Blur", { blurX: 5, blurY: 10 })
-            .moveTowards(position, {rotate:false})
-            .zIndex(2)
-            .waitUntilFinished()
-    
-        .teleportTo(position)
-        .snapToGrid()
-        .waitUntilFinished()
-        .showToken(token)
-        
-        return this
-        }
-
-        speed({caster, position}={}){
-            if(!position){
-                throw new Error("Position is required for speed")
-            }
-            this.castCommon({caster:caster, affected:caster})
-            .animation()
-                .on(this.caster)
-                .fadeOut(0)
-                .waitUntilFinished()
-            .effect()
-                .file(this.caster.document.texture.src) 
-                .scale(this.caster.document.texture.scaleX) 
-                .opacity(1) 
-                .from(this.caster)
-                .atLocation(this.caster)
-                .moveSpeed(1000)
-                .moveTowards(position, { ease: "easeInOutCubic", rotate: true })
-                .duration(300) 
-                .wait(100)
-            
-            this.descriptorSpeed(position)
-
-            .animation()
-                .on(this.caster)
-                .teleportTo(position)
-                .snapToGrid()
-                .offset({ x: -1, y: -1 })
-                .waitUntilFinished(-1800) 
-        
-            .animation()
-                .on(this.caster)
-              //  .fadeIn(100)
-                .opacity(1)
-                .waitUntilFinished(-1800)
-
-            return this
-
-        }
         descriptorSpeed(){
             return this
         }
@@ -1720,34 +1789,7 @@ Hooks.on("ready", () => {
             }
         }
 
-        teleport({caster:caster, position}={}){
-            if(!position){
-                throw new Error("Position is required for teleport")
-            }
-            super.castCommon({caster:caster, affected:caster})
-            .animation()
-                .on(this.caster)
-                .teleportTo(position)
-                .snapToGrid()
-                .fadeOut(50)
-                .fadeIn(50)
-                .offset({ x: -1, y: -1 })
-                .waitUntilFinished(100)
-
-            super.castCommon()
-                .file(`jb2a.swirling_leaves.complete.02.${leaves}`)
-                .scaleToObject(2.25)
-                .fadeOut(300)
-                .filter("ColorMatrix", { saturate: saturate })
-                .animateProperty("sprite", "width", { from: token.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
-                .animateProperty("sprite", "height", { from: token.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
-                .animateProperty("sprite", "width", { from: 0, to: token.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
-                .animateProperty("sprite", "height", { from: 0, to: token.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
-                .playbackRate(2)
-                .belowTokens()
-                .tint(tint)
-            .pause(1000)
-        }
+       
     }
     class TemplatedDescriptorEffect extends PowerEffectSection{
         constructor(inSequence) {
@@ -1773,26 +1815,27 @@ Hooks.on("ready", () => {
 
         castBurrow({caster, affected,position}={}) {
             super.castCommon({caster:caster, affected:affected})
-            return this.descriptorBurrow(position)
+            return this.descriptorCastBurrow(position)
         }
 
         castLeap({caster, affected,position}={}){
             super.castCommon({caster:caster, affected:affected})
-            return this.descriptorLeap(position)
+
+            return this.descriptorCastLeap(position)
         }
         castTeleport({caster, affected,position}={}){
             super.castCommon({caster:caster, affected:affected})
-            return this.descriptorTeleport(position)
+            return this.descriptorCastTeleport(position)
         }
         castSpeed({caster, affected,position}={}){
             super.castCommon({caster:caster, affected:affected})
-            return this.descriptorSpeed(position)
+            return this.descriptorCastSpeed(position)
         }
-        castFlight({caster, affected,position}={}){
+        castFlight({caster, affected,position}={}) {
             super.castCommon({caster:caster, affected:affected})
-            return this.descriptorFlight(position)
-
+            return this.descriptorCastFlight(position)
         }
+       
 
         project({caster, affected}={}){
             super.projectCommon({caster:caster, affected:affected})
@@ -1900,9 +1943,10 @@ Hooks.on("ready", () => {
 
         affectFlight({affected, position}={}){
             super.affectCommon({affected:affected})
-            super.startFly({caster:this.affected})
-            this.descriptorFlight()
-            this.affectAura({affected:this.caster})
+            super.startFlight(position)
+            super.endFlight(position)
+             super.affectCommon({affected:affected})
+            this.descriptorFlight(position)
             return this
         }
         descriptorFlight(){
@@ -2070,21 +2114,6 @@ Hooks.on("ready", () => {
         descriptorWeaken(){
             super.weaken({affected:this.affected})
             return this
-        }
-
-     
-
-        startFly({caster}={}){
-            this.cast({caster:caster})
-            super.startFly({caster:this.caster})
-            
-            return this
-        }
-        
-        endFly({caster}={}){
-            this.cast({caster:caster})
-            super.endFly({caster:this.caster})
-            return this;
         }
 
         leaping({caster, position, height}={}){
@@ -2848,7 +2877,6 @@ Hooks.on("ready", () => {
                .zIndex(5)
             return this
          }
-        
         descriptorCast(){ 
                 this.rotateTowards(this.affected)
                     
@@ -2867,11 +2895,105 @@ Hooks.on("ready", () => {
                 .shake({duration: 5000, strength: 2, rotation: false, fadeOutDuration: 1000 })
               return this
          }
-            
-        descriptorMeleeCast(){
-             return this
-        }
+         descriptorMeleeCast(){
+            return this
+       }
+         
+        descriptorCastBurrow(position){
 
+            this.delay(500)
+                .file("jb2a.extras.tmfx.outpulse.circle.03.fast")
+                .scaleToObject(2)
+                .belowTokens()
+                .opacity(0.5)
+                .duration(2000)
+                .pause(800)
+            super.affectCommon()
+                .file("jb2a.explosion.04.orange")
+                .fadeOut(5000)
+                .anchor({x:0.2})
+                .scaleToObject(2)
+                .duration(1000)
+                .rotateTowards(position, { cacheLocation: true })
+                .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 3000})
+                .scaleOut(0.175, 5000, {ease: "easeOutQuint", delay: -3000})
+                .zIndex(3)
+                .pause(1000)
+            super.affectCommon()
+                .file("jb2a.impact.ground_crack.white.03")
+             //   .anchor({x: 0.1})
+                .rotateTowards(position, {cacheLocation: true})
+                .scaleToObject(2)
+                .belowTokens()
+                .opacity(1)
+            super.affectCommon()
+                .file("-Assets/Images/Effects/CrackedEarthWEBP.webp")
+                .belowTokens()
+                .anchor({x: -0.2})
+                .size(2, { gridUnits: true })
+                .rotateTowards(position, { cacheLocation: true })
+                .delay(300)
+                .duration(8000)
+                .fadeOut(2000)
+                .opacity(1)
+                .zIndex(1)
+                .canvasPan()
+                .delay(200)
+                .shake({ duration: 800, strength: 5, rotation: false })
+                .canvasPan()
+                .delay(1000)
+                .shake({ duration: 5000, strength: 2, rotation: false, fadeOutDuration: 1000 })
+            super.affectCommon()
+                .file("blfx.spell.template.line.crack1")
+                .delay(200)
+                .zIndex(5)
+                .stretchTo(position)
+                .pause(500)
+            
+            super.affectCommon()
+                .file("jb2a.impact.earth.01.browngreen")
+                .scaleToObject(4)
+                .fadeOut(1000, {ease: "easeInExpo"})
+                .zIndex(5)
+            super.affectCommon()
+                .file("jb2a.burrow.out.01.brown.1")
+                .scaleToObject(4)
+                .fadeOut(1000, {ease: "easeInExpo"})
+                .zIndex(5)  
+                .pause(100)
+            super.affectCommon()
+                .delay(100)
+                .file("animated-spell-effects-cartoon.smoke.11")
+                .playbackRate(0.65)
+                .fadeIn(250)
+                .fadeOut(1500)
+                .scaleToObject(4)
+                .randomRotation()
+                .opacity(0.5)
+                .filter("ColorMatrix", { brightness: 0.8 })
+                .zIndex(4)
+            super.affectCommon()
+                .file("jb2a.particles.outward.orange.01.03")
+                .fadeIn(250, {ease: "easeOutQuint"})
+                .scaleIn(0, 200, {ease: "easeOutCubic"})
+                .fadeOut(5000, {ease: "easeOutQuint"})
+                .opacity(1)
+                .filter("ColorMatrix", { saturate: 0.75, brightness: 0.85 })
+                .randomRotation()
+                .scaleToObject(4)
+                .duration(10000)
+            return this;
+        }
+        descriptorCastFlight({caster, affected}={}){
+           
+        }
+        descriptorCastLeap(position){}
+       
+        descriptorCastSpeed(position){}
+        descriptorCastTeleport(position){}
+    
+            
+       
         earthBuff(){
             this.delay(500)
               .file("jb2a.extras.tmfx.outpulse.circle.03.fast")
@@ -2950,7 +3072,6 @@ Hooks.on("ready", () => {
               .duration(10000)
              return this
         }
-
         projectEarthBolt({caster, affected}={})
         {
             super.projectCommon({caster, affected})
@@ -2993,7 +3114,7 @@ Hooks.on("ready", () => {
                   .zIndex(0.01)
                   .opacity(0.6)
                   .mask()
-         }
+        }
         descriptorLine() {
             this.file("blfx.spell.template.line.crack1")
                 .atLocation(this.templateStart)
@@ -3195,7 +3316,6 @@ Hooks.on("ready", () => {
                 .zIndex(4)
             return this
         }
-
         burstAffliction({caster, affected}={}){
             super.burstCommon({caster:caster, affected:afflicted})
             .file("jb2a.impact.earth.01.browngreen")
@@ -3250,6 +3370,7 @@ Hooks.on("ready", () => {
 
             return this;
         }
+
         descriptorAura(){
          
             return this
@@ -3327,109 +3448,7 @@ Hooks.on("ready", () => {
                              
             return this;
         }
-        descriptorCastBurrow(position){
 
-            this.delay(500)
-                .file("jb2a.extras.tmfx.outpulse.circle.03.fast")
-                .scaleToObject(2)
-                .belowTokens()
-                .opacity(0.5)
-                .duration(2000)
-                .pause(800)
-            super.affectCommon()
-                .file("jb2a.explosion.04.orange")
-                .fadeOut(5000)
-                .anchor({x:0.2})
-                .scaleToObject(2)
-                .duration(1000)
-                .rotateTowards(position, { cacheLocation: true })
-                .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 3000})
-                .scaleOut(0.175, 5000, {ease: "easeOutQuint", delay: -3000})
-                .zIndex(3)
-                .pause(1000)
-            super.affectCommon()
-                .file("jb2a.impact.ground_crack.white.03")
-             //   .anchor({x: 0.1})
-                .rotateTowards(position, {cacheLocation: true})
-                .scaleToObject(2)
-                .belowTokens()
-                .opacity(1)
-            super.affectCommon()
-                .file("-Assets/Images/Effects/CrackedEarthWEBP.webp")
-                .belowTokens()
-                .anchor({x: -0.2})
-                .size(2, { gridUnits: true })
-                .rotateTowards(position, { cacheLocation: true })
-                .delay(300)
-                .duration(8000)
-                .fadeOut(2000)
-                .opacity(1)
-                .zIndex(1)
-                .canvasPan()
-                .delay(200)
-                .shake({ duration: 800, strength: 5, rotation: false })
-                .canvasPan()
-                .delay(1000)
-                .shake({ duration: 5000, strength: 2, rotation: false, fadeOutDuration: 1000 })
-            super.affectCommon()
-                .file("blfx.spell.template.line.crack1")
-                .delay(200)
-                .zIndex(5)
-                .stretchTo(position)
-                .pause(500)
-            
-            super.affectCommon()
-                .file("jb2a.impact.earth.01.browngreen")
-                .scaleToObject(4)
-                .fadeOut(1000, {ease: "easeInExpo"})
-                .zIndex(5)
-            super.affectCommon()
-                .file("jb2a.burrow.out.01.brown.1")
-                .scaleToObject(4)
-                .fadeOut(1000, {ease: "easeInExpo"})
-                .zIndex(5)  
-                .pause(100)
-            super.affectCommon()
-                .delay(100)
-                .file("animated-spell-effects-cartoon.smoke.11")
-                .playbackRate(0.65)
-                .fadeIn(250)
-                .fadeOut(1500)
-                .scaleToObject(4)
-                .randomRotation()
-                .opacity(0.5)
-                .filter("ColorMatrix", { brightness: 0.8 })
-                .zIndex(4)
-            super.affectCommon()
-                .file("jb2a.particles.outward.orange.01.03")
-                .fadeIn(250, {ease: "easeOutQuint"})
-                .scaleIn(0, 200, {ease: "easeOutCubic"})
-                .fadeOut(5000, {ease: "easeOutQuint"})
-                .opacity(1)
-                .filter("ColorMatrix", { saturate: 0.75, brightness: 0.85 })
-                .randomRotation()
-                .scaleToObject(4)
-                .duration(10000)
-            return this;
-        }
-        descriptorCastLeap(position){}
-        descriptorCastTeleport(position){}
-        descriptorCastSpeed(position){}
-        descriptorCastFlight(position){}
-    
-
-        castLeap({caster, affected}={}){
-            super.castCommon({caster:caster, affected:affected})
-        }
-        castTeleport({caster, affected}={}){
-            super.castCommon({caster:caster, affected:affected})
-        }
-        castSpeed({caster, affected}={}){
-            super.castCommon({caster:caster, affected:affected})
-        }
-        castFLight({caster, affected}={}){
-            super.castCommon({caster:caster, affected:affected})
-        }
         descriptorBurrow(){
             this.pause(1000)
             .file("jb2a.impact.earth.01.browngreen")
@@ -3502,72 +3521,67 @@ Hooks.on("ready", () => {
             return this
 
         }
-        descriptorLeap(){}
-        descriptorTeleport(){}
-        descriptorSpeed(){}
-        descriptorFlight(){}
-
         descriptorDamage(){
-              this.file("jb2a.ground_cracks.dark_red.01")
-                .belowTokens()
-                .anchor({x: -0.2})
-                .size(2, { gridUnits: true })
-             
-                .rotateTowards(this.affected, { cacheLocation: true })
-                .delay(300)
-                .duration(3000)
-                .fadeOut(2000)
-                .opacity(1)
-                .zIndex(1)
-                
-            .canvasPan()
-                .delay(200)
-                .shake({ duration: 800, strength: 5, rotation: false })
-                
-            .canvasPan()
-                .delay(200)
-                .shake({ duration: 5000, strength: 2, rotation: false, fadeOutDuration: 1000 })
-                
-            super.affectCommon() 
-                .delay(500)
-                .file("jb2a.extras.tmfx.outpulse.circle.03.fast")
-                .scaleToObject(2)
-                .belowTokens()
-                .opacity(0.1)
-                .duration(600)
-            
-            super.affectCommon()
-                .file("jb2a.impact.white.0")
-                .scaleIn(0, 500, { ease: "easeOutCubic" })
-                .belowTokens()
-                .scaleToObject(1.8)
-                .opacity(0.5)
-            
-            super.affectCommon()
-                .file("jb2a.impact.boulder.01")
-                .belowTokens()
-                .scaleToObject(2.5)
-                .opacity(1)
-            
-            super.affectCommon()
-                .file("animated-spell-effects-cartoon.smoke.11")
-                .playbackRate(0.65)
-                .fadeIn(250)
-                .fadeOut(1500)
-                .scaleToObject(3.5)
-                .randomRotation()
-                .opacity(0.5)
-                .filter("ColorMatrix", { brightness: 0.8 })
-                .zIndex(4)
-            super.affectCommon()
-              .from(this.affected)
-              .fadeIn(200)
-              .fadeOut(500)
-              .loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
-              .scaleToObject(this.affected.document.texture.scaleX)
-              .duration(6000)
-              .opacity(0.25)
-            return this;
+            this.file("jb2a.ground_cracks.dark_red.01")
+              .belowTokens()
+              .anchor({x: -0.2})
+              .size(2, { gridUnits: true })
+           
+              .rotateTowards(this.affected, { cacheLocation: true })
+              .delay(300)
+              .duration(3000)
+              .fadeOut(2000)
+              .opacity(1)
+              .zIndex(1)
+              
+          .canvasPan()
+              .delay(200)
+              .shake({ duration: 800, strength: 5, rotation: false })
+              
+          .canvasPan()
+              .delay(200)
+              .shake({ duration: 5000, strength: 2, rotation: false, fadeOutDuration: 1000 })
+              
+          super.affectCommon() 
+              .delay(500)
+              .file("jb2a.extras.tmfx.outpulse.circle.03.fast")
+              .scaleToObject(2)
+              .belowTokens()
+              .opacity(0.1)
+              .duration(600)
+          
+          super.affectCommon()
+              .file("jb2a.impact.white.0")
+              .scaleIn(0, 500, { ease: "easeOutCubic" })
+              .belowTokens()
+              .scaleToObject(1.8)
+              .opacity(0.5)
+          
+          super.affectCommon()
+              .file("jb2a.impact.boulder.01")
+              .belowTokens()
+              .scaleToObject(2.5)
+              .opacity(1)
+          
+          super.affectCommon()
+              .file("animated-spell-effects-cartoon.smoke.11")
+              .playbackRate(0.65)
+              .fadeIn(250)
+              .fadeOut(1500)
+              .scaleToObject(3.5)
+              .randomRotation()
+              .opacity(0.5)
+              .filter("ColorMatrix", { brightness: 0.8 })
+              .zIndex(4)
+          super.affectCommon()
+            .from(this.affected)
+            .fadeIn(200)
+            .fadeOut(500)
+            .loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
+            .scaleToObject(this.affected.document.texture.scaleX)
+            .duration(6000)
+            .opacity(0.25)
+          return this;
         }
         descriptorDeflection(){
             this.deflectionAnimation="jb2a.bullet.Snipe.orange"
@@ -3699,6 +3713,7 @@ Hooks.on("ready", () => {
                 .file("modules/dnd5e-animations/assets/sounds/Spells/Whoosh/spell-whoosh-20.mp3")
                 .delay(1000)
         }
+        descriptorFlight(){}
         descriptorHealing(){
             this.initalizeRandomNumbers()
             super.affectCommon()
@@ -3873,6 +3888,31 @@ Hooks.on("ready", () => {
             .fadeOut(5000, {ease: "easeOutQuint"})
             .duration(10000)
         }
+        descriptorLeap(){}
+        descriptorProtection(){
+            this.earthBuff()
+              .file("jb2a.shield_themed.above.molten_earth.01.orange")
+              .playbackRate(1)
+              .scaleToObject()
+              .scale(1.8)
+              .fadeIn(500)
+              .rotateIn(180, 600, {ease: "easeOutCubic"})
+              .scaleIn(0, 600, {ease: "easeOutCubic"})
+              .loopProperty("sprite", "rotation", { from: 0, to: -360, duration: 10000})
+           //  .persist()
+          super.affectCommon()
+              .file("jb2a.shield_themed.above.molten_earth.03.orange")
+              .playbackRate(1)
+              .scaleToObject()
+              .scale(1.8)
+              .fadeIn(500)
+              .rotateIn(180, 600, {ease: "easeOutCubic"})
+              .scaleIn(0, 600, {ease: "easeOutCubic"})
+          //    .persist()
+          return this
+       }
+        descriptorSpeed(){}
+        descriptorTeleport(){}
         descriptorWeaken(){
              this.file("animated-spell-effects-cartoon.water.ball")
                 .playbackRate(1)
@@ -3887,28 +3927,7 @@ Hooks.on("ready", () => {
                // .persist()
                  return this
          }
-        descriptorProtection(){
-              this.earthBuff()
-                .file("jb2a.shield_themed.above.molten_earth.01.orange")
-                .playbackRate(1)
-                .scaleToObject()
-                .scale(1.8)
-                .fadeIn(500)
-                .rotateIn(180, 600, {ease: "easeOutCubic"})
-                .scaleIn(0, 600, {ease: "easeOutCubic"})
-                .loopProperty("sprite", "rotation", { from: 0, to: -360, duration: 10000})
-             //  .persist()
-            super.affectCommon()
-                .file("jb2a.shield_themed.above.molten_earth.03.orange")
-                .playbackRate(1)
-                .scaleToObject()
-                .scale(1.8)
-                .fadeIn(500)
-                .rotateIn(180, 600, {ease: "easeOutCubic"})
-                .scaleIn(0, 600, {ease: "easeOutCubic"})
-            //    .persist()
-            return this
-         }
+       
          /*
         
  
@@ -3930,16 +3949,9 @@ Hooks.on("ready", () => {
              return this
          }
  
-         descriptorMindControl(){
-             return this
-         }
- 
          descriptorNullify(){
              return this
          }
- 
-
- 
          descriptorTransform(){
              return this
          }
@@ -4380,7 +4392,7 @@ Hooks.on("ready", () => {
             .opacity(0.5)
        
             .belowTokens()
-            
+              
             super.affectCommon()
             .from(target)
             .fadeIn(200)
@@ -4389,6 +4401,7 @@ Hooks.on("ready", () => {
             .scaleToObject(target.document.texture.scaleX)
             .duration(1500)
             .opacity(0.25);
+            
             
             return this;
         }
@@ -4456,6 +4469,12 @@ Hooks.on("ready", () => {
                 .fadeIn(100)
                 .fadeOut(50)
         }
+        descriptorCast(){
+            return this.file("animated-spell-effects-cartoon.fire.19")
+                .playbackRate(1)
+                .scale(0.3)
+                .waitUntilFinished(-800)
+        }
 
         descriptorCastBurrow(position) { 
              let hue = -0
@@ -4499,17 +4518,76 @@ Hooks.on("ready", () => {
                 .stretchTo(position)
                 .tint(tint)
                 .filter("ColorMatrix", { hue: hue })
-                .zIndex(1)
+                .zIndex(1) 
                 .pause(300)
             return this
         }
-
-        descriptorCast(){
-            return this.file("animated-spell-effects-cartoon.fire.19")
+        descriptorCastFlight(position){
+            this.file("animated-spell-effects-cartoon.fire.spiral")
+            .randomSpriteRotation()
+            .playbackRate(1)
+            .scale(0.5)
+            super.castCommon()
+                .file("animated-spell-effects-cartoon.fire.118")
+                .anchor({ x: 0.5, y: 0.66 })
                 .playbackRate(1)
-                .scale(0.3)
-                .waitUntilFinished(-800)
+                .scale(0.5)
+           super.castCommon()
+                .file("jb2a.particle_burst.01.circle.yellow")
+                .filter("ColorMatrix", {hue: 0, contrast: 0.5, saturate: 0})
+                .opacity(0.8)
+                .tint("#dc7118")
+                .playbackRate(1.5)
+                .randomSpriteRotation()
+                .scaleToObject(3)
+                .waitUntilFinished(0)      
+            super.castCommon()
+                .file("jb2a.impact.fire.01.orange.0")
+                .size({ width: this.affected.document.width * 2.5, height: this.affected.document.width * 2.45 }, { gridUnits: true })
+                .belowTokens()
+                .filter("ColorMatrix", { hue: -10 })
+                .zIndex(1)
+                .pause(10)
+            .castCommon()
+                .file("animated-spell-effects-cartoon.smoke.105")
+                .opacity(1)
+                .scaleToObject(2)
+                .tint("c1f8f6")
+                .belowTokens() 
+             super.castCommon()
+             this.file("jb2a.gust_of_wind.default")
+                  .opacity(1)
+                  .tint("#1c1c1c")
+                  .scale(this.affected.w / canvas.grid.size)
+                  .stretchTo(position)
+                  .belowTokens()
+                  .zIndex(1)
+            
+            return this
         }
+        descriptorCastLeap(position){}
+        descriptorCastTeleport(position){}
+        descriptorCastSpeed(position){}
+        
+        descriptorMeleeCast(){
+            this.file("animated-spell-effects-cartoon.fire.19")
+               .playbackRate(1)
+               .scale(0.4)
+               
+           this.castCommon({rotation:false})
+               .file("animated-spell-effects-cartoon.fire.19")
+               .playbackRate(1)
+               .scale(0.4)
+               .delay(800)
+               .waitUntilFinished(-1200)
+               
+           this.castCommon({rotation:false})
+               .file("jb2a.flurry_of_blows.no_hit.yellow")
+               .stretchTo(this.affected)
+               .playbackRate(1)
+               .pause(800)
+           return this;
+       }
 
         projectDamage(){
             return super.projectCommon({affected:this.affected, caster:this.caster})
@@ -4518,7 +4596,6 @@ Hooks.on("ready", () => {
                 .scale(1.5)
                 .waitUntilFinished(-1000)
         }
-
         projectBolt({affected,caster}={}){
             return super.projectCommon({affected:affected, caster:caster})
                 .file("jb2a.fire_bolt.orange")
@@ -4527,8 +4604,6 @@ Hooks.on("ready", () => {
                 .duration(400)
                 .scale(1)
         }
-        
-    
         descriptorProject() {
           
           return this.file("animated-spell-effects-cartoon.fire.29")
@@ -4536,101 +4611,6 @@ Hooks.on("ready", () => {
             .playbackRate(1)
             .waitUntilFinished(-2000)
         }
-
-        descriptorBurrow(position){
-            this.file("jb2a.impact.earth.01.browngreen.0")
-            .atLocation(this.caster)
-            .scaleToObject(4)
-            .opacity(0.8)
-
-            super.affectCommon()
-            .file("jb2a.burrow.out.01.brown.1")
-            .atLocation(this.affected)
-            .opacity(0.8)
-            .belowTokens()
-            .scaleToObject(4)
-            .zIndex(1)
-
-            .animation()
-            .delay(1400)
-            .on(this.affected)
-            .fadeIn(200)
-
-
-            super.affectCommon()
-            .file("jb2a.ground_cracks.orange.01")
-            .atLocation(this.affected)
-            .opacity(0.9)
-            .scaleToObject(3)
-            .fadeIn(100)
-            .fadeOut(1000)
-            .duration(3000)
-            .belowTokens()
-            .waitUntilFinished(-2000)
-            return
-
-        }
-        descriptorCastLeap(position){}
-        descriptorCastTeleport(position){}
-        descriptorCastSpeed(position){}
-        descriptorCastFlight(position){}
-        descriptorLeap(){}
-        descriptorTeleport(){}
-        descriptorSpeed(){}
-        descriptorFlight(){}
-    
-        descriptorDamage() {
-            this.file("animated-spell-effects-cartoon.mix.fire earth explosion.06") // Explosion effect
-                .scale(0.8)
-                .fadeIn(300)
-                .fadeOut(300)
-            super.affectCommon()
-                .file(`jb2a.ground_cracks.orange.01`)
-                .scaleToObject(2)
-                .fadeIn(600)
-                .opacity(1)
-                .belowTokens()
-                .scaleIn(0, 600, {ease: "easeOutCubic"})
-                .filter("ColorMatrix", { hue: 0 })
-                .fadeOut(500)
-                .duration(8000)
-                
-            super.affectCommon()
-                .file("jb2a.impact.ground_crack.still_frame.01")
-                .scaleToObject(2)
-                .fadeIn(600)
-                .opacity(1)
-                .belowTokens()
-                .scaleIn(0, 600, {ease: "easeOutCubic"})
-                .filter("ColorMatrix", { hue: 0 })
-                .fadeOut(500)
-                .duration(12000)
-                
-                .canvasPan()
-                .shake({duration: 800, strength: 1, rotation: false })
-    
-            return this;
-        }
-        descriptorMeleeCast(){
-             this.file("animated-spell-effects-cartoon.fire.19")
-                .playbackRate(1)
-                .scale(0.4)
-                
-            this.castCommon({rotation:false})
-                .file("animated-spell-effects-cartoon.fire.19")
-                .playbackRate(1)
-                .scale(0.4)
-                .delay(800)
-                .waitUntilFinished(-1200)
-                
-            this.castCommon({rotation:false})
-                .file("jb2a.flurry_of_blows.no_hit.yellow")
-                .stretchTo(this.affected)
-                .playbackRate(1)
-                .pause(800)
-            return this;
-         }
- 
         descriptorProjectToLine() {
             return this.file("animated-spell-effects-cartoon.fire.29")
                 .fadeIn(100)
@@ -4640,8 +4620,9 @@ Hooks.on("ready", () => {
         descriptorProjectToCone() {
              
              return this.descriptorProjectToLine()
-         }   
-      
+        } 
+
+
         descriptorAura(){
             return this.file("animated-spell-effects-cartoon.fire.01")
                 .anchor({x:0.5 , y:0.7, gridUnits:true})
@@ -4655,7 +4636,7 @@ Hooks.on("ready", () => {
                 .playbackRate(1)
                 .scaleToObject(2.5)
                 .waitUntilFinished(-2000)
-         }
+        }
         descriptorLine() {
             let position = canvas.templates.placeables[canvas.templates.placeables.length - 1];
             const lineTemplate = canvas.templates.placeables.at(-1).document;
@@ -4712,48 +4693,181 @@ Hooks.on("ready", () => {
         }
 
         descriptorAffliction() {
-             this.file("animated-spell-effects-cartoon.fire.spiral")
-                .playbackRate(1)
-                .scale(0.5)
-                .waitUntilFinished(-2500)
+            this.file("animated-spell-effects-cartoon.fire.spiral")
+               .playbackRate(1)
+               .scale(0.5)
+               .waitUntilFinished(-2500)
+               
+           
+           super.affectCommon()
+               .file("jb2a.shield_themed.below.fire.01.orange")
+               .attachTo(this.affected)
+               .playbackRate(1)
+               .scaleToObject()
+               .scale(1.8)
+               .fadeIn(500)
+               .rotateIn(180, 600, {ease: "easeOutCubic"})
+               .scaleIn(0, 600, {ease: "easeOutCubic"})
+               .loopProperty("sprite", "rotation", { from: 0, to: -360, duration: 10000})
+               .persist()
+           
+           super.affectCommon()
+               .file("jb2a.shield_themed.above.fire.03.orange")
+               .attachTo(this.affected)
+               .playbackRate(1)
+               .scaleToObject()
+               .scale(1.8)
+               .fadeIn(500)
+               .rotateIn(180, 600, {ease: "easeOutCubic"})
+               .scaleIn(0, 600, {ease: "easeOutCubic"})
+               .persist()
+           return this;
+       }
+        descriptorBurrow(position){
+            this.file("jb2a.impact.earth.01.browngreen.0")
+            .atLocation(this.caster)
+            .scaleToObject(4)
+            .opacity(0.8)
+
+            super.affectCommon()
+            .file("jb2a.burrow.out.01.brown.1")
+            .atLocation(this.affected)
+            .opacity(0.8)
+            .belowTokens()
+            .scaleToObject(4)
+            .zIndex(1)
+
+            .animation()
+            .delay(1400)
+            .on(this.affected)
+            .fadeIn(200)
+
+
+            super.affectCommon()
+            .file("jb2a.ground_cracks.orange.01")
+            .atLocation(this.affected)
+            .opacity(0.9)
+            .scaleToObject(3)
+            .fadeIn(100)
+            .fadeOut(1000)
+            .duration(3000)
+            .belowTokens()
+            .waitUntilFinished(-2000)
+            return
+
+        }
+        descriptorDamage() {
+            this.file("animated-spell-effects-cartoon.mix.fire earth explosion.06") // Explosion effect
+                .scale(0.8)
+                .fadeIn(300)
+                .fadeOut(300)
+            super.affectCommon()
+                .file(`jb2a.ground_cracks.orange.01`)
+                .scaleToObject(2)
+                .fadeIn(600)
+                .opacity(1)
+                .belowTokens()
+                .scaleIn(0, 600, {ease: "easeOutCubic"})
+                .filter("ColorMatrix", { hue: 0 })
+                .fadeOut(500)
+                .duration(8000)
                 
-            
             super.affectCommon()
-                .file("jb2a.shield_themed.below.fire.01.orange")
-                .attachTo(this.affected)
-                .playbackRate(1)
-                .scaleToObject()
-                .scale(1.8)
-                .fadeIn(500)
-                .rotateIn(180, 600, {ease: "easeOutCubic"})
+                .file("jb2a.impact.ground_crack.still_frame.01")
+                .scaleToObject(2)
+                .fadeIn(600)
+                .opacity(1)
+                .belowTokens()
                 .scaleIn(0, 600, {ease: "easeOutCubic"})
-                .loopProperty("sprite", "rotation", { from: 0, to: -360, duration: 10000})
-                .persist()
-            
-            super.affectCommon()
-                .file("jb2a.shield_themed.above.fire.03.orange")
-                .attachTo(this.affected)
-                .playbackRate(1)
-                .scaleToObject()
-                .scale(1.8)
-                .fadeIn(500)
-                .rotateIn(180, 600, {ease: "easeOutCubic"})
-                .scaleIn(0, 600, {ease: "easeOutCubic"})
-                .persist()
+                .filter("ColorMatrix", { hue: 0 })
+                .fadeOut(500)
+                .duration(12000)
+                
+                .canvasPan()
+                .shake({duration: 800, strength: 1, rotation: false })
+    
             return this;
         }
-        descriptorHealing(){
-           this.file("jb2a.healing_generic.400px.yellow02")
-                .atLocation(target)
-                .playbackRate(1)
-                .scaleToObject()
-                .tint("#dc7118")
-                .scale(1.8)
+        descriptorDeflection(){
+            this.deflectionAnimation='jb2a.bullet.Snipe.orange.05ft'
+            this.file("jb2a.impact_themed.ice_shard.01.blue")
+                .scaleToObject(2.5)
                 .fadeIn(500)
-                .filter("Glow", {distance: 0.5})
-            return this
+                .fadeOut(500)
+            super.affectCommon() 
+                .effect()
+                .file("jb2a.shield_themed.above.ice.03.blue")
+                .scaleToObject(1.5)
+                .fadeIn(500)
+                .fadeOut(500)
+                .filter("Glow", {distance: 3})
+                .delay(1000)
         }
-        
+        descriptorFlight(position){
+           
+            super.affectCommon()
+                .from(this.affected)
+                .file("jb2a.markers.on_token_mask.complete.01.orange")
+                .name("Fly")
+                .attachTo(this.affected, { bindAlpha: false, followRotation: true, locale: true })
+                .rotate(180)
+                .scaleToObject(1, { considerTokenScale: true })
+                .opacity(1)
+                .duration(800)
+                .anchor({ x: this.affected.document.texture.scaleX * 0.5, y: 0.5 })
+                .animateProperty("sprite", "position.y", { from: 50, to: 40, duration: 500, ease: "easeOutBack" })
+                .loopProperty("sprite", "position.y", { from: 0, to: -5, duration: 2500, pingPong: true, delay: 1000 })
+                .zIndex(2)
+            //    .persist()
+
+                super.affectCommon()
+                .name("Fly")
+                .scaleToObject(1.35, { considerTokenScale: true })
+                .attachTo(this.affected, { bindAlpha: false })
+                .opacity(1)
+                .duration(800)
+                .filter("ColorMatrix", { hue: 132, saturate: -1 })
+                .anchor({ x: this.affected.document.texture.scaleX * 0.55, y: 0.8 })
+                .animateProperty("sprite", "position.y", { from: 50, to: -10, duration: 500, ease: "easeOutBack" })
+                .loopProperty("sprite", "position.y", { from: 0, to: -50, duration: 2500, pingPong: true, delay: 1000 })
+                .fadeIn(1000)
+                .zIndex(2.2)
+             //   .persist()
+            
+                super.affectCommon()
+                .from(this.affected)
+                .name("Fly")
+                .scaleToObject(0.9)
+                .duration(1000)
+                .opacity(0.5)
+                .belowTokens()
+                .filter("ColorMatrix", { brightness: -1 })
+                .filter("Blur", { blurX: 5, blurY: 10 })
+                .attachTo(this.affected, { bindAlpha: false })
+                .zIndex(1)
+                //.persist()
+        super.affectCommon()
+            this.file("jb2a.impact.fire.01.orange.0")
+            .opacity(1)
+            .scaleToObject(6)
+            .aboveLighting()
+            .zIndex(1)
+      //  .delay(100)
+       
+        return this
+        }
+        descriptorHealing(){
+            this.file("jb2a.healing_generic.400px.yellow02")
+                 .atLocation(target)
+                 .playbackRate(1)
+                 .scaleToObject()
+                 .tint("#dc7118")
+                 .scale(1.8)
+                 .fadeIn(500)
+                 .filter("Glow", {distance: 0.5})
+             return this
+        }
+
         descriptorInsubstantial(){
             this.file("animated-spell-effects-cartoon.fire.01")
             .anchor({x:0.5 , y:0.7, gridUnits:true})
@@ -4774,32 +4888,20 @@ Hooks.on("ready", () => {
                 .play();
                  return this
         }
+        descriptorLeap(){}
         descriptorProtection(){
-             return this.effect()
-                .file("blfx.misc.fire1.loop.orange")
-              
-                .persist( true)
-                 .scaleToObject(2)
-                .sound('modules/mm3e-animations/sounds/action/powers/firering.ogg')
-                .wait(1000)
-                .sound('modules/mm3e-animations/sounds/action/powers/Fireball_Loop.ogg')
-         }
-
-        descriptorDeflection(){
-            this.deflectionAnimation='jb2a.bullet.Snipe.orange.05ft'
-            this.file("jb2a.impact_themed.ice_shard.01.blue")
-                .scaleToObject(2.5)
-                .fadeIn(500)
-                .fadeOut(500)
-            super.affectCommon() 
-                .effect()
-                .file("jb2a.shield_themed.above.ice.03.blue")
-                .scaleToObject(1.5)
-                .fadeIn(500)
-                .fadeOut(500)
-                .filter("Glow", {distance: 3})
-                .delay(1000)
+            return this.effect()
+               .file("blfx.misc.fire1.loop.orange")
+             
+               .persist( true)
+                .scaleToObject(2)
+               .sound('modules/mm3e-animations/sounds/action/powers/firering.ogg')
+               .wait(1000)
+               .sound('modules/mm3e-animations/sounds/action/powers/Fireball_Loop.ogg')
         }
+       
+        descriptorSpeed(){}
+        descriptorTeleport(){}
          /*
         
  
@@ -5035,7 +5137,7 @@ Hooks.on("ready", () => {
             .scaleToObject(2.25)
             .fadeOut(300)
             .filter("ColorMatrix", { saturate: saturate })
-            .animateProperty("sprite", "width", { from: this.caster.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
+           .animateProperty("sprite", "width", { from: this.caster.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
             .animateProperty("sprite", "height", { from: this.caster.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
             .animateProperty("sprite", "width", { from: 0, to: this.caster.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
             .animateProperty("sprite", "height", { from: 0, to: this.caster.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
@@ -5077,31 +5179,43 @@ Hooks.on("ready", () => {
             .zIndex(1)
             return this
         }
-
-        descriptorInsubstantial(){
-            this.descriptorAura();
-            return this
-        }
-
-        descriptorProtection(){
-            this.descriptorAura()
-            .file("jb2a.shield_themed.above.ice.01.blue")
-            .playbackRate(1)
-            .scaleToObject()
-            .scale(1.8)
-            .fadeIn(500)
-            .rotateIn(180, 600, {ease: "easeOutCubic"})
-            .scaleIn(0, 600, {ease: "easeOutCubic"})
-            .loopProperty("sprite", "rotation", { from: 0, to: -360, duration: 10000})
-            .filter("Glow", {distance: 5})
-            .persist()
-            .delay(1000)
-        }
-
-        descriptorAura(){
-            this.file("jb2a.impact_themed.ice_shard.01.blue")
-            .scaleToObject(4)
-            return this
+        descriptorCastFlight(position){
+            let hue = 140
+            let leaves = 'pink'
+            let saturate = -1
+             this.castCommon()
+            this.file(`jb2a.swirling_leaves.complete.02.${leaves}`)
+                .scaleToObject(4)
+                .fadeOut(300)
+                .filter("ColorMatrix", { saturate: saturate })
+                .pause(3000)
+            super.castCommon()
+                .file("jb2a.gust_of_wind.default")
+                .opacity(1)
+                .stretchTo(position)
+                .scale(this.affected.w / canvas.grid.size)
+                .belowTokens()
+                .zIndex(1)
+            this.castCommon()
+               .animateProperty("sprite", "width", { from: this.affected.document.width * 2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits: true, delay: 500 })
+                .animateProperty("sprite", "height", { from: this.affected.document.width * 2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits: true, delay: 500 })
+                .animateProperty("sprite", "width", { from: 0, to: this.affected.document.width * 2.25, duration: 500, ease: "easeOutCubic", gridUnits: true, delay: 2500 })
+                .animateProperty("sprite", "height", { from: 0, to: this.affected.document.width * 2.25, duration: 500, ease: "easeOutCubic", gridUnits: true, delay: 2500 })
+                .playbackRate(2)
+                .belowTokens() 
+            super.castCommon()
+                .file("jb2a.impact_themed.ice_shard.blue")
+                .size({ width: this.caster.width * 2.5, height: this.caster.width * 2.45 }, { gridUnits: true })
+                .belowTokens()
+                .filter("ColorMatrix", { hue: -10 })
+                .zIndex(1)
+            super.castCommon()
+                .file("animated-spell-effects-cartoon.smoke.105")
+                .opacity(1)
+                .scaleToObject(2)
+                .tint("c1f8f6")
+                .belowTokens()
+                return this
         }
 
         descriptorMeleeCast(){
@@ -5112,7 +5226,6 @@ Hooks.on("ready", () => {
             .pause(800)
             return this
         }
-        
         castCone({affected, caster}={}){
             super.castCommon(affected, caster)
             this.file("jb2a.cast_generic.ice.01.blue.0")
@@ -5123,23 +5236,113 @@ Hooks.on("ready", () => {
             	.playbackRate(1.5)
             return this
         }
-    
         descriptorProjectToCone() {
             this.descriptorProject()
             return this;
         }
 
-        descriptorDamage(){
-            this.file('jb2a.impact_themed.ice_shard.blue')
-            .scaleToObject(2.5)
-            super.affectCommon()
-                .file("jb2a.impact.ground_crack.frost.01.white")
-                .belowTokens()
-                .scaleToObject(3)
+        descriptorProject() {
+            this.file("jb2a.ray_of_frost")
+                .scale(1.5)
+                .filter("Glow", { distance: 2 })
+                .pause(800)
             return this;
         }
+        descriptorProjectToLine() {
+            
+             this.descriptorProject()
+        }
 
+        descriptorBurst() {
+           this.file("jb2a.impact.frost.blue.01")
+                .belowTokens()
+                .scaleToObject(1.5)
+                .delay(800);
+            super.affectCommon()
+                .file("jb2a.ice_spikes.radial.burst.white")
+                .scaleToObject(1.5)
+                .filter("Glow", { distance: 5 })
+                .delay(900);
+    
+            return this;
+        }
+        descriptorLine() {
+            const center = 
+            {x: (this.affected.document.object.ray.A.x 
+                 + this.affected.document.object.ray.B.x)/2,
+             y: (this.affected.document.object.ray.A.y 
+                + this.affected.document.object.ray.B.y)/2}
+           
+            this.file("jb2a.impact_themed.ice_shard.01.blue")
+               
+                .delay(1000)
+
+            super.affectCommon()
+                .file("jb2a.healing_generic.burst.bluewhite")
+                .scale(0.8)
+                .delay(1300)
+                
+                
+            super.affectCommon()
+                .file("jb2a.impact_themed.ice_shard.01.blue")
+                .atLocation(center)
+                .delay(1800)
+            
+            super.affectCommon()
+                .file("jb2a.healing_generic.burst.bluewhite")
+                .scale(0.8)
+                .delay(2300)
+                
+                super.affectCommon()
+                .file("jb2a.template_line.ice.01.blue.60ft")
+                .stretchTo(this.affected)
+                .fadeIn(50)
+                .fadeOut(50)
+                .playbackRate(1)
+                .delay(800)
+        }
+  
+        descriptorCone(){
+            this.file("jb2a.breath_weapons.cold.cone.blue")
+            .fadeIn(100)
+            .fadeOut(100)
+        	.delay(1650)
+        	.playbackRate(1.5)
+            return this;
+        }
+        burstHealing(){
+            this.burstCommon()
+            .file("jb2a.impact_themed.ice_shard.01.blue")
+            .atLocation(this.affected)
+            .scaleToObject(1.5)
+            .delay(1000)
+            return this
+            
+        }
+
+        descriptorAffliction() {
+            this.file("jb2a.shield_themed.above.ice.01.blue")
+                .playbackRate(1)
+                .scaleToObject()
+                .scale(1.8)
+                .fadeIn(500)
+                .rotateIn(180, 600, { ease: "easeOutCubic" })
+                .scaleIn(0, 600, { ease: "easeOutCubic" })
+                .loopProperty("sprite", "rotation", { from: 0, to: -360, duration: 10000 })
+                .filter("Glow", { distance: 5 })
+                .persist();
+              return this;
+        }  
+        descriptorAura(){
+            this.file("jb2a.impact_themed.ice_shard.01.blue")
+            .scaleToObject(4)
+            return this
+        }  
         descriptorBurrow(){
+            let hue = 140 
+            let leaves = 'pink'
+            let saturate = -1
+
             this.file(`jb2a.swirling_leaves.complete.02.${leaves}`)
             .atLocation(this.affected)
             .scaleToObject(2.25)
@@ -5186,129 +5389,90 @@ Hooks.on("ready", () => {
 
             return this
         }
-
         descriptorDeflection(){
-           this.deflectionAnimation='jb2a.bullet.Snipe.blue.05ft'
-           this.file("jb2a.impact_themed.ice_shard.01.blue")
-                .scaleToObject(2.5)
-                .fadeIn(500)
-                .fadeOut(500)
-            super.affectCommon()
-                .file("jb2a.shield_themed.above.ice.03.blue")
-                .scaleToObject(1.5)
-                .fadeIn(500)
-                .fadeOut(500)
-                .filter("Glow", {distance: 3})
-                .delay(1000)
-            return this
-        }
-
-        descriptorProject() {
-            this.file("jb2a.ray_of_frost")
-                .scale(1.5)
-                .filter("Glow", { distance: 2 })
-                .pause(800)
-            return this;
-        }
-
-        descriptorProjectToLine() {
-            
-             this.descriptorProject()
-        }
-    
-        descriptorBurst() {
-           this.file("jb2a.impact.frost.blue.01")
-                .belowTokens()
-                .scaleToObject(1.5)
-                .delay(800);
-            super.affectCommon()
-                .file("jb2a.ice_spikes.radial.burst.white")
-                .scaleToObject(1.5)
-                .filter("Glow", { distance: 5 })
-                .delay(900);
-    
-            return this;
-        }
-
-        descriptorLine() {
-            const center = 
-            {x: (this.affected.document.object.ray.A.x 
-                 + this.affected.document.object.ray.B.x)/2,
-             y: (this.affected.document.object.ray.A.y 
-                + this.affected.document.object.ray.B.y)/2}
-           
+            this.deflectionAnimation='jb2a.bullet.Snipe.blue.05ft'
             this.file("jb2a.impact_themed.ice_shard.01.blue")
-               
-                .delay(1000)
-
+                 .scaleToObject(2.5)
+                 .fadeIn(500)
+                 .fadeOut(500)
+             super.affectCommon()
+                 .file("jb2a.shield_themed.above.ice.03.blue")
+                 .scaleToObject(1.5)
+                 .fadeIn(500)
+                 .fadeOut(500)
+                 .filter("Glow", {distance: 3})
+                 .delay(1000)
+             return this
+         }
+        descriptorFlight(position){
+           super.affectCommon()
+                .file("jaamod.misc.snowfall_light")
+                .name("Fly")
+                .scaleToObject(1.35, { considerTokenScale: true })
+                .opacity(1)
+                .duration(800)
+                .filter("ColorMatrix", { hue: 132, saturate: -1 })
+                .anchor({ x: this.affected.document.texture.scaleX * 0.55, y: 0.8 })
+                .animateProperty("sprite", "position.y", { from: 50, to: -10, duration: 500, ease: "easeOutBack" })
+                .loopProperty("sprite", "position.y", { from: 0, to: -50, duration: 2500, pingPong: true, delay: 1000 })
+                .fadeIn(1000)
+                .zIndex(2.2)
+                .persist()
+           super.affectCommon()
+                .from(this.affected)
+                .name("Fly")
+                .scaleToObject(0.9)
+                .opacity(0.5)
+                .belowTokens()
+                .filter("ColorMatrix", { brightness: -1 })
+                .filter("Blur", { blurX: 5, blurY: 10 })
+                .zIndex(1)
+                .persist()
+                .pause(1)
             super.affectCommon()
-                .file("jb2a.healing_generic.burst.bluewhite")
-                .scale(0.8)
-                .delay(1300)
-                
-                
+                .attachTo(this.affected)
+                .file("jb2a.impact_themed.ice_shard.blue")
+                .spriteOffset({ y: -1 }, { gridUnits: true })
+                .opacity(1)
+                .scaleToObject(8)
+                .aboveLighting()
+                .zIndex(1)
+             return this
+         }    
+ 
+        descriptorDamage(){
+            this.file('jb2a.impact_themed.ice_shard.blue')
+            .scaleToObject(2.5)
             super.affectCommon()
-                .file("jb2a.impact_themed.ice_shard.01.blue")
-                .atLocation(center)
-                .delay(1800)
-            
-            super.affectCommon()
-                .file("jb2a.healing_generic.burst.bluewhite")
-                .scale(0.8)
-                .delay(2300)
-                
-                super.affectCommon()
-                .file("jb2a.template_line.ice.01.blue.60ft")
-                .stretchTo(this.affected)
-                .fadeIn(50)
-                .fadeOut(50)
-                .playbackRate(1)
-                .delay(800)
-        }
-  
-        descriptorCone(){
-            this.file("jb2a.breath_weapons.cold.cone.blue")
-            .fadeIn(100)
-            .fadeOut(100)
-        	.delay(1650)
-        	.playbackRate(1.5)
+                .file("jb2a.impact.ground_crack.frost.01.white")
+                .belowTokens()
+                .scaleToObject(3)
             return this;
-        }
-
-        burstHealing(){
-            this.burstCommon()
-            .file("jb2a.impact_themed.ice_shard.01.blue")
-            .atLocation(this.affected)
-            .scaleToObject(1.5)
-            .delay(1000)
-            return this
-            
-        }
-
-        descriptorAffliction() {
-            this.file("jb2a.shield_themed.above.ice.01.blue")
-                .playbackRate(1)
-                .scaleToObject()
-                .scale(1.8)
-                .fadeIn(500)
-                .rotateIn(180, 600, { ease: "easeOutCubic" })
-                .scaleIn(0, 600, { ease: "easeOutCubic" })
-                .loopProperty("sprite", "rotation", { from: 0, to: -360, duration: 10000 })
-                .filter("Glow", { distance: 5 })
-                .persist();
-              return this;
-        }  
-
-        
+        }     
         descriptorHealing(){
             this.file("jb2a.healing_generic.burst.bluewhite")
                 .scaleToObject(4)
                 .delay(1100)
             return this
         }
-
-        descriptorDeflection(){}
-
+        descriptorInsubstantial(){
+            this.descriptorAura();
+            return this
+        }
+        descriptorProtection(){
+            this.descriptorAura()
+            .file("jb2a.shield_themed.above.ice.01.blue")
+            .playbackRate(1)
+            .scaleToObject()
+            .scale(1.8)
+            .fadeIn(500)
+            .rotateIn(180, 600, {ease: "easeOutCubic"})
+            .scaleIn(0, 600, {ease: "easeOutCubic"})
+            .loopProperty("sprite", "rotation", { from: 0, to: -360, duration: 10000})
+            .filter("Glow", {distance: 5})
+            .persist()
+            .delay(1000)
+        }
     }
     class ImpactEffectSection extends TemplatedDescriptorEffect {
         constructor(inSequence) {
@@ -6055,1577 +6219,1581 @@ Hooks.on("ready", () => {
        }*/
    
    }
-    class KineticEffectSection extends TemplatedDescriptorEffect {
-        constructor(inSequence) {
-            super(inSequence);
-        }
-       /* castCone({affected, caster}={}){
-            return this
-        }*/
-    
-        descriptorCast(){
-             return this
-        }
-        descriptorMeleeCast(){
-            return this
-        }
-
-        descriptorProject() {
-            return this;
-        }
-        descriptorProjectToLine() {
-            return this.descriptorProject()
-        }
-        descriptorProjectToCone() {
-            return this.descriptorProject()
-        }   
-
-        descriptorBurst() {
-            return this;
-        }
-        descriptorLine() {
-            return this
-        }
-        descriptorCone() {
-            return this;
-        }
-        descriptorAffliction() {
-             
-            return this;
-        }
-        descriptorAura(){
-            return this
-        }
-        descriptorDamage(){
-            return this;
-        }
-        descriptorHealing(){
-           
-            return this
-        }
-
-        /*
-       
-        descriptorAura(){
-            return this
-        }
-
-        descriptorConcealment()
-        {
-            return this;
-        }
-
-        descriptorIllusion(){
-            return this
-        }
-        descriptorInsubstantial(){
-            return this
-        }
-
-        descriptorMindControl(){
-            return this
-        }
-
-        descriptorMindControl(){
-            return this
-        }
-
-        descriptorNullify(){
-            return this
-        }
-
-        descriptorProtection(){
-            return this
-        }
-
-        descriptorTransform(){
-            return this
-        }
-
-        descriptorWeaken(){
-            return this
-        }*/
-    
+class KineticEffectSection extends TemplatedDescriptorEffect {
+    constructor(inSequence) {
+        super(inSequence);
     }
-    class LightEffectSection extends TemplatedDescriptorEffect {
-        constructor(inSequence) {
-            super(inSequence);
-        }
-       /* castCone({affected, caster}={}){
-            return this
-        }*/
-    
-        descriptorCast(){
-             return this
-        }
-        descriptorMeleeCast(){
-            return this
-        }
+    /* castCone({affected, caster}={}){
+        return this
+    }*/
 
-        descriptorProject() {
-            return this;
-        }
-        descriptorProjectToLine() {
-            return this.descriptorProject()
-        }
-        descriptorProjectToCone() {
-            return this.descriptorProject()
-        }   
-
-        descriptorBurst() {
-            return this;
-        }
-        descriptorLine() {
+    descriptorCast(){
             return this
-        }
-        descriptorCone() {
-            return this;
-        }
-        descriptorAffliction() {
-             
-            return this;
-        }
-        descriptorAura(){
-            return this
-        }
-        descriptorDamage(){
-            return this;
-        }
-        descriptorHealing(){
-           
-            return this
-        }
-
-        /*
-       
-        descriptorAura(){
-            return this
-        }
-
-        descriptorConcealment()
-        {
-            return this;
-        }
-
-        descriptorIllusion(){
-            return this
-        }
-        descriptorInsubstantial(){
-            return this
-        }
-
-        descriptorMindControl(){
-            return this
-        }
-
-        descriptorMindControl(){
-            return this
-        }
-
-        descriptorNullify(){
-            return this
-        }
-
-        descriptorProtection(){
-            return this
-        }
-
-        descriptorTransform(){
-            return this
-        }
-
-        descriptorWeaken(){
-            return this
-        }*/
-    
     }
-    class LightningEffectSection extends TemplatedDescriptorEffect {
-        constructor(inSequence) {
-            super(inSequence);
-        }
-        castDamage({affected,caster}={}) {
-           return super.castCommon({affected:affected, caster:caster, rotation:false})
-                .file("animated-spell-effects-cartoon.fire.03") // Fire casting animation
-                .spriteOffset({ x: 15, y: 0 })
-                .scale(0.3)
-                .waitUntilFinished(-1000)
-            .file("modules/animated-spell-effects-cartoon/assets/spell-effects/cartoon/fire/fire_55_800x800.webm") // Fireball projectile
-                .scale(0.08)
-                .zeroSpriteRotation(true)
-                .fadeIn(100)
-                .fadeOut(50)
-        }
-        cast({caster, affected , duration = 1}={}){
-            super.castCommon({caster:caster, affected:affected})
-           .file("animated-spell-effects-cartoon.fire.03")
-              .spriteOffset({ x: 15, y: 0 })
-              .playbackRate(1)
-              .scale(0.3)
-              .waitUntilFinished(-1000)
-          super.cast()
-              .file("modules/animated-spell-effects-cartoon/spell-effects/cartoon/fire/fire_55_800x800.webm")
-              .scale(0.08)
-              .zeroSpriteRotation(true)
-              .attachTo(this.caster, { bindVisibility: false })
-              .name("Fire_attack")
-              .duration(2000)
-              .fadeIn(100)
-              .fadeOut(50)
-              .spriteOffset({ x: 20, y: 0 })
-              .scaleIn(0, 500, {ease: "easeOutCubic"})
-              .zeroSpriteRotation(true)
-              .waitUntilFinished(-100)
-          return this;
-      }
-       cast2({caster, affected , duration = 1}={}){
-            super.castCommon({caster:caster, affected:affected})
-           .file("animated-spell-effects-cartoon.fire.03")
-              .playbackRate(1)
-              .spriteOffset({ x: -10, y: 0 })
-              .scale(0.5)
-              .waitUntilFinished(-1000)
-           return this;
-      }
+    descriptorMeleeCast(){
+        return this
+    }
 
-      castRange({caster, affected , duration = 1}={}){
-            super.cast({caster:caster, affected:affected})
-          .file("animated-spell-effects-cartoon.fire.19")
-          .playbackRate(1)
-          .scale(0.3)
-          .waitUntilFinished(-800)
-                
-          super.cast()
-          .file("jb2a.cast_generic.fire.side01.orange.0")
-          .playbackRate(1)
-          .scaleToObject(1.5)
-          .rotateTowards(this.affected)
-          .anchor({ x: 0.4, y: 0.5 })
-          .waitUntilFinished(-100)
-          .duration(600)
-          return this;
-      }
-      project({caster, target }={}){ 
-          super.projectCommon({caster:caster,target:target})
-               .file("animated-spell-effects-cartoon.fire.29")
-              .spriteOffset({ x: 20, y: 0 })
-              .playbackRate(1)
-              .scale(1)
-              .waitUntilFinished(-2000)
+    descriptorProject() {
         return this;
-      }
+    }
+    descriptorProjectToLine() {
+        return this.descriptorProject()
+    }
+    descriptorProjectToCone() {
+        return this.descriptorProject()
+    }   
 
-      projectRange({caster, target }={}){ 
-          super.projectCommon({caster:caster,target:target})
-              .file("jb2a.fire_bolt.orange")
-              .playbackRate(1)
-              .waitUntilFinished(-100)
-              .duration(600)
-              .scale(1)
+    descriptorBurst() {
         return this;
-      }
-
-      projectRay({caster, target }={}){ 
-          super.projectCommon({caster:caster,target:target})
-              .file("jb2a.scorching_ray.01.orange")
-              .playbackRate(1)
-              .scale(1.5)
-              .waitUntilFinished(-1000)
+    }
+    descriptorLine() {
+        return this
+    }
+    descriptorCone() {
         return this;
-      }
-      affectDamage({affected = this.affected, repeats=1}={} ){ 
-        this.affectCommon({affected: affected})
-       .affect()
-           .file("animated-spell-effects-cartoon.mix.fire earth explosion.06")
-           .delay(500)
-           .scale(0.8)
-           
-            .pause(500)
-
-       .affect()
-           .file(`jb2a.ground_cracks.orange.01`)
-           .scaleToObject(2)
-           .fadeIn(600)
-           .opacity(1)
-           .belowTokens()
-           .scaleIn(0, 600, {ease: "easeOutCubic"})
-           .filter("ColorMatrix", { hue: 0 })
-           .fadeOut(500)
-           .duration(8000)
-
-
-       .affect()
-           .file("jb2a.impact.ground_crack.still_frame.01")
-           .scaleToObject(2)
-           .fadeIn(600)
-           .opacity(1)
-           .belowTokens()
-           .scaleIn(0, 600, {ease: "easeOutCubic"})
-           .filter("ColorMatrix", { hue: 0 })
-           .fadeOut(500)
-           .duration(12000)
-
-           .canvasPan()
-           .shake({duration: 800, strength: 1, rotation: false })
-       return this
-   }
-   affectHealing({affected = this.affected|| this.firstSelected}={}){
-        super.affectCommon({affected:affected, persist:false})
-               .file("jb2a.healing_generic.loop.yellowwhite")
-               .playbackRate(1)
-               .scaleToObject()
-               .tint("#dc7118")
-               .scale(2)
-               .fadeIn(500)
-               .fadeOut(500)
-               .filter("Glow")
-               
-               .playSound("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-buff-long-4.mp3")
-       return this;
-   }
-   affectAffliction({affected}={})
-   {
-       super.affectCommon({affected:affected})
-           .file("animated-spell-effects-cartoon.fire.spiral")
-           .playbackRate(1)
-           .scale(0.5)
-           
-           .pause(800)
-           
-           
-           .affect()
-           .file("jb2a.shield_themed.below.fire.01.orange")
-           .attachTo(this.affected)
-           .playbackRate(1)
-           .scaleToObject()
-           .scale(1.8)
-           .fadeIn(500)
-           .rotateIn(180, 600, {ease: "easeOutCubic"})
-           .scaleIn(0, 600, {ease: "easeOutCubic"})
-           .loopProperty("sprite", "rotation", { from: 0, to: -360, duration: 10000})
-           .persist()
-           
-           .affect()
-           .file("jb2a.shield_themed.above.fire.03.orange")
-           .attachTo(this.affected)
-           .playbackRate(1)
-           .scaleToObject()
-           .scale(1.8)
-           .fadeIn(500)
-           .rotateIn(180, 600, {ease: "easeOutCubic"})
-           .scaleIn(0, 600, {ease: "easeOutCubic"})
-           .persist()
-       return this;
-   }
-   burst({affected,persist=true}={})
-  {
-       super.burstCommon({affected:affected})
-           .file("jb2a.impact.fire.01.orange.0")
-           .playbackRate(1)
-           .scaleToObject(2.5)
-       return this
-   }
-
-   burstheal({affected,persist=true}={})
-  {
-      super.burstCommon({affected:affected})
-           .file("jb2a.healing_generic.burst.yellowwhite")
-           .tint("#dc7118")
-           .scaleToObject(1.2)
-       return this
-   }
-
-        descriptorCast(){
-             return this
-        }
-
-        descriptorCastBurrow(position){
-            this.castCommon({affected:affected, caster:caster})
-            .file("jb2a.static_electricity.03.blue")
-            .fadeIn(350)
-            .fadeOut(350)
-            .scaleToObject(3)
-            .filter("ColorMatrix", { hue: -10, contrast: 0.5, saturate: 0.1, brightness: 1 })
-            .randomRotation()
-            .belowTokens()
-            .duration(1800)
+    }
+    descriptorAffliction() {
             
-            super.affectCommon()
-              .file(`jb2a.static_electricity.02.blue`)
-              .opacity(0.9)
-              .scaleToObject(1.5)
-              .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+        return this;
+    }
+    descriptorAura(){
+        return this
+    }
+    descriptorDamage(){
+        return this;
+    }
+    descriptorHealing(){
+        
+        return this
+    }
+
+    /*
+    
+    descriptorAura(){
+        return this
+    }
+
+    descriptorConcealment()
+    {
+        return this;
+    }
+
+    descriptorIllusion(){
+        return this
+    }
+    descriptorInsubstantial(){
+        return this
+    }
+
+    descriptorMindControl(){
+        return this
+    }
+
+    descriptorMindControl(){
+        return this
+    }
+
+    descriptorNullify(){
+        return this
+    }
+
+    descriptorProtection(){
+        return this
+    }
+
+    descriptorTransform(){
+        return this
+    }
+
+    descriptorWeaken(){
+        return this
+    }*/
+
+}
+class LightEffectSection extends TemplatedDescriptorEffect {
+    constructor(inSequence) {
+        super(inSequence);
+    }
+    /* castCone({affected, caster}={}){
+        return this
+    }*/
+
+    descriptorCast(){
+            return this
+    }
+    descriptorMeleeCast(){
+        return this
+    }
+
+    descriptorProject() {
+        return this;
+    }
+    descriptorProjectToLine() {
+        return this.descriptorProject()
+    }
+    descriptorProjectToCone() {
+        return this.descriptorProject()
+    }   
+
+    descriptorBurst() {
+        return this;
+    }
+    descriptorLine() {
+        return this
+    }
+    descriptorCone() {
+        return this;
+    }
+    descriptorAffliction() {
+            
+        return this;
+    }
+    descriptorAura(){
+        return this
+    }
+    descriptorDamage(){
+        return this;
+    }
+    descriptorHealing(){
+        
+        return this
+    }
+
+    /*
+    
+    descriptorAura(){
+        return this
+    }
+
+    descriptorConcealment()
+    {
+        return this;
+    }
+
+    descriptorIllusion(){
+        return this
+    }
+    descriptorInsubstantial(){
+        return this
+    }
+
+    descriptorMindControl(){
+        return this
+    }
+
+    descriptorMindControl(){
+        return this
+    }
+
+    descriptorNullify(){
+        return this
+    }
+
+    descriptorProtection(){
+        return this
+    }
+
+    descriptorTransform(){
+        return this
+    }
+
+    descriptorWeaken(){
+        return this
+    }*/
+
+}
+class LightningEffectSection extends TemplatedDescriptorEffect {
+    constructor(inSequence) {
+        super(inSequence);
+    }
+    castDamage({affected,caster}={}) {
+        return super.castCommon({affected:affected, caster:caster, rotation:false})
+            .file("animated-spell-effects-cartoon.fire.03") // Fire casting animation
+            .spriteOffset({ x: 15, y: 0 })
+            .scale(0.3)
+            .waitUntilFinished(-1000)
+        .file("modules/animated-spell-effects-cartoon/assets/spell-effects/cartoon/fire/fire_55_800x800.webm") // Fireball projectile
+            .scale(0.08)
+            .zeroSpriteRotation(true)
+            .fadeIn(100)
+            .fadeOut(50)
+    }
+    cast({caster, affected , duration = 1}={}){
+        super.castCommon({caster:caster, affected:affected})
+        .file("animated-spell-effects-cartoon.fire.03")
+            .spriteOffset({ x: 15, y: 0 })
+            .playbackRate(1)
+            .scale(0.3)
+            .waitUntilFinished(-1000)
+        super.cast()
+            .file("modules/animated-spell-effects-cartoon/spell-effects/cartoon/fire/fire_55_800x800.webm")
+            .scale(0.08)
+            .zeroSpriteRotation(true)
+            .attachTo(this.caster, { bindVisibility: false })
+            .name("Fire_attack")
+            .duration(2000)
+            .fadeIn(100)
+            .fadeOut(50)
+            .spriteOffset({ x: 20, y: 0 })
+            .scaleIn(0, 500, {ease: "easeOutCubic"})
+            .zeroSpriteRotation(true)
             .waitUntilFinished(-100)
+        return this;
+    }
+    cast2({caster, affected , duration = 1}={}){
+        super.castCommon({caster:caster, affected:affected})
+        .file("animated-spell-effects-cartoon.fire.03")
+            .playbackRate(1)
+            .spriteOffset({ x: -10, y: 0 })
+            .scale(0.5)
+            .waitUntilFinished(-1000)
+        return this;
+    }
+
+    castRange({caster, affected , duration = 1}={}){
+        super.cast({caster:caster, affected:affected})
+        .file("animated-spell-effects-cartoon.fire.19")
+        .playbackRate(1)
+        .scale(0.3)
+        .waitUntilFinished(-800)
             
-            super.affectCommon()
+        super.cast()
+        .file("jb2a.cast_generic.fire.side01.orange.0")
+        .playbackRate(1)
+        .scaleToObject(1.5)
+        .rotateTowards(this.affected)
+        .anchor({ x: 0.4, y: 0.5 })
+        .waitUntilFinished(-100)
+        .duration(600)
+        return this;
+    }
+    project({caster, target }={}){ 
+        super.projectCommon({caster:caster,target:target})
+            .file("animated-spell-effects-cartoon.fire.29")
+            .spriteOffset({ x: 20, y: 0 })
+            .playbackRate(1)
+            .scale(1)
+            .waitUntilFinished(-2000)
+    return this;
+    }
+
+    projectRange({caster, target }={}){ 
+        super.projectCommon({caster:caster,target:target})
+            .file("jb2a.fire_bolt.orange")
+            .playbackRate(1)
+            .waitUntilFinished(-100)
+            .duration(600)
+            .scale(1)
+    return this;
+    }
+
+    projectRay({caster, target }={}){ 
+        super.projectCommon({caster:caster,target:target})
+            .file("jb2a.scorching_ray.01.orange")
+            .playbackRate(1)
+            .scale(1.5)
+            .waitUntilFinished(-1000)
+    return this;
+    }
+    affectDamage({affected = this.affected, repeats=1}={} ){ 
+    this.affectCommon({affected: affected})
+    .affect()
+        .file("animated-spell-effects-cartoon.mix.fire earth explosion.06")
+        .delay(500)
+        .scale(0.8)
+        
+        .pause(500)
+
+    .affect()
+        .file(`jb2a.ground_cracks.orange.01`)
+        .scaleToObject(2)
+        .fadeIn(600)
+        .opacity(1)
+        .belowTokens()
+        .scaleIn(0, 600, {ease: "easeOutCubic"})
+        .filter("ColorMatrix", { hue: 0 })
+        .fadeOut(500)
+        .duration(8000)
+
+
+    .affect()
+        .file("jb2a.impact.ground_crack.still_frame.01")
+        .scaleToObject(2)
+        .fadeIn(600)
+        .opacity(1)
+        .belowTokens()
+        .scaleIn(0, 600, {ease: "easeOutCubic"})
+        .filter("ColorMatrix", { hue: 0 })
+        .fadeOut(500)
+        .duration(12000)
+
+        .canvasPan()
+        .shake({duration: 800, strength: 1, rotation: false })
+    return this
+}
+affectHealing({affected = this.affected|| this.firstSelected}={}){
+    super.affectCommon({affected:affected, persist:false})
+            .file("jb2a.healing_generic.loop.yellowwhite")
+            .playbackRate(1)
+            .scaleToObject()
+            .tint("#dc7118")
+            .scale(2)
+            .fadeIn(500)
+            .fadeOut(500)
+            .filter("Glow")
+            
+            .playSound("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-buff-long-4.mp3")
+    return this;
+}
+affectAffliction({affected}={})
+{
+    super.affectCommon({affected:affected})
+        .file("animated-spell-effects-cartoon.fire.spiral")
+        .playbackRate(1)
+        .scale(0.5)
+        
+        .pause(800)
+        
+        
+        .affect()
+        .file("jb2a.shield_themed.below.fire.01.orange")
+        .attachTo(this.affected)
+        .playbackRate(1)
+        .scaleToObject()
+        .scale(1.8)
+        .fadeIn(500)
+        .rotateIn(180, 600, {ease: "easeOutCubic"})
+        .scaleIn(0, 600, {ease: "easeOutCubic"})
+        .loopProperty("sprite", "rotation", { from: 0, to: -360, duration: 10000})
+        .persist()
+        
+        .affect()
+        .file("jb2a.shield_themed.above.fire.03.orange")
+        .attachTo(this.affected)
+        .playbackRate(1)
+        .scaleToObject()
+        .scale(1.8)
+        .fadeIn(500)
+        .rotateIn(180, 600, {ease: "easeOutCubic"})
+        .scaleIn(0, 600, {ease: "easeOutCubic"})
+        .persist()
+    return this;
+}
+burst({affected,persist=true}={})
+{
+    super.burstCommon({affected:affected})
+        .file("jb2a.impact.fire.01.orange.0")
+        .playbackRate(1)
+        .scaleToObject(2.5)
+    return this
+}
+
+burstheal({affected,persist=true}={})
+{
+    super.burstCommon({affected:affected})
+        .file("jb2a.healing_generic.burst.yellowwhite")
+        .tint("#dc7118")
+        .scaleToObject(1.2)
+    return this
+}
+
+    descriptorCast(){
+            return this
+    }
+
+    descriptorCastBurrow(position){
+        this.castCommon({affected:affected, caster:caster})
+        .file("jb2a.static_electricity.03.blue")
+        .fadeIn(350)
+        .fadeOut(350)
+        .scaleToObject(3)
+        .filter("ColorMatrix", { hue: -10, contrast: 0.5, saturate: 0.1, brightness: 1 })
+        .randomRotation()
+        .belowTokens()
+        .duration(1800)
+        
+        super.affectCommon()
+            .file(`jb2a.static_electricity.02.blue`)
+            .opacity(0.9)
+            .scaleToObject(1.5)
+            .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+        .waitUntilFinished(-100)
+        
+        super.affectCommon()
+        .file("jb2a.impact.earth.01.browngreen.0")
+        .scaleToObject(4)
+        .opacity(0.8)
+        .filter("ColorMatrix", {hue:70, contrast: 0.5, saturate: 0.5,brightness: 1,})
+        
+        .pause(500)
+        
+        super.affectCommon()
+        .file("jb2a.burrow.out.01.still_frame.0")
+        .duration(5000)
+        .fadeIn(500)
+        .fadeOut(1000)
+        .belowTokens()
+        .scaleToObject(6)
+        .filter("ColorMatrix", { saturate: 1 })
+        .zIndex(1)
+        
+        super.affectCommon()
+        .file("jb2a.lightning_bolt.wide.blue")
+        .opacity(1)
+        .scale(this.caster.w / canvas.grid.size)
+        .stretchTo(position)
+        .zIndex(1)
+        return this
+    }
+    descriptorCastLeap(position){}
+    descriptorCastTeleport(position){}
+    descriptorCastSpeed(position){}
+    descriptorCastFlight(position){}
+    descriptorMeleeCast(){
+        return this
+    }
+
+    descriptorProject() {
+        return this;
+    }
+    descriptorProjectToLine() {
+        return this.descriptorProject()
+    }
+    descriptorProjectToCone() {
+        return this.descriptorProject()
+    }   
+
+    descriptorBurst() {
+        return this;
+    }
+    descriptorLine() {
+        return this
+    }
+    descriptorCone() {
+        return this;
+    }
+    descriptorAffliction() {
+            
+        return this;
+    }
+    descriptorAura(){
+        return this
+    }
+    descriptorDamage(){
+        return this;
+    }
+
+    descriptorBurrow(){
+        this.file("jb2a.cast_generic.02.blue.0")
+            .atLocation(this.affected)
+            .scaleToObject(2.25)
+            .animateProperty("sprite", "width", { from: this.affected.document.width * 2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits: true, delay: 500 })
+            .animateProperty("sprite", "height", { from: this.affected.document.width * 2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits: true, delay: 500 })
+            .animateProperty("sprite", "width", { from: 0, to: this.affected.document.width * 2.25, duration: 500, ease: "easeOutCubic", gridUnits: true, delay: 2500 })
+            .animateProperty("sprite", "height", { from: 0, to: this.affected.document.width * 2.25, duration: 500, ease: "easeOutCubic", gridUnits: true, delay: 2500 })
+            .playbackRate(0.8)
+            .belowTokens()
+            .pause(1000)
+        super.affectCommon()
             .file("jb2a.impact.earth.01.browngreen.0")
-            .scaleToObject(4)
+            .atLocation(this.affected)
+            .scaleToObject(6)
             .opacity(0.8)
             .filter("ColorMatrix", {hue:70, contrast: 0.5, saturate: 0.5,brightness: 1,})
-            
-            .pause(500)
-            
-            super.affectCommon()
-            .file("jb2a.burrow.out.01.still_frame.0")
-            .duration(5000)
-            .fadeIn(500)
-            .fadeOut(1000)
+        super.affectCommon()
+            .file("jb2a.burrow.out.01.brown.1")
+            .atLocation(this.affected)
+            .opacity(0.8)
             .belowTokens()
+            .scaleToObject(8)
+            .filter("ColorMatrix", {hue:70, contrast: 0.5, saturate: 0.5,brightness: 1,})
+            .zIndex(1)
+        .animation()
+        .delay(1400)
+        .on(this.affected)
+        .fadeIn(200)
+
+        super.affectCommon()
+            .file("animated-spell-effects-cartoon.electricity.18")
+            .filter("ColorMatrix", { brightness: 1, contrast: 1 })
+            .fadeOut(3000)
             .scaleToObject(6)
-            .filter("ColorMatrix", { saturate: 1 })
-            .zIndex(1)
+            .zIndex(3)
+            .waitUntilFinished(-2000)
+        super.affectCommon()
+            .file("jb2a.impact.ground_crack.02.blue")
+            .belowTokens()
+            .filter("ColorMatrix", { saturate: 2 })
+            .fadeOut(1000)
+            .scaleToObject(4)
+            .zIndex(2)
+        return this
+    }
+    descriptorLeap(){}
+    descriptorTeleport(){}
+    descriptorSpeed(){}
+    descriptorFlight(){}
+    descriptorHealing(){
+        
+        return this
+    }
+
+    /*
+    
+    descriptorAura(){
+        return this
+    }
+
+    descriptorConcealment()
+    {
+        return this;
+    }
+
+    descriptorIllusion(){
+        return this
+    }
+    descriptorInsubstantial(){
+        return this
+    }
+
+    descriptorMindControl(){
+        return this
+    }
+
+    descriptorMindControl(){
+        return this
+    }
+
+    descriptorNullify(){
+        return this
+    }
+
+    descriptorProtection(){
+        return this
+    }
+
+    descriptorTransform(){
+        return this
+    }
+
+    descriptorWeaken(){
+        return this
+    }*/
+
+}
+class MagnetismEffectSection extends TemplatedDescriptorEffect {
+    constructor(inSequence) {
+        super(inSequence);
+    }
+    /* castCone({affected, caster}={}){
+        return this
+    }*/
+
+    descriptorCast(){
+            return this
+    }
+    descriptorMeleeCast(){
+        return this
+    }
+
+    descriptorProject() {
+        return this;
+    }
+    descriptorProjectToLine() {
+        return this.descriptorProject()
+    }
+    descriptorProjectToCone() {
+        return this.descriptorProject()
+    }   
+
+    descriptorBurst() {
+        return this;
+    }
+    descriptorLine() {
+        return this
+    }
+    descriptorCone() {
+        return this;
+    }
+    descriptorAffliction() {
             
-            super.affectCommon()
-            .file("jb2a.lightning_bolt.wide.blue")
-            .opacity(1)
-            .scale(this.caster.w / canvas.grid.size)
-            .stretchTo(position)
-            .zIndex(1)
-            return this
-        }
-        descriptorCastLeap(position){}
-        descriptorCastTeleport(position){}
-        descriptorCastSpeed(position){}
-        descriptorCastFlight(position){}
-        descriptorMeleeCast(){
-            return this
-        }
-
-        descriptorProject() {
-            return this;
-        }
-        descriptorProjectToLine() {
-            return this.descriptorProject()
-        }
-        descriptorProjectToCone() {
-            return this.descriptorProject()
-        }   
-
-        descriptorBurst() {
-            return this;
-        }
-        descriptorLine() {
-            return this
-        }
-        descriptorCone() {
-            return this;
-        }
-        descriptorAffliction() {
-             
-            return this;
-        }
-        descriptorAura(){
-            return this
-        }
-        descriptorDamage(){
-            return this;
-        }
-
-        descriptorBurrow(){
-            this.file("jb2a.cast_generic.02.blue.0")
-                .atLocation(this.affected)
-                .scaleToObject(2.25)
-                .animateProperty("sprite", "width", { from: this.affected.document.width * 2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits: true, delay: 500 })
-                .animateProperty("sprite", "height", { from: this.affected.document.width * 2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits: true, delay: 500 })
-                .animateProperty("sprite", "width", { from: 0, to: this.affected.document.width * 2.25, duration: 500, ease: "easeOutCubic", gridUnits: true, delay: 2500 })
-                .animateProperty("sprite", "height", { from: 0, to: this.affected.document.width * 2.25, duration: 500, ease: "easeOutCubic", gridUnits: true, delay: 2500 })
-                .playbackRate(0.8)
-                .belowTokens()
-                .pause(1000)
-            super.affectCommon()
-                .file("jb2a.impact.earth.01.browngreen.0")
-                .atLocation(this.affected)
-                .scaleToObject(6)
-                .opacity(0.8)
-                .filter("ColorMatrix", {hue:70, contrast: 0.5, saturate: 0.5,brightness: 1,})
-            super.affectCommon()
-                .file("jb2a.burrow.out.01.brown.1")
-                .atLocation(this.affected)
-                .opacity(0.8)
-                .belowTokens()
-                .scaleToObject(8)
-                .filter("ColorMatrix", {hue:70, contrast: 0.5, saturate: 0.5,brightness: 1,})
-                .zIndex(1)
-            .animation()
-            .delay(1400)
-            .on(this.affected)
-            .fadeIn(200)
-
-            super.affectCommon()
-                .file("animated-spell-effects-cartoon.electricity.18")
-                .filter("ColorMatrix", { brightness: 1, contrast: 1 })
-                .fadeOut(3000)
-                .scaleToObject(6)
-                .zIndex(3)
-                .waitUntilFinished(-2000)
-            super.affectCommon()
-                .file("jb2a.impact.ground_crack.02.blue")
-                .belowTokens()
-                .filter("ColorMatrix", { saturate: 2 })
-                .fadeOut(1000)
-                .scaleToObject(4)
-                .zIndex(2)
-            return this
-        }
-        descriptorLeap(){}
-        descriptorTeleport(){}
-        descriptorSpeed(){}
-        descriptorFlight(){}
-        descriptorHealing(){
-           
-            return this
-        }
-
-        /*
-       
-        descriptorAura(){
-            return this
-        }
-
-        descriptorConcealment()
-        {
-            return this;
-        }
-
-        descriptorIllusion(){
-            return this
-        }
-        descriptorInsubstantial(){
-            return this
-        }
-
-        descriptorMindControl(){
-            return this
-        }
-
-        descriptorMindControl(){
-            return this
-        }
-
-        descriptorNullify(){
-            return this
-        }
-
-        descriptorProtection(){
-            return this
-        }
-
-        descriptorTransform(){
-            return this
-        }
-
-        descriptorWeaken(){
-            return this
-        }*/
-    
+        return this;
     }
-    class MagnetismEffectSection extends TemplatedDescriptorEffect {
-        constructor(inSequence) {
-            super(inSequence);
-        }
-       /* castCone({affected, caster}={}){
-            return this
-        }*/
-    
-        descriptorCast(){
-             return this
-        }
-        descriptorMeleeCast(){
-            return this
-        }
-
-        descriptorProject() {
-            return this;
-        }
-        descriptorProjectToLine() {
-            return this.descriptorProject()
-        }
-        descriptorProjectToCone() {
-            return this.descriptorProject()
-        }   
-
-        descriptorBurst() {
-            return this;
-        }
-        descriptorLine() {
-            return this
-        }
-        descriptorCone() {
-            return this;
-        }
-        descriptorAffliction() {
-             
-            return this;
-        }
-        descriptorAura(){
-            return this
-        }
-        descriptorDamage(){
-            return this;
-        }
-        descriptorHealing(){
-           
-            return this
-        }
-
-        /*
-       
-        descriptorAura(){
-            return this
-        }
-
-        descriptorConcealment()
-        {
-            return this;
-        }
-
-        descriptorIllusion(){
-            return this
-        }
-        descriptorInsubstantial(){
-            return this
-        }
-
-        descriptorMindControl(){
-            return this
-        }
-
-        descriptorMindControl(){
-            return this
-        }
-
-        descriptorNullify(){
-            return this
-        }
-
-        descriptorProtection(){
-            return this
-        }
-
-        descriptorTransform(){
-            return this
-        }
-
-        descriptorWeaken(){
-            return this
-        }*/
-    
+    descriptorAura(){
+        return this
     }
-    class MagicEffectSection extends TemplatedDescriptorEffect {
-        constructor(inSequence) {
-            super(inSequence);
-        }
-       /* castCone({affected, caster}={}){
-            return this
-        }*/
-    
-        descriptorCast(){
-             return this
-        }
-        descriptorMeleeCast(){
-            return this
-        }
-
-        descriptorProject() {
-            return this;
-        }
-        descriptorProjectToLine() {
-            return this.descriptorProject()
-        }
-        descriptorProjectToCone() {
-            return this.descriptorProject()
-        }   
-
-        descriptorBurst() {
-            return this;
-        }
-        descriptorLine() {
-            return this
-        }
-        descriptorCone() {
-            return this;
-        }
-        descriptorAffliction() {
-             
-            return this;
-        }
-        descriptorAura(){
-            return this
-        }
-        descriptorDamage(){
-            return this;
-        }
-        descriptorHealing(){
-           
-            return this
-        }
-
-        /*
-       
-        descriptorAura(){
-            return this
-        }
-
-        descriptorConcealment()
-        {
-            return this;
-        }
-
-        descriptorIllusion(){
-            return this
-        }
-        descriptorInsubstantial(){
-            return this
-        }
-
-        descriptorMindControl(){
-            return this
-        }
-
-        descriptorMindControl(){
-            return this
-        }
-
-        descriptorNullify(){
-            return this
-        }
-
-        descriptorProtection(){
-            return this
-        }
-
-        descriptorTransform(){
-            return this
-        }
-
-        descriptorWeaken(){
-            return this
-        }*/
-    
+    descriptorDamage(){
+        return this;
     }
-    class RadiationEffectSection extends TemplatedDescriptorEffect {
-        constructor(inSequence) {
-            super(inSequence);
-        }
-       /* castCone({affected, caster}={}){
-            return this
-        }*/
- 
+    descriptorHealing(){
+        
+        return this
+    }
 
-        startRadiation(){
-            this.castCommon({rotation:false})
-            .file("jb2a.particles.inward.blue.01.02")
-            .playbackRate(0.5)
+    /*
+    
+    descriptorAura(){
+        return this
+    }
+
+    descriptorConcealment()
+    {
+        return this;
+    }
+
+    descriptorIllusion(){
+        return this
+    }
+    descriptorInsubstantial(){
+        return this
+    }
+
+    descriptorMindControl(){
+        return this
+    }
+
+    descriptorMindControl(){
+        return this
+    }
+
+    descriptorNullify(){
+        return this
+    }
+
+    descriptorProtection(){
+        return this
+    }
+
+    descriptorTransform(){
+        return this
+    }
+
+    descriptorWeaken(){
+        return this
+    }*/
+
+}
+class MagicEffectSection extends TemplatedDescriptorEffect {
+    constructor(inSequence) {
+        super(inSequence);
+    }
+    /* castCone({affected, caster}={}){
+        return this
+    }*/
+
+    descriptorCast(){
+            return this
+    }
+    descriptorMeleeCast(){
+        return this
+    }
+
+    descriptorProject() {
+        return this;
+    }
+    descriptorProjectToLine() {
+        return this.descriptorProject()
+    }
+    descriptorProjectToCone() {
+        return this.descriptorProject()
+    }   
+
+    descriptorBurst() {
+        return this;
+    }
+    descriptorLine() {
+        return this
+    }
+    descriptorCone() {
+        return this;
+    }
+    descriptorAffliction() {
+            
+        return this;
+    }
+    descriptorAura(){
+        return this
+    }
+    descriptorDamage(){
+        return this;
+    }
+    descriptorHealing(){
+        
+        return this
+    }
+
+    /*
+    
+    descriptorAura(){
+        return this
+    }
+
+    descriptorConcealment()
+    {
+        return this;
+    }
+
+    descriptorIllusion(){
+        return this
+    }
+    descriptorInsubstantial(){
+        return this
+    }
+
+    descriptorMindControl(){
+        return this
+    }
+
+    descriptorMindControl(){
+        return this
+    }
+
+    descriptorNullify(){
+        return this
+    }
+
+    descriptorProtection(){
+        return this
+    }
+
+    descriptorTransform(){
+        return this
+    }
+
+    descriptorWeaken(){
+        return this
+    }*/
+
+}
+class RadiationEffectSection extends TemplatedDescriptorEffect {
+    constructor(inSequence) {
+        super(inSequence);
+    }
+    /* castCone({affected, caster}={}){
+        return this
+    }*/
+
+
+    startRadiation(){
+        this.castCommon({rotation:false})
+        .file("jb2a.particles.inward.blue.01.02")
+        .playbackRate(0.5)
+        .scale(1)
+        .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
+        .duration(3000)
+        .fadeIn(500)
+        .fadeOut(800)
+        
+        super.castCommon()
+        .file(`jb2a.token_border.circle.static.blue.003`)
+        .opacity(0.9)
+        .fadeIn(1000, {ease: "easeInExpo"})
+        .fadeOut(2500, {ease: "easeInExpo"})
+        .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 18000})
+        .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+        .scaleIn(0, 3000, {ease: "easeOutBack"})
+        .scaleOut(0, 3000, {ease: "easeInBack"})
+        .belowTokens()
+        .tint("#5dd20f")
+        .duration(8000)
+        return this
+    }
+    descriptorCast(){
+        this.startRadiation()
+        super.castCommon()
+            .file("jb2a.cast_generic.02.green")
+            .playbackRate(.5)
             .scale(1)
-            .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
-            .duration(3000)
+            .delay(500)
             .fadeIn(500)
             .fadeOut(800)
-          
-          super.castCommon()
-            .file(`jb2a.token_border.circle.static.blue.003`)
-            .opacity(0.9)
-            .fadeIn(1000, {ease: "easeInExpo"})
-            .fadeOut(2500, {ease: "easeInExpo"})
-            .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 18000})
-            .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
-            .scaleIn(0, 3000, {ease: "easeOutBack"})
-            .scaleOut(0, 3000, {ease: "easeInBack"})
-            .belowTokens()
-            .tint("#5dd20f")
-            .duration(8000)
-            return this
-        }
-        descriptorCast(){
-            this.startRadiation()
-            super.castCommon()
-             .file("jb2a.cast_generic.02.green")
-             .playbackRate(.5)
-             .scale(1)
-             .delay(500)
-             .fadeIn(500)
-             .fadeOut(800)
-             .belowTokens() 
-           .pause(2000)
-           return this    
-        }
+            .belowTokens() 
+        .pause(2000)
+        return this    
+    }
 
-        castBurst({affected, caster}){
-            super.castCommon({affected:affected, caster:caster})
-                .descriptorCast()
-                .file("jb2a.particle_burst.01.circle.bluepurple")
-                .rotateTowards(this.affected)
-                .spriteOffset({ x: -0.2 }, { gridUnits: true })
-                .spriteScale({ x: 0.8, y: 1 })
-                .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
-                .rotate(0)
-                .scaleToObject(1)
-                .scaleIn(0, 1500, { ease: "easeOutCubic" })
-                .animateProperty("sprite", "position.x", { from: -0.5, to: 0.05, duration: 1000, gridUnits: true, ease: "easeOutBack", delay: 0 })
-                .tint("#e51e19")
-                .zIndex(0)
-                .pause(1200)
-            return this
-        }
-        castBurrow({affected, caster,position}={}){
-
-            let hue = -0
-            let leaves = 'orangepink'
-            let saturate = 0
-            let tint = "#144f08"
-            this.castCommon({affected:affected, caster:caster})
-            .file("jb2a.particles.inward.blue.01.02")
-            .fadeIn(350)
-            .fadeOut(350)
-            .scaleToObject(3)
+    castBurst({affected, caster}){
+        super.castCommon({affected:affected, caster:caster})
+            .descriptorCast()
+            .file("jb2a.particle_burst.01.circle.bluepurple")
+            .rotateTowards(this.affected)
+            .spriteOffset({ x: -0.2 }, { gridUnits: true })
+            .spriteScale({ x: 0.8, y: 1 })
             .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
-            .randomRotation()
-            .belowTokens()
-            .duration(1800)
+            .rotate(0)
+            .scaleToObject(1)
+            .scaleIn(0, 1500, { ease: "easeOutCubic" })
+            .animateProperty("sprite", "position.x", { from: -0.5, to: 0.05, duration: 1000, gridUnits: true, ease: "easeOutBack", delay: 0 })
+            .tint("#e51e19")
+            .zIndex(0)
+            .pause(1200)
+        return this
+    }
+    castBurrow({affected, caster,position}={}){
 
-            super.affectCommon()
-            .file("jb2a.energy_strands.in.green.01")
-            .fadeIn(250)
-            .fadeOut(200)
+        let hue = -0
+        let leaves = 'orangepink'
+        let saturate = 0
+        let tint = "#144f08"
+        this.castCommon({affected:affected, caster:caster})
+        .file("jb2a.particles.inward.blue.01.02")
+        .fadeIn(350)
+        .fadeOut(350)
+        .scaleToObject(3)
+        .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
+        .randomRotation()
+        .belowTokens()
+        .duration(1800)
+
+        super.affectCommon()
+        .file("jb2a.energy_strands.in.green.01")
+        .fadeIn(250)
+        .fadeOut(200)
+        .scaleToObject(2)
+        //.belowTokens()
+        .waitUntilFinished(-100)
+
+        super.affectCommon()
+        .file("jb2a.impact.earth.01.browngreen.0")
+        .scaleToObject(4)
+        .opacity(0.8)
+        .tint("#0e7c1b")
+        .filter("ColorMatrix", {saturate: 1})
+
+        .pause(500)
+
+        super.affectCommon()
+        .file("jb2a.burrow.out.01.still_frame.0")
+        .duration(5000)
+        .fadeIn(500)
+        .fadeOut(1000)
+        .belowTokens()
+        .scaleToObject(6)
+        .tint("#0e7c1b")
+        .filter("ColorMatrix", {saturate: 1})
+        .zIndex(1)
+
+        super.affectCommon()
+        .file("jb2a.spell_projectile.earth.01.browngreen.05ft")
+        .opacity(1)
+        .scale(this.caster.w / canvas.grid.size)
+        .stretchTo(position)
+        .tint(tint)
+        .zIndex(1)
+    }
+    descriptorMeleeCast(){
+            this.descriptorCast()
+        super.castCommon()
+            .file("jb2a.unarmed_strike.magical.02.green")
+            .stretchTo(this.affected)
+            .filter("ColorMatrix", { hue: 0, brightness: 1, contrast: 0, saturate: 0 })
+            .scale(3)
+            .delay(100)
+            .playbackRate(1.25)
+            .fadeOut(100)
+            .zIndex(2)
+            .pause(750)
+            .delay(250)
+            
+        //  .pause(1000)
+        
+        return this;
+    }
+    descriptorCastFlight(position){
+      this.file("jb2a.particles.inward.blue.01.02")
+        .playbackRate(0.5)
+        .scale(1)
+        .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
+        .duration(3000)
+        .fadeIn(500)
+        .fadeOut(800)
+      super.affectCommon()
+        .file(`jb2a.this.caster_border.circle.static.blue.003`)
+        .opacity(0.9)
+        .size({ width: 2.5, height: 2.5 }, {gridUnits: true})
+        .fadeIn(1000, {ease: "easeInExpo"})
+        .fadeOut(2500, {ease: "easeInExpo"})
+        .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 18000})
+        .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+        .scaleIn(0, 3000, {ease: "easeOutBack"})
+        .scaleOut(0, 3000, {ease: "easeInBack"})
+        .belowTokens()
+        .tint("#5dd20f")
+        .duration(8000)
+      super.affectCommon()
+        .file("jb2a.cast_generic.02.green.0")
+        .playbackRate(0.5)
+        .scale(1)
+        .delay(500)
+        .fadeIn(500)
+        .fadeOut(800)
+        .belowTokens()
+        .waitUntilFinished() 
+      super.affectCommon()
+          .file("animated-spell-effects-cartoon.air.explosion.green")
+          .scaleToObject(3.5)
+      .pause(500)
+      this.name("flyRad")
+                .file("animated-spell-effects-cartoon.smoke.39")
+                .scaleToObject(2)
+                .rotate(90)
+                .opacity(1)
+        .attachTo(this.affected, {bindAlpha: false})
+                .tint("#047111")
+                .loopProperty("sprite", "position.x", {  from:0 ,to:0.100, duration: 2500, pingPong: true, delay:500, ease: "easeInOutCubic", gridUnits:true})
+                .spriteOffset({x:-40, y: -30})
+        .atLocation(this.affected)
+                .persist()     
+        super.affectCommon()
+                .name("flyRad")
+            .attachTo(this.affected, {bindAlpha: false})
+                .opacity(1)
+                .file("animated-spell-effects-cartoon.smoke.39")
+                .scaleToObject(2)
+                .loopProperty("sprite", "position.x", {  from:0 ,to:0.100, duration: 2500, pingPong: true, delay:500, ease: "easeInOutCubic", gridUnits:true})
+                .rotate(90)
+                .spriteOffset({x:-40, y: 30})
+                .atLocation(this.affected)
+                .persist()
+                .tint("#047111")
+                .mirrorY()               
+        super.affectCommon()
+                .file("jb2a.extras.tmfx.border.circle.outpulse.01.normal")
+                .atLocation(this.affected)
+                .scaleToObject(2)
+                .opacity(0.15)
+        return this;
+
+    }
+
+    descriptorProject() {
+        this.projectCommon({affected:this.affected,caster:this.caster})
+        .file("jb2a.disintegrate.green")
+            .size({ width: 500, height: 100 })
+            .scale(1)
+            .filter("ColorMatrix", {hue:10, contrast: 0, saturate: 0.5,brightness: 0.9,})
+            .playbackRate(1)
+            .scale(2)
+            .zIndex(3)
+        
+        .playSound("modules/lancer-weapon-fx/soundfx/flamethrower_fire.ogg")
+            .fadeInAudio(500)
+            .fadeOutAudio(500)
+        return this
+
+    }
+    projectAcid({caster, affected}={}){
+        this.projectCommon({affected:affected,caster:caster})
+            .file("jb2a.breath_weapons.acid.line.green")
+            .spriteScale(0.5)
+            .aboveLighting()
+            .fadeIn(50)
+            .fadeOut(50)
+            .filter("ColorMatrix", {hue:10, contrast: 0.2, saturate: 0.1,brightness: 0.9,})
+            .pause(2000)
+        return this
+    }
+    projectGreenPurple({caster, affected}={}){
+        this.projectCommon({affected:affected,caster:caster})
+        .file("jb2a.energy_beam.normal.dark_greenpurple.03")
+            .playbackRate(0.8)
+            .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+            .tint("#5dd20f")
+            .scale(1)
+            .delay(1000)
+            .fadeIn(500)
+            .fadeOut(800)
+            .duration(9000)   
+            .pause(2000)
+        return this
+    }
+    descriptorProjectToLine() {
+        return this.descriptorProject()
+    }
+    descriptorProjectToCone() {
+        return this.descriptorProject()
+    }   
+
+    descriptorBurst() {
+        this.file("jb2a.cast_generic.02.green.0")
+            .playbackRate(0.5)
             .scaleToObject(2)
-            //.belowTokens()
-            .waitUntilFinished(-100)
-
-            super.affectCommon()
-            .file("jb2a.impact.earth.01.browngreen.0")
-            .scaleToObject(4)
-            .opacity(0.8)
-            .tint("#0e7c1b")
-            .filter("ColorMatrix", {saturate: 1})
-
-            .pause(500)
-
-            super.affectCommon()
-            .file("jb2a.burrow.out.01.still_frame.0")
-            .duration(5000)
+            .delay(500)
+            .fadeIn(500)
+            .fadeOut(800)
+            .belowTokens()
+        
+            .canvasPan()
+            .shake({ duration: 4000, strength: 5, rotation: false })
+            .delay(2500)
+        
+        
+        super.burstCommon()
+            .file("jb2a.smoke.puff.ring.01.dark_black.0")
+            .delay(2000)
+            .scaleToObject(2)
+            .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
+            .playbackRate(0.5)
+            .zIndex(0.5)
+        
+        super.burstCommon()
+            .file("jb2a.toll_the_dead.green.skull_smoke")
+            .fadeIn(200)
+            .fadeOut(1750)
+            .delay(2200)
+            .opacity(1)
+            .scaleIn(0, 1867, { ease: "easeOutCirc" })
+            .scaleToObject(3.2)
+            .filter("Glow", { color: "#0d0d0c", distance: 2, outerStrength: 3, innerStrength: 3 })
+            .zIndex(5)
+            .aboveLighting()
+        
+        super.burstCommon()
+            .name("Fallout")
+            .file("jb2a.impact.ground_crack.green.01")
+            .scaleToObject(1.5)
+            .fadeOut(1000, { ease: "easeInCubic" })
+            .endTime(1000)
+            .delay(2500)
+            .belowTokens()
+            .persist()
+            .noLoop()
+            .zIndex(0)
+        
+        super.burstCommon()
+            .name("Fallout")
+            .file("jb2a.ground_cracks.green.01")
+            .scaleToObject(1.5)
+            .fadeOut(1000, { ease: "easeInCubic" })
+            .delay(2500)
+            .belowTokens()
+            .persist()
+            .zIndex(0)
+        
+        super.burstCommon()
+            .name("Fallout")
+        .file("jb2a.token.symbol.out_flow.poison.dark_green")
+            .playbackRate(0.4)
+            .scale(1.4)
+            .delay(2000)
+            .opacity(0.5)
+            .belowTokens()
+            .fadeIn(800)
+            .fadeOut(1500)
+            .persist()
+            .zIndex(1)
+        
+        super.burstCommon()
+            .name("Fallout")
+            .file("jb2a.extras.tmfx.outflow.circle.01")
+            .size(13, { gridUnits: true })
+            .opacity(0.7)
+            .scaleIn(0, 2500, { ease: "easeOutBack" })
+            .scaleOut(0, 6500, { ease: "easeInSine" })
+            .filter("ColorMatrix", { brightness: 0 })
+            .rotate(90)
+            .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 20000 })
+            .belowTokens()
+            .delay(2000)
+            .persist()
+            .zIndex(-1)
+        
+        super.burstCommon()
+            .file(canvas.scene.background.src)
+            .filter("ColorMatrix", { brightness: 0.8 })
+            .atLocation({ x: (canvas.dimensions.width) / 2, y: (canvas.dimensions.height) / 2 })
+            .size({ width: canvas.scene.width / canvas.grid.size, height: canvas.scene.height / canvas.grid.size }, { gridUnits: true })
+            .spriteOffset({ x: -0 }, { gridUnits: true })
+        .opacity((this.caster.document.width*0.05)+0.5)
+            .duration(10000)
             .fadeIn(500)
             .fadeOut(1000)
             .belowTokens()
-            .scaleToObject(6)
-            .tint("#0e7c1b")
-            .filter("ColorMatrix", {saturate: 1})
-            .zIndex(1)
-
-            super.affectCommon()
-            .file("jb2a.spell_projectile.earth.01.browngreen.05ft")
-            .opacity(1)
-            .scale(this.caster.w / canvas.grid.size)
-            .stretchTo(position)
-            .tint(tint)
-            .zIndex(1)
-        }
-        descriptorMeleeCast(){
-                this.descriptorCast()
-            super.castCommon()
-                .file("jb2a.unarmed_strike.magical.02.green")
-                .stretchTo(this.affected)
-                .filter("ColorMatrix", { hue: 0, brightness: 1, contrast: 0, saturate: 0 })
-                .scale(3)
-                .delay(100)
-                .playbackRate(1.25)
-                .fadeOut(100)
-                .zIndex(2)
-                .pause(750)
-                .delay(250)
-               
-          //  .pause(1000)
-            
-            return this;
-        }
-
-        descriptorProject() {
-            this.projectCommon({affected:this.affected,caster:this.caster})
-            .file("jb2a.disintegrate.green")
-              .size({ width: 500, height: 100 })
-              .scale(1)
-              .filter("ColorMatrix", {hue:10, contrast: 0, saturate: 0.5,brightness: 0.9,})
-              .playbackRate(1)
-              .scale(2)
-              .zIndex(3)
-            
-            .playSound("modules/lancer-weapon-fx/soundfx/flamethrower_fire.ogg")
-              .fadeInAudio(500)
-              .fadeOutAudio(500)
-            return this
-
-        }
-        projectAcid({caster, affected}={}){
-            this.projectCommon({affected:affected,caster:caster})
-                .file("jb2a.breath_weapons.acid.line.green")
-                .spriteScale(0.5)
-                .aboveLighting()
-                .fadeIn(50)
-                .fadeOut(50)
-                .filter("ColorMatrix", {hue:10, contrast: 0.2, saturate: 0.1,brightness: 0.9,})
-                .pause(2000)
-            return this
-        }
-        projectGreenPurple({caster, affected}={}){
-            this.projectCommon({affected:affected,caster:caster})
-            .file("jb2a.energy_beam.normal.dark_greenpurple.03")
-              .playbackRate(0.8)
-              .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
-              .tint("#5dd20f")
-              .scale(1)
-              .delay(1000)
-              .fadeIn(500)
-              .fadeOut(800)
-              .duration(9000)   
-              .pause(2000)
-            return this
-        }
-        descriptorProjectToLine() {
-            return this.descriptorProject()
-        }
-        descriptorProjectToCone() {
-            return this.descriptorProject()
-        }   
-
-        descriptorBurst() {
-            this.file("jb2a.cast_generic.02.green.0")
-                .playbackRate(0.5)
-                .scaleToObject(2)
-                .delay(500)
-                .fadeIn(500)
-                .fadeOut(800)
-                .belowTokens()
-            
-                .canvasPan()
-                .shake({ duration: 4000, strength: 5, rotation: false })
-                .delay(2500)
-            
-            
-            super.burstCommon()
-                .file("jb2a.smoke.puff.ring.01.dark_black.0")
-                .delay(2000)
-                .scaleToObject(2)
-                .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
-                .playbackRate(0.5)
-                .zIndex(0.5)
-            
-            super.burstCommon()
-                .file("jb2a.toll_the_dead.green.skull_smoke")
-                .fadeIn(200)
-                .fadeOut(1750)
-                .delay(2200)
-                .opacity(1)
-                .scaleIn(0, 1867, { ease: "easeOutCirc" })
-                .scaleToObject(3.2)
-                .filter("Glow", { color: "#0d0d0c", distance: 2, outerStrength: 3, innerStrength: 3 })
-                .zIndex(5)
-                .aboveLighting()
-            
-            super.burstCommon()
-                .name("Fallout")
-                .file("jb2a.impact.ground_crack.green.01")
-                .scaleToObject(1.5)
-                .fadeOut(1000, { ease: "easeInCubic" })
-                .endTime(1000)
-                .delay(2500)
-                .belowTokens()
-                .persist()
-                .noLoop()
-                .zIndex(0)
-            
-            super.burstCommon()
-                .name("Fallout")
-                .file("jb2a.ground_cracks.green.01")
-                .scaleToObject(1.5)
-                .fadeOut(1000, { ease: "easeInCubic" })
-                .delay(2500)
-                .belowTokens()
-                .persist()
-                .zIndex(0)
-            
-            super.burstCommon()
-                .name("Fallout")
-            .file("jb2a.token.symbol.out_flow.poison.dark_green")
-                .playbackRate(0.4)
-                .scale(1.4)
-                .delay(2000)
-                .opacity(0.5)
-                .belowTokens()
-                .fadeIn(800)
-                .fadeOut(1500)
-                .persist()
-                .zIndex(1)
-            
-            super.burstCommon()
-                .name("Fallout")
-                .file("jb2a.extras.tmfx.outflow.circle.01")
-                .size(13, { gridUnits: true })
-                .opacity(0.7)
-                .scaleIn(0, 2500, { ease: "easeOutBack" })
-                .scaleOut(0, 6500, { ease: "easeInSine" })
-                .filter("ColorMatrix", { brightness: 0 })
-                .rotate(90)
-                .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 20000 })
-                .belowTokens()
-                .delay(2000)
-                .persist()
-                .zIndex(-1)
-            
-            super.burstCommon()
-                .file(canvas.scene.background.src)
-                .filter("ColorMatrix", { brightness: 0.8 })
-                .atLocation({ x: (canvas.dimensions.width) / 2, y: (canvas.dimensions.height) / 2 })
-                .size({ width: canvas.scene.width / canvas.grid.size, height: canvas.scene.height / canvas.grid.size }, { gridUnits: true })
-                .spriteOffset({ x: -0 }, { gridUnits: true })
-            .opacity((this.caster.document.width*0.05)+0.5)
-                .duration(10000)
-                .fadeIn(500)
-                .fadeOut(1000)
-                .belowTokens()
-                .tint("#5dd20f")
-            return this;
-        }
-        burstAffectDamage({affected, caster}){
-            super.burstCommon({affected:affected, caster:caster})
-            .file("jb2a.cast_generic.02.green.0")
-            .atLocation(this.affected)
-                .playbackRate(0.5)
-                .scaleToObject(2)
-                .delay(500)
-                .fadeIn(500)
-                .fadeOut(800)
-                .belowTokens()
-            
-                .canvasPan()
-                .shake({ duration: 4000, strength: 25, rotation: false })
-                .delay(2500)
-            
-                    .effect("modules/lancer-weapon-fx/sprites/shockwave.png")
-          
-                    .duration(7000)
-                    .scale(0.2)
-                    .scaleOut(8, 7000)
-                    .fadeOut(7000)
-                    .delay(3000)
-                
-            .playSound("https://assets.forge-vtt.com/bazaar/modules/lancer-weapon-fx/assets/soundfx/pw_nuke.ogg")
-                .delay(2000)
-                .duration(8000)
-                .fadeOutAudio(3000)
-            
-            super.burstCommon()
-                .file("jb2a.smoke.puff.ring.01.dark_black.0")
-          
-                .delay(2000)
-                .scaleToObject(2)
-                .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
-                .playbackRate(0.5)
-                .zIndex(0.5)
-            
-            super.burstCommon()
-                .file("animated-spell-effects-cartoon.fire.explosion.06")
-          
-                .scaleToObject(2)
-                .scaleIn(0, 3000, { ease: "easeOutCubic" })
-                .fadeOut(500, { ease: "easeInCubic" })
-                .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 1,brightness: 1,})
-                .tint("#5dd20f")
-                .delay(1300)
-                .playbackRate(1)
-                .zIndex(2)
-            
-            super.burstCommon()
-                .file("animated-spell-effects-cartoon.mix.fire earth explosion.05")
-          
-                .scaleToObject(3)
-                .anchor({ x: 0.5, y: 0.4, gridUnits:true })
-                .scaleIn(0, 1500, { ease: "easeOutCubic" })
-                .scaleOut(0, 2500, { ease: "easeInBack" })
-                .fadeOut(500, { ease: "easeInCubic" })
-                .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 1,brightness: 1,})
-                .tint("#5dd20f")
-                .delay(1800)
-                .zIndex(1)
-            
-            
-            super.burstCommon()
-                .file("jb2a.toll_the_dead.green.skull_smoke")
-          
-                .fadeIn(200)
-                .fadeOut(1750)
-                .delay(2200)
-                .opacity(1)
-                .scaleIn(0, 1867, { ease: "easeOutCirc" })
-                .scaleToObject(3.2)
-                .filter("Glow", { color: "#0d0d0c", distance: 2, outerStrength: 3, innerStrength: 3 })
-                .zIndex(5)
-                .aboveLighting()
-            
-            super.burstCommon()
-                .name("Fallout")
-                .file("jb2a.impact.ground_crack.green.01")
-          
-                .scaleToObject(1.5)
-                .fadeOut(1000, { ease: "easeInCubic" })
-                .endTime(1000)
-                .delay(2500)
-                .belowTokens()
-                .persist()
-                .noLoop()
-                .zIndex(0)
-            
-            super.burstCommon()
-                .name("Fallout")
-                .file("jb2a.ground_cracks.green.01")
-          
-                .scaleToObject(1.5)
-                .fadeOut(1000, { ease: "easeInCubic" })
-                .delay(2500)
-                .belowTokens()
-                .persist()
-                .zIndex(0)
-            
-            super.burstCommon()
-                .name("Fallout")
-            .file("jb2a.template_circle.symbol.out_flow.poison.dark_green")
-          
-                .playbackRate(0.4)
-                .scale(1.4)
-                .delay(2000)
-                .opacity(0.5)
-                .belowTokens()
-                .fadeIn(800)
-                .fadeOut(1500)
-                .persist()
-                .zIndex(1)
-            
-            super.burstCommon()
-                .name("Fallout")
-                .file("jb2a.extras.tmfx.outflow.circle.01")
-          
-                .size(13, { gridUnits: true })
-                .opacity(0.7)
-                .scaleIn(0, 2500, { ease: "easeOutBack" })
-                .scaleOut(0, 6500, { ease: "easeInSine" })
-                .filter("ColorMatrix", { brightness: 0 })
-                .rotate(90)
-                .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 20000 })
-                .belowTokens()
-                .delay(2000)
-                .persist()
-                .zIndex(-1)
-            return this
-        }
-        descriptorLine() {
-            this.atLocation(this.templateStart)
-                 // .rotateTowards(this.affected, {cacheLocation: true})
-                 .file("jb2a.breath_weapons.acid.line.green")
-                .spriteScale(0.5)
-                .stretchTo(this.end)
-                .aboveLighting()
-                .fadeIn(50)
-                .fadeOut(50)
-                .filter("ColorMatrix", {hue:10, contrast: 0.2, saturate: 0.1,brightness: 0.9,})
-                .pause(2000)
-                super.lineCommon().file("jb2a.particles.outward.blue.01.04")
-                .fadeIn(500)
-                .fadeOut(500)
-                .anchor({x:0.5})
-                .scaleToObject(2)
-                .duration(5000)
-                .rotateTowards(this.affected, {cacheLocation: true})
-                .loopProperty("sprite", "rotation", { from: -360, to: 360, duration: 3000})
-                .scaleOut(0, 4000, {ease: "easeOutQuint", delay: -3000})
-                .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
-                .zIndex(1)
+            .tint("#5dd20f")
+        return this;
+    }
+    burstAffectDamage({affected, caster}){
+        super.burstCommon({affected:affected, caster:caster})
+        .file("jb2a.cast_generic.02.green.0")
+        .atLocation(this.affected)
+            .playbackRate(0.5)
+            .scaleToObject(2)
+            .delay(500)
+            .fadeIn(500)
+            .fadeOut(800)
+            .belowTokens()
         
-            super.lineCommon()
-                .file("jb2a.particles.outward.blue.01.04")
-                .fadeIn(500)
-                .fadeOut(500)
-                .anchor({x:0.5})
-                .scaleToObject(2)
-                .duration(5000)
-            .rotateTowards(this.affected, {cacheLocation: true})
-                .loopProperty("sprite", "rotation", { from: 360, to: -360, duration: 3000})
-                .scaleOut(0, 4000, {ease: "easeOutQuint", delay: -3000})
-                .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
-                .zIndex(1)
-         
-               
-
-            .playSound("modules/lancer-weapon-fx/soundfx/flamethrower_fire.ogg")
-                .delay(2500)  
-        }
-        descriptorCone() {
-            return this;
-        }
-        descriptorAffliction() {
-            this.from(this.affected)
-          
-            .fadeIn(200)
-            .fadeOut(500)
-            .delay(800)
-            .loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
-            .scaleToObject(this.affected.document.texture.scaleX)
-            .duration(3000)
-            .opacity(0.25)
-
-            super.affectCommon()
-                .from(this.affected)
-                .fadeIn(200)
-                .fadeOut(500)
+            .canvasPan()
+            .shake({ duration: 4000, strength: 25, rotation: false })
+            .delay(2500)
+        
+                .effect("modules/lancer-weapon-fx/sprites/shockwave.png")
+        
+                .duration(7000)
+                .scale(0.2)
+                .scaleOut(8, 7000)
+                .fadeOut(7000)
                 .delay(3000)
-                .loopProperty("sprite", "position.x", { from: -0.08, to: 0.08, duration: 50, pingPong: true, gridUnits: true })
-                .scaleToObject(this.affected.document.texture.scaleX)
-                .duration(10000)
-                .opacity(0.25)
-              
-            super.affectCommon()
-              .file("jb2a.template_circle.symbol.normal.poison.dark_green")
-              .scaleToObject(3)
-              .fadeIn(800)
-              .fadeOut(800)
-              .zIndex(3)
-              
-            super.affectCommon()
-              .file("jb2a.smoke.puff.ring.01.dark_black.0")
-              .scaleToObject(3)
-              .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
-              .playbackRate(0.5)
-              .zIndex(3)
-                
-            super.affectCommon()
-              .file("jb2a.markers.poison.dark_green.02")
-              .playbackRate(1)
-              .scaleToObject()
-              .scale(1.8)
-              .fadeIn(500)
-              .rotateIn(180, 600, {ease: "easeOutCubic"})
-              .scaleIn(0, 600, {ease: "easeOutCubic"})
-              .persist()
-            return this;
-        }
-        descriptorAura(){
-            return this
-        }
+            
+        .playSound("https://assets.forge-vtt.com/bazaar/modules/lancer-weapon-fx/assets/soundfx/pw_nuke.ogg")
+            .delay(2000)
+            .duration(8000)
+            .fadeOutAudio(3000)
+        
+        super.burstCommon()
+            .file("jb2a.smoke.puff.ring.01.dark_black.0")
+        
+            .delay(2000)
+            .scaleToObject(2)
+            .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
+            .playbackRate(0.5)
+            .zIndex(0.5)
+        
+        super.burstCommon()
+            .file("animated-spell-effects-cartoon.fire.explosion.06")
+        
+            .scaleToObject(2)
+            .scaleIn(0, 3000, { ease: "easeOutCubic" })
+            .fadeOut(500, { ease: "easeInCubic" })
+            .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 1,brightness: 1,})
+            .tint("#5dd20f")
+            .delay(1300)
+            .playbackRate(1)
+            .zIndex(2)
+        
+        super.burstCommon()
+            .file("animated-spell-effects-cartoon.mix.fire earth explosion.05")
+        
+            .scaleToObject(3)
+            .anchor({ x: 0.5, y: 0.4, gridUnits:true })
+            .scaleIn(0, 1500, { ease: "easeOutCubic" })
+            .scaleOut(0, 2500, { ease: "easeInBack" })
+            .fadeOut(500, { ease: "easeInCubic" })
+            .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 1,brightness: 1,})
+            .tint("#5dd20f")
+            .delay(1800)
+            .zIndex(1)
+        
+        
+        super.burstCommon()
+            .file("jb2a.toll_the_dead.green.skull_smoke")
+        
+            .fadeIn(200)
+            .fadeOut(1750)
+            .delay(2200)
+            .opacity(1)
+            .scaleIn(0, 1867, { ease: "easeOutCirc" })
+            .scaleToObject(3.2)
+            .filter("Glow", { color: "#0d0d0c", distance: 2, outerStrength: 3, innerStrength: 3 })
+            .zIndex(5)
+            .aboveLighting()
+        
+        super.burstCommon()
+            .name("Fallout")
+            .file("jb2a.impact.ground_crack.green.01")
+        
+            .scaleToObject(1.5)
+            .fadeOut(1000, { ease: "easeInCubic" })
+            .endTime(1000)
+            .delay(2500)
+            .belowTokens()
+            .persist()
+            .noLoop()
+            .zIndex(0)
+        
+        super.burstCommon()
+            .name("Fallout")
+            .file("jb2a.ground_cracks.green.01")
+        
+            .scaleToObject(1.5)
+            .fadeOut(1000, { ease: "easeInCubic" })
+            .delay(2500)
+            .belowTokens()
+            .persist()
+            .zIndex(0)
+        
+        super.burstCommon()
+            .name("Fallout")
+        .file("jb2a.template_circle.symbol.out_flow.poison.dark_green")
+        
+            .playbackRate(0.4)
+            .scale(1.4)
+            .delay(2000)
+            .opacity(0.5)
+            .belowTokens()
+            .fadeIn(800)
+            .fadeOut(1500)
+            .persist()
+            .zIndex(1)
+        
+        super.burstCommon()
+            .name("Fallout")
+            .file("jb2a.extras.tmfx.outflow.circle.01")
+        
+            .size(13, { gridUnits: true })
+            .opacity(0.7)
+            .scaleIn(0, 2500, { ease: "easeOutBack" })
+            .scaleOut(0, 6500, { ease: "easeInSine" })
+            .filter("ColorMatrix", { brightness: 0 })
+            .rotate(90)
+            .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 20000 })
+            .belowTokens()
+            .delay(2000)
+            .persist()
+            .zIndex(-1)
+        return this
+    }
+    descriptorLine() {
+        this.atLocation(this.templateStart)
+                // .rotateTowards(this.affected, {cacheLocation: true})
+                .file("jb2a.breath_weapons.acid.line.green")
+            .spriteScale(0.5)
+            .stretchTo(this.end)
+            .aboveLighting()
+            .fadeIn(50)
+            .fadeOut(50)
+            .filter("ColorMatrix", {hue:10, contrast: 0.2, saturate: 0.1,brightness: 0.9,})
+            .pause(2000)
+            super.lineCommon().file("jb2a.particles.outward.blue.01.04")
+            .fadeIn(500)
+            .fadeOut(500)
+            .anchor({x:0.5})
+            .scaleToObject(2)
+            .duration(5000)
+            .rotateTowards(this.affected, {cacheLocation: true})
+            .loopProperty("sprite", "rotation", { from: -360, to: 360, duration: 3000})
+            .scaleOut(0, 4000, {ease: "easeOutQuint", delay: -3000})
+            .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
+            .zIndex(1)
+    
+        super.lineCommon()
+            .file("jb2a.particles.outward.blue.01.04")
+            .fadeIn(500)
+            .fadeOut(500)
+            .anchor({x:0.5})
+            .scaleToObject(2)
+            .duration(5000)
+        .rotateTowards(this.affected, {cacheLocation: true})
+            .loopProperty("sprite", "rotation", { from: 360, to: -360, duration: 3000})
+            .scaleOut(0, 4000, {ease: "easeOutQuint", delay: -3000})
+            .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
+            .zIndex(1)
+        
+            
 
-
-        meleeAffectDamage({affected, caster}){
-            super.affectCommon({affected:affected, caster:caster})
-                .file("jb2a.swirling_leaves.outburst.01.pink")
-                .scaleIn(0, 500, {ease: "easeOutCubic"}) 
-                .filter("ColorMatrix", { saturate: 1, hue: -105 })
-                .scaleToObject(0.75)
-                .fadeOut(2000)
-                .atLocation(this.caster)
-                .zIndex(1)
-                .recoilAwayFromSelected({affected:affected, distance : .25, duration:100, repeats:1})
-            super.affectCommon()
-                .file("animated-spell-effects-cartoon.water.85")
-                .scaleIn(0, 100, {ease: "easeOutCubic"}) 
-                .scaleToObject(2.8)
-                .filter("ColorMatrix", {hue: 5, brightness: 1, contrast: 0, saturate: -0.8})
-                .randomRotation()
-            .playSound()
-                .file("modules/lancer-weapon-fx/soundfx/Axe_Hit.ogg")
-                .fadeInAudio(500)
-                .fadeOutAudio(500)
-            .playSound()
-                .file("modules/lancer-weapon-fx/soundfx/Axe_swing.ogg")
-                .fadeInAudio(500)
-                .fadeOutAudio(500)
-            super.affectCommon()
-                .file("jb2a.impact.ground_crack.green.01")
-                .scaleToObject(3)
-                .randomRotation()
-                .belowTokens()
-            super.affectCommon()
-                .file("jb2a.toll_the_dead.green.skull_smoke")
-                .scaleIn(0.5, 800, {ease: "easeOutQuint"})
-                .fadeIn(500)
-                .fadeOut(500)
-                .scale(0.8)
-                .filter("Glow", { color: "#0d0d0c", distance: 1, outerStrength: 5, innerStrength: 0 })
-                .zIndex(4)
-            super.affectCommon()
-                .delay(200)
-                .file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
-                .scaleIn(0, 100, {ease: "easeOutCubic"}) 
-                .scaleToObject(1.75)
-                .opacity(0.5)
-                .belowTokens()
-            super.affectCommon()
-                .delay(200)
-                .file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
-                .scaleIn(0, 100, {ease: "easeOutCubic"}) 
-                .scaleToObject(2.5)
-                .opacity(0.5)
-                .belowTokens()
-            super.affectCommon()
-                .from(this.affected)
-                .fadeIn(200)
-                .fadeOut(500)
-                .loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
-                .scaleToObject(this.affected.document.texture.scaleX)
-                .duration(3000)
-                .opacity(0.25)
-        }
-
-        descriptorDamage(){
-            this.from(this.affected)   
+        .playSound("modules/lancer-weapon-fx/soundfx/flamethrower_fire.ogg")
+            .delay(2500)  
+    }
+    descriptorCone() {
+        return this;
+    }
+    burstAffectTransform({affected, caster}){
+        super.burstCommon({affected:affected, caster:caster})
+            .pause(2000)
+            .delay(300)
+        super.burstCommon()
+            .file("jb2a.token_border.circle.static.blue.006")
+            .scaleToObject(2, { considerTokenScale: true })
+            .randomRotation()
+            .fadeIn(1000)
+            .fadeOut(500)
+            .opacity(0.8)
+            .persist()
+            .loopProperty("alphaFilter", "alpha", { from: 0.75, to: 1, duration: 1500, pingPong: true, ease: "easeOutSine" })
+            .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+            .tint("#5dd20f")
+        super.burstCommon()
+            .from(this.affected)
             .fadeIn(200)
             .fadeOut(500)
-            .delay(800)
-            .loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
+            .delay(3000)
+            .loopProperty("sprite", "position.x", { from: -0.08, to: 0.08, duration: 50, pingPong: true, gridUnits: true })
+        .scaleToObject(this.affected.document.texture.scaleX)
+            .duration(10000)
+            .opacity(0.25)
+    }
+
+    descriptorAffliction() {
+        this.from(this.affected)
+        
+        .fadeIn(200)
+        .fadeOut(500)
+        .delay(800)
+        .loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
+        .scaleToObject(this.affected.document.texture.scaleX)
+        .duration(3000)
+        .opacity(0.25)
+
+        super.affectCommon()
+            .from(this.affected)
+            .fadeIn(200)
+            .fadeOut(500)
+            .delay(3000)
+            .loopProperty("sprite", "position.x", { from: -0.08, to: 0.08, duration: 50, pingPong: true, gridUnits: true })
             .scaleToObject(this.affected.document.texture.scaleX)
-            .duration(3000)
+            .duration(10000)
             .opacity(0.25)
             
-            .affectCommon()
+        super.affectCommon()
             .file("jb2a.template_circle.symbol.normal.poison.dark_green")
             .scaleToObject(3)
             .fadeIn(800)
             .fadeOut(800)
             .zIndex(3)
             
-            .affectCommon()
+        super.affectCommon()
             .file("jb2a.smoke.puff.ring.01.dark_black.0")
             .scaleToObject(3)
             .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
             .playbackRate(0.5)
             .zIndex(3)
-
-            .affectCommon()
-            .file("jb2a.ground_cracks.green.01")
-            .delay(2000)
-            .duration(5000)
-            .scaleToObject(2.2)
+            
+        super.affectCommon()
+            .file("jb2a.markers.poison.dark_green.02")
+            .playbackRate(1)
+            .scaleToObject()
+            .scale(1.8)
             .fadeIn(500)
-            .fadeOut(1000)
+            .rotateIn(180, 600, {ease: "easeOutCubic"})
+            .scaleIn(0, 600, {ease: "easeOutCubic"})
+            .persist()
+        return this;
+    }
+    descriptorAura(){
+        return this
+    }
+
+    
+    descriptorBurrow(){
+        this.file("jb2a.cast_generic.02.green.0")
+            .atLocation(this.affected)
+            .scaleToObject(2.25)
+            .animateProperty("sprite", "width", { from: this.affected.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
+            .animateProperty("sprite", "height", { from: this.affected.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
+            .animateProperty("sprite", "width", { from: 0, to: this.affected.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
+            .animateProperty("sprite", "height", { from: 0, to: this.affected.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
+            .playbackRate(0.8)
             .belowTokens()
 
-
             .pause(1000)
-            
-            .affectCommon()
+
+        super.affectCommon()
+            .file("jb2a.impact.earth.01.browngreen.0")
+            .atLocation(this.affected)
+            .scaleToObject(6)
+            .opacity(0.8)
+
+        super.affectCommon()
+            .file("jb2a.burrow.out.01.brown.1")
+            .atLocation(this.affected)
+            .opacity(0.8)
+            .belowTokens()
+            .scaleToObject(8)
+            .tint("#0e7c1b")
+            .filter("ColorMatrix", {saturate: 1})
+            .zIndex(1)
+
+            .animation()
+            .delay(1400)
+            .on(this.affected)
+            .fadeIn(200)
+
+        super.affectCommon()
+            .file("modules/animated-spell-effects/spell-effects/misc/skull_blast_CIRCLE_02.webm")
+            .filter("ColorMatrix", {brightness: 1, contrast: 1})
+            .fadeOut(3000)
+            .scaleToObject(6)
+            .zIndex(3)
+            .waitUntilFinished(-2000)
+
+        super.affectCommon()
+            .file("jb2a.impact.ground_crack.02.green")
+            .belowTokens()
+            .tint("#0e7c1b")
+            .filter("ColorMatrix", {saturate: 2})
+            .fadeOut(1000)
+            .scaleToObject(4)
+            .zIndex(2)
+
+        super.affectCommon()
+            .file("jb2a.ground_cracks.green.02")
+            .belowTokens()
+            .tint("#0e7c1b")
+            .filter("ColorMatrix", {saturate: 1})
+            .duration(6000)
+            .fadeOut(1000)
+            .scaleToObject(4)
+            .delay(500)
+            .zIndex(1)
+    }
+    descriptorConcealment()
+    {
+        this.file("jb2a.smoke.puff.ring.01.dark_black.0")
+                .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
+                .delay(505)
+                .scaleToObject(3)
+                .aboveLighting()
+                .playbackRate(0.5);
+        return super.concealment();
+    }
+    descriptorDamage(){
+        this.from(this.affected)   
+        .fadeIn(200)
+        .fadeOut(500)
+        .delay(800)
+        .loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
+        .scaleToObject(this.affected.document.texture.scaleX)
+        .duration(3000)
+        .opacity(0.25)
+        
+        .affectCommon()
+        .file("jb2a.template_circle.symbol.normal.poison.dark_green")
+        .scaleToObject(3)
+        .fadeIn(800)
+        .fadeOut(800)
+        .zIndex(3)
+        
+        .affectCommon()
+        .file("jb2a.smoke.puff.ring.01.dark_black.0")
+        .scaleToObject(3)
+        .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
+        .playbackRate(0.5)
+        .zIndex(3)
+
+        .affectCommon()
+        .file("jb2a.ground_cracks.green.01")
+        .delay(2000)
+        .duration(5000)
+        .scaleToObject(2.2)
+        .fadeIn(500)
+        .fadeOut(1000)
+        .belowTokens()
+
+
+        .pause(1000)
+        
+        .affectCommon()
+        .file("jb2a.toll_the_dead.green.skull_smoke")
+        .scaleIn(0.5, 800, {ease: "easeOutQuint"})
+        .fadeIn(500)
+        .fadeOut(500)
+        .scale(1)
+        .filter("Glow", { color: "#0d0d0c", distance: 1, outerStrength: 5, innerStrength: 0 })
+        .zIndex(4)
+    }
+    descriptorDeflection(){
+        this.deflectionAnimation='jb2a.bullet.Snipe.green'
+        this.file("jb2a.smoke.puff.ring.01.dark_black.0")
+            .atLocation(this.affected)
+            .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
+            .scaleToObject(3)
+            .aboveLighting()
+            .playbackRate(0.5)
+            .wait(1000)
+
+        super.affectCommon()
+            .file("jb2a.wall_of_force.sphere.green")
+            .atLocation(this.affected)
+            .attachTo(this.affected)
+            .name("Rad Field")
+            .fadeIn(1000)
+            .fadeOut(1000)
+    }
+    meleeAffectDamage({affected, caster}){
+        super.affectCommon({affected:affected, caster:caster})
+            .file("jb2a.swirling_leaves.outburst.01.pink")
+            .scaleIn(0, 500, {ease: "easeOutCubic"}) 
+            .filter("ColorMatrix", { saturate: 1, hue: -105 })
+            .scaleToObject(0.75)
+            .fadeOut(2000)
+            .atLocation(this.caster)
+            .zIndex(1)
+            .recoilAwayFromSelected({affected:affected, distance : .25, duration:100, repeats:1})
+        super.affectCommon()
+            .file("animated-spell-effects-cartoon.water.85")
+            .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+            .scaleToObject(2.8)
+            .filter("ColorMatrix", {hue: 5, brightness: 1, contrast: 0, saturate: -0.8})
+            .randomRotation()
+        .playSound()
+            .file("modules/lancer-weapon-fx/soundfx/Axe_Hit.ogg")
+            .fadeInAudio(500)
+            .fadeOutAudio(500)
+        .playSound()
+            .file("modules/lancer-weapon-fx/soundfx/Axe_swing.ogg")
+            .fadeInAudio(500)
+            .fadeOutAudio(500)
+        super.affectCommon()
+            .file("jb2a.impact.ground_crack.green.01")
+            .scaleToObject(3)
+            .randomRotation()
+            .belowTokens()
+        super.affectCommon()
             .file("jb2a.toll_the_dead.green.skull_smoke")
             .scaleIn(0.5, 800, {ease: "easeOutQuint"})
             .fadeIn(500)
             .fadeOut(500)
-            .scale(1)
+            .scale(0.8)
             .filter("Glow", { color: "#0d0d0c", distance: 1, outerStrength: 5, innerStrength: 0 })
             .zIndex(4)
-        }
-        descriptorBurrow(){
-            this.file("jb2a.cast_generic.02.green.0")
-                .atLocation(this.affected)
-                .scaleToObject(2.25)
-                .animateProperty("sprite", "width", { from: this.affected.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
-                .animateProperty("sprite", "height", { from: this.affected.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
-                .animateProperty("sprite", "width", { from: 0, to: this.affected.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
-                .animateProperty("sprite", "height", { from: 0, to: this.affected.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
-                .playbackRate(0.8)
-                .belowTokens()
-
-                .pause(1000)
-
-            super.affectCommon()
-                .file("jb2a.impact.earth.01.browngreen.0")
-                .atLocation(this.affected)
-                .scaleToObject(6)
-                .opacity(0.8)
-
-            super.affectCommon()
-                .file("jb2a.burrow.out.01.brown.1")
-                .atLocation(this.affected)
-                .opacity(0.8)
-                .belowTokens()
-                .scaleToObject(8)
-                .tint("#0e7c1b")
-                .filter("ColorMatrix", {saturate: 1})
-                .zIndex(1)
-
-                .animation()
-                .delay(1400)
-                .on(this.affected)
-                .fadeIn(200)
-
-            super.affectCommon()
-                .file("modules/animated-spell-effects/spell-effects/misc/skull_blast_CIRCLE_02.webm")
-                .filter("ColorMatrix", {brightness: 1, contrast: 1})
-                .fadeOut(3000)
-                .scaleToObject(6)
-                .zIndex(3)
-                .waitUntilFinished(-2000)
-
-            super.affectCommon()
-                .file("jb2a.impact.ground_crack.02.green")
-                .belowTokens()
-                .tint("#0e7c1b")
-                .filter("ColorMatrix", {saturate: 2})
-                .fadeOut(1000)
-                .scaleToObject(4)
-                .zIndex(2)
-
-            super.affectCommon()
-                .file("jb2a.ground_cracks.green.02")
-                .belowTokens()
-                .tint("#0e7c1b")
-                .filter("ColorMatrix", {saturate: 1})
-                .duration(6000)
-                .fadeOut(1000)
-                .scaleToObject(4)
-                .delay(500)
-                .zIndex(1)
-        }
-        
-        descriptorHealing(){
-           
-            this.file("jb2a.template_circle.symbol.normal.poison.dark_green")
-          
-              .scaleToObject(3)
-              .fadeIn(800)
-              .fadeOut(800)
-              .delay(500)
-              .zIndex(3)
-              
-            super.affectCommon()
-              .file("jb2a.smoke.puff.ring.01.dark_black.0")
-          
-              .scaleToObject(3)
-              .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
-              .playbackRate(0.5)
-              .zIndex(3)
-            
-            super.affectCommon()
-            .file(`jb2a.token_border.circle.static.blue.003`)
-          
-                .opacity(0.9)
-                .size({ width: 2.5, height: 2.5 }, {gridUnits: true})
-                .fadeIn(1000, {ease: "easeInExpo"})
-                .fadeOut(2500, {ease: "easeInExpo"})
-                .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 18000})
-                .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
-                .scaleIn(0, 3000, {ease: "easeOutBack"})
-                .scaleOut(0, 3000, {ease: "easeInBack"})
-                .tint("#5dd20f")
-                .duration(8000)
-            
-            super.affectCommon()
-                .file("jb2a.cast_generic.02.green.0")
-          
-                .playbackRate(0.5)
-                .scale(1)
-                .delay(500)
-                .fadeIn(500)
-                .fadeOut(800)
-                .belowTokens()
-                .waitUntilFinished(-500)
-            
-            super.affectCommon()
-            .file("jb2a.flaming_sphere.200px.green")
-          
-            .rotate(50)
-            .fadeIn(250)
-            .fadeOut(250)
-            .spriteOffset({x:canvas.grid.size})
-            .scaleToObject(0.5)
-            .duration(5000)
-               .animateProperty("sprite", "position.y", { from: 0, to: -1, duration: 1000, gridUnits: true, fromEnd: false, ease: "easeOutSine" })
-               .animateProperty("sprite", "position.x", { from: 1, to: 0, duration: 1500, gridUnits: true, fromEnd: false, ease: "easeOutSine", delay: 300 })
-               .zIndex(2)
-            
-            super.affectCommon()
-            .file("jb2a.flaming_sphere.200px.green")
-          
-            .spriteOffset({x:canvas.grid.size})
-            .rotate(180)
-            .fadeIn(250)
-            .fadeOut(250)
-            .scaleToObject(0.5)
-            .duration(5000)
-               .animateProperty("sprite", "position.y", { from: 0, to: -1, duration: 1000, gridUnits: true, fromEnd: false, ease: "easeOutSine" })
-               .animateProperty("sprite", "position.x", { from: 1, to: 0, duration: 1500, gridUnits: true, fromEnd: false, ease: "easeOutSine", delay: 300 })
-            .zIndex(2)
-            
-            super.affectCommon()
-            .file("jb2a.flaming_sphere.200px.green")
-          
-            .spriteOffset({x:canvas.grid.size})
-            .rotate(310)
-            .scaleToObject(0.5)
-            .fadeIn(250)
-            .fadeOut(250)
-            .duration(5000)
-               .animateProperty("sprite", "position.y", { from: 0, to: -1, duration: 1000, gridUnits: true, fromEnd: false, ease: "easeOutSine" })
-               .animateProperty("sprite", "position.x", { from: 1, to: 0, duration: 1500, gridUnits: true, fromEnd: false, ease: "easeOutSine", delay: 300 })
-               .zIndex(2)
-               
-               
-            .pause(2500)
-            
-            super.affectCommon()
-            .file("jb2a.detect_magic.circle.green")
-            .atLocation(this.affected, { offset: { x:0, y: -45 } } )
-            .scaleToObject(2)
-            .playbackRate(1)
-            .opacity(0.75)
-            .mask()
-            .fadeIn(500)
-            .fadeOut(1000)
-            .duration(10000)
-            .delay(3000)
-            
-            
-            super.affectCommon()
+        super.affectCommon()
+            .delay(200)
+            .file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
+            .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+            .scaleToObject(1.75)
+            .opacity(0.5)
+            .belowTokens()
+        super.affectCommon()
+            .delay(200)
+            .file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
+            .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+            .scaleToObject(2.5)
+            .opacity(0.5)
+            .belowTokens()
+        super.affectCommon()
             .from(this.affected)
-                .delay(500)
-          
-                .tint("#059c02")
-                .fadeIn(750)
-                .fadeOut(1000)
-                .duration(4000)
-              // .fadeOut(3500)
-            .attachTo(this.affected)
-              // .duration(7500)
-              .opacity(0.8)
-                .animateProperty("alphaFilter", "alpha", { from: 0, to: -0.2, duration: 1000})
-                .zIndex(1)
+            .fadeIn(200)
+            .fadeOut(500)
+            .loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
+            .scaleToObject(this.affected.document.texture.scaleX)
+            .duration(3000)
+            .opacity(0.25)
+    }
+    descriptorFlight(position){
+        this.from(this.affected)
+        this.file("animated-spell-effects-cartoon.air.explosion.green")
+            .atLocation(this.affected)
+            .scaleToObject(3.5)
+             .aboveLighting()
+            .persist(false)
+        .thenDo(async function(){
+            Sequencer.EffectManager.endEffects({ name: "flyRad"});
+        })
+        
+        return this
+    }
+    descriptorHealing(){
+        
+        this.file("jb2a.template_circle.symbol.normal.poison.dark_green")
+        
+            .scaleToObject(3)
+            .fadeIn(800)
+            .fadeOut(800)
+            .delay(500)
+            .zIndex(3)
             
-            super.affectCommon()
-            .file("jb2a.energy_strands.range.multiple.dark_green.01")
-            .atLocation({x:this.affected.x+(canvas.grid.size*1.5),y: this.affected.y-(canvas.grid.size*0.4)})
-            .fadeIn(250)
-            .fadeOut(250)
-            .zIndex(1)
-            
-            super.affectCommon()
-            .file("jb2a.energy_strands.range.multiple.dark_green.01")
-            .atLocation({x:this.affected.x-(canvas.grid.size*0.5),y: this.affected.y-(canvas.grid.size*0.4)})
-            .fadeIn(250)
-            .fadeOut(250)
-            .zIndex(1)
-            
-            super.affectCommon()
-            .file("jb2a.energy_strands.range.multiple.dark_green.01")
-            .atLocation({x:this.affected.x+(canvas.grid.size*0.5),y: this.affected.y+(canvas.grid.size*1.6)})
-            .fadeIn(250)
-            .fadeOut(250)
-            .zIndex(1)
-            .waitUntilFinished(-500)
-            
-            super.affectCommon()
-            .file("jb2a.healing_generic.burst.yellowwhite")
-          
-            .attachTo(this.affected)
-            .scaleToObject(2)
-            .tint("#08a60a")
-            .zIndex(5)
-        }
-
-        descriptorInsubstantial(){
-            this.playSound("https://assets.forge-vtt.com/bazaar/modules/lancer-weapon-fx/assets/soundfx/ptrwht00.wav")
-            .delay(1000)
-            .file(`jb2a.this.caster_border.circle.static.blue.003`)
+        super.affectCommon()
+            .file("jb2a.smoke.puff.ring.01.dark_black.0")
+        
+            .scaleToObject(3)
+            .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
+            .playbackRate(0.5)
+            .zIndex(3)
+        
+        super.affectCommon()
+        .file(`jb2a.token_border.circle.static.blue.003`)
+        
             .opacity(0.9)
             .size({ width: 2.5, height: 2.5 }, {gridUnits: true})
             .fadeIn(1000, {ease: "easeInExpo"})
@@ -7635,11 +7803,11 @@ Hooks.on("ready", () => {
             .scaleIn(0, 3000, {ease: "easeOutBack"})
             .scaleOut(0, 3000, {ease: "easeInBack"})
             .tint("#5dd20f")
-            .belowTokens()
-            .duration(6000)
-
-            super.affectCommon()
+            .duration(8000)
+        
+        super.affectCommon()
             .file("jb2a.cast_generic.02.green.0")
+        
             .playbackRate(0.5)
             .scale(1)
             .delay(500)
@@ -7647,1523 +7815,1575 @@ Hooks.on("ready", () => {
             .fadeOut(800)
             .belowTokens()
             .waitUntilFinished(-500)
-        }
-        descriptorTransformation(){
-            this.file("jb2a.template_circle.symbol.normal.poison.dark_green")
-            .atLocation(summon)
-            .scaleToObject(3)
-            .fadeIn(800)
-            .fadeOut(800)
-            .zIndex(3)
+        
+        super.affectCommon()
+        .file("jb2a.flaming_sphere.200px.green")
+        
+        .rotate(50)
+        .fadeIn(250)
+        .fadeOut(250)
+        .spriteOffset({x:canvas.grid.size})
+        .scaleToObject(0.5)
+        .duration(5000)
+            .animateProperty("sprite", "position.y", { from: 0, to: -1, duration: 1000, gridUnits: true, fromEnd: false, ease: "easeOutSine" })
+            .animateProperty("sprite", "position.x", { from: 1, to: 0, duration: 1500, gridUnits: true, fromEnd: false, ease: "easeOutSine", delay: 300 })
+            .zIndex(2)
+        
+        super.affectCommon()
+        .file("jb2a.flaming_sphere.200px.green")
+        
+        .spriteOffset({x:canvas.grid.size})
+        .rotate(180)
+        .fadeIn(250)
+        .fadeOut(250)
+        .scaleToObject(0.5)
+        .duration(5000)
+            .animateProperty("sprite", "position.y", { from: 0, to: -1, duration: 1000, gridUnits: true, fromEnd: false, ease: "easeOutSine" })
+            .animateProperty("sprite", "position.x", { from: 1, to: 0, duration: 1500, gridUnits: true, fromEnd: false, ease: "easeOutSine", delay: 300 })
+        .zIndex(2)
+        
+        super.affectCommon()
+        .file("jb2a.flaming_sphere.200px.green")
+        
+        .spriteOffset({x:canvas.grid.size})
+        .rotate(310)
+        .scaleToObject(0.5)
+        .fadeIn(250)
+        .fadeOut(250)
+        .duration(5000)
+            .animateProperty("sprite", "position.y", { from: 0, to: -1, duration: 1000, gridUnits: true, fromEnd: false, ease: "easeOutSine" })
+            .animateProperty("sprite", "position.x", { from: 1, to: 0, duration: 1500, gridUnits: true, fromEnd: false, ease: "easeOutSine", delay: 300 })
+            .zIndex(2)
             
-          super.affectCommon()
-            .file("jb2a.smoke.puff.ring.01.dark_black.0")
-            .atLocation(summon)
-            .scaleToObject(3)
-            .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
-            .playbackRate(0.5)
-            .zIndex(3)
-          
-          super.affectCommon()
-            .file("jb2a.ground_cracks.green.01")
-            .atLocation(summon)
-            .delay(2000)
-            .duration(5000)
-            .scaleToObject(2.2)
-            .fadeIn(500)
+            
+        .pause(2500)
+        
+        super.affectCommon()
+        .file("jb2a.detect_magic.circle.green")
+        .atLocation(this.affected, { offset: { x:0, y: -45 } } )
+        .scaleToObject(2)
+        .playbackRate(1)
+        .opacity(0.75)
+        .mask()
+        .fadeIn(500)
+        .fadeOut(1000)
+        .duration(10000)
+        .delay(3000)
+        
+        
+        super.affectCommon()
+        .from(this.affected)
+            .delay(500)
+        
+            .tint("#059c02")
+            .fadeIn(750)
             .fadeOut(1000)
-            .belowTokens()
-            
-        }
-
-        burstAffectTransform({affected, caster}){
-            super.burstCommon({affected:affected, caster:caster})
-                .pause(2000)
-                .delay(300)
-            super.burstCommon()
-                .file("jb2a.token_border.circle.static.blue.006")
-                .scaleToObject(2, { considerTokenScale: true })
-                .randomRotation()
-                .fadeIn(1000)
-                .fadeOut(500)
-                .opacity(0.8)
-                .persist()
-                .loopProperty("alphaFilter", "alpha", { from: 0.75, to: 1, duration: 1500, pingPong: true, ease: "easeOutSine" })
-                .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
-                .tint("#5dd20f")
-            super.burstCommon()
-                .from(this.affected)
-                .fadeIn(200)
-                .fadeOut(500)
-                .delay(3000)
-                .loopProperty("sprite", "position.x", { from: -0.08, to: 0.08, duration: 50, pingPong: true, gridUnits: true })
-            .scaleToObject(this.affected.document.texture.scaleX)
-                .duration(10000)
-                .opacity(0.25)
-        }
-
-        descriptorConcealment()
-        {
-            this.file("jb2a.smoke.puff.ring.01.dark_black.0")
-                    .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
-                    .delay(505)
-                    .scaleToObject(3)
-                    .aboveLighting()
-                    .playbackRate(0.5);
-            return super.concealment();
-        }
-
-        descriptorProtection(){
-            return this.file(`jb2a.topken_border.circle.static.blue.004`)
-                .opacity(0.9)
-                .size({ width: 2, height: 2 }, { gridUnits: true })
-                .fadeIn(1000, { ease: "easeInExpo" })
-                .fadeOut(2500, { ease: "easeInExpo" })
-                .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 18000 })
-                .filter("ColorMatrix", { hue: -10, contrast: 0.5, saturate: 0.1, brightness: 1 })
-                .scaleIn(0, 3000, { ease: "easeOutBack" })
-                .scaleOut(0, 3000, { ease: "easeInBack" })
-                .tint("#5dd20f")
-                .belowTokens()
-                .persist()
-                .play();
-        }
-        descriptorDeflection(){
-            this.deflectionAnimation='jb2a.bullet.Snipe.green'
-            this.file("jb2a.smoke.puff.ring.01.dark_black.0")
-                .atLocation(this.affected)
-                .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
-                .scaleToObject(3)
-                .aboveLighting()
-                .playbackRate(0.5)
-                .wait(1000)
-
-            super.affectCommon()
-                .file("jb2a.wall_of_force.sphere.green")
-                .atLocation(this.affected)
-                .attachTo(this.affected)
-                .name("Rad Field")
-                .fadeIn(1000)
-                .fadeOut(1000)
-        }
-        /*
-       
-        descriptorAura(){
-            return this
-        }
-
-        descriptorConcealment()
-        {
-            return this;
-        }
-
-        descriptorIllusion(){
-            return this
-        }
-        descriptorInsubstantial(){
-            return this
-        }
-
-        descriptorMindControl(){
-            return this
-        }
-
-        descriptorMindControl(){
-            return this
-        }
-
-        descriptorNullify(){
-            return this
-        }
-
-        descriptorProtection(){
-            return this
-        }
-
-        descriptorTransform(){
-            return this
-        }
-
-        descriptorWeaken(){
-            return this
-        }*/
-    
+            .duration(4000)
+            // .fadeOut(3500)
+        .attachTo(this.affected)
+            // .duration(7500)
+            .opacity(0.8)
+            .animateProperty("alphaFilter", "alpha", { from: 0, to: -0.2, duration: 1000})
+            .zIndex(1)
+        
+        super.affectCommon()
+        .file("jb2a.energy_strands.range.multiple.dark_green.01")
+        .atLocation({x:this.affected.x+(canvas.grid.size*1.5),y: this.affected.y-(canvas.grid.size*0.4)})
+        .fadeIn(250)
+        .fadeOut(250)
+        .zIndex(1)
+        
+        super.affectCommon()
+        .file("jb2a.energy_strands.range.multiple.dark_green.01")
+        .atLocation({x:this.affected.x-(canvas.grid.size*0.5),y: this.affected.y-(canvas.grid.size*0.4)})
+        .fadeIn(250)
+        .fadeOut(250)
+        .zIndex(1)
+        
+        super.affectCommon()
+        .file("jb2a.energy_strands.range.multiple.dark_green.01")
+        .atLocation({x:this.affected.x+(canvas.grid.size*0.5),y: this.affected.y+(canvas.grid.size*1.6)})
+        .fadeIn(250)
+        .fadeOut(250)
+        .zIndex(1)
+        .waitUntilFinished(-500)
+        
+        super.affectCommon()
+        .file("jb2a.healing_generic.burst.yellowwhite")
+        
+        .attachTo(this.affected)
+        .scaleToObject(2)
+        .tint("#08a60a")
+        .zIndex(5)
     }
 
+    descriptorInsubstantial(){
+        this.playSound("https://assets.forge-vtt.com/bazaar/modules/lancer-weapon-fx/assets/soundfx/ptrwht00.wav")
+        .delay(1000)
+        .file(`jb2a.this.caster_border.circle.static.blue.003`)
+        .opacity(0.9)
+        .size({ width: 2.5, height: 2.5 }, {gridUnits: true})
+        .fadeIn(1000, {ease: "easeInExpo"})
+        .fadeOut(2500, {ease: "easeInExpo"})
+        .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 18000})
+        .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+        .scaleIn(0, 3000, {ease: "easeOutBack"})
+        .scaleOut(0, 3000, {ease: "easeInBack"})
+        .tint("#5dd20f")
+        .belowTokens()
+        .duration(6000)
+
+        super.affectCommon()
+        .file("jb2a.cast_generic.02.green.0")
+        .playbackRate(0.5)
+        .scale(1)
+        .delay(500)
+        .fadeIn(500)
+        .fadeOut(800)
+        .belowTokens()
+        .waitUntilFinished(-500)
+    }
+      
+    descriptorProtection(){
+        return this.file(`jb2a.topken_border.circle.static.blue.004`)
+            .opacity(0.9)
+            .size({ width: 2, height: 2 }, { gridUnits: true })
+            .fadeIn(1000, { ease: "easeInExpo" })
+            .fadeOut(2500, { ease: "easeInExpo" })
+            .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 18000 })
+            .filter("ColorMatrix", { hue: -10, contrast: 0.5, saturate: 0.1, brightness: 1 })
+            .scaleIn(0, 3000, { ease: "easeOutBack" })
+            .scaleOut(0, 3000, { ease: "easeInBack" })
+            .tint("#5dd20f")
+            .belowTokens()
+            .persist()
+            .play();
+    }
+    descriptorTransformation(){
+        this.file("jb2a.template_circle.symbol.normal.poison.dark_green")
+        .atLocation(summon)
+        .scaleToObject(3)
+        .fadeIn(800)
+        .fadeOut(800)
+        .zIndex(3)
+        
+        super.affectCommon()
+        .file("jb2a.smoke.puff.ring.01.dark_black.0")
+        .atLocation(summon)
+        .scaleToObject(3)
+        .filter("ColorMatrix", {hue:80, contrast: 1, saturate: 1,brightness: 1,})
+        .playbackRate(0.5)
+        .zIndex(3)
+        
+        super.affectCommon()
+        .file("jb2a.ground_cracks.green.01")
+        .atLocation(summon)
+        .delay(2000)
+        .duration(5000)
+        .scaleToObject(2.2)
+        .fadeIn(500)
+        .fadeOut(1000)
+        .belowTokens()
+        
+    }
   
-    class SuperSpeedEffectSection extends TemplatedDescriptorEffect {
-         constructor(inSequence) {
-            super(inSequence);
-        }
-        meleeDamageCast({caster, affected}) {
-            super.castCommon({caster, affected})
-            .file('jb2a.flurry_of_blows.physical.orange')
+    /*
+
+    descriptorIllusion(){
+        return this
+    }
+    descriptorInsubstantial(){
+        return this
+    }
+
+    descriptorMindControl(){
+        return this
+    }
+
+
+    descriptorNullify(){
+        return this
+    }
+
+    descriptorProtection(){
+        return this
+    }
+
+    descriptorWeaken(){
+        return this
+    }*/
+
+}
+
+class SuperSpeedEffectSection extends TemplatedDescriptorEffect {
+        constructor(inSequence) {
+        super(inSequence);
+    }
+    meleeDamageCast({caster, affected}) {
+        super.castCommon({caster, affected})
+        .file('jb2a.flurry_of_blows.physical.orange')
+        .filter("ColorMatrix", { hue: 100,saturation: 0, brightness:1.3})
+        .from(this.caster)
+        .scale(2.5)
+        .spriteOffset({x:-50, y: 0})
+        .atLocation(this.caster)
+        .repeats(6,500)
+    .castCommon() 
+            .playSound('modules/mm3e-animations/sounds/action/powers/flurryhits.ogg')  
+        .pause(2000)
+    .castCommon()
+        .file('animated-spell-effects-cartoon.simple.63')
+        .scale(.5)
+
+        return this;
+    }
+    
+    descriptorCast(){
+            this.vibrate(1000)
+    }
+    descriptorMeleeCast(){
+        this.vibrate(1000)
+        super.castCommon()  
+            .file('jb2a.flurry_of_blows.no_hit.yellow')
             .filter("ColorMatrix", { hue: 100,saturation: 0, brightness:1.3})
             .from(this.caster)
             .scale(2.5)
             .spriteOffset({x:-50, y: 0})
-            .atLocation(this.caster)
-            .repeats(6,500)
+            .repeats(9,500)
         .castCommon() 
-             .playSound('modules/mm3e-animations/sounds/action/powers/flurryhits.ogg')  
-            .pause(2000)
+                .playSound('modules/mm3e-animations/sounds/action/powers/Flurry.ogg')  
+            .pause(2500)
         .castCommon()
             .file('animated-spell-effects-cartoon.simple.63')
             .scale(.5)
+        return this
+    }
+    descriptorBurst(){
+        let points = this.getCircularTemplatePoints(this.affected)
+        this.vibrate()
+        this.runThroughTemplate(points)
+        return this
+    }
+    descriptorLine(){
+        const points = this.getLineTemplatePoints(this.affected);
+        this.vibrate();
+        this.runThroughTemplate(points);
+        return this;
+    }   
+    descriptorCone(){
+        const points = this.getConeTemplatePoints(this.affected);
+        this.vibrate();
+        this.runThroughTemplate(points);
+        return this;
+    }
+    getCircularTemplatePoints(template) {
+        const points = [];
+        const stepCount = 4; // Number of pairs across the circle
+        const angleStep = (2 * Math.PI) / stepCount; // Angle between each pair in radians
 
-            return this;
-        }
-        
-        descriptorCast(){
-             this.vibrate(1000)
-        }
-        descriptorMeleeCast(){
-           this.vibrate(1000)
-           super.castCommon()  
-                .file('jb2a.flurry_of_blows.no_hit.yellow')
-                .filter("ColorMatrix", { hue: 100,saturation: 0, brightness:1.3})
-                .from(this.caster)
-                .scale(2.5)
-                .spriteOffset({x:-50, y: 0})
-                .repeats(9,500)
-            .castCommon() 
-                 .playSound('modules/mm3e-animations/sounds/action/powers/Flurry.ogg')  
-                .pause(2500)
-            .castCommon()
-                .file('animated-spell-effects-cartoon.simple.63')
-                .scale(.5)
-            return this
-        }
-        descriptorBurst(){
-            let points = this.getCircularTemplatePoints(this.affected)
-            this.vibrate()
-            this.runThroughTemplate(points)
-            return this
-        }
-        descriptorLine(){
-            const points = this.getLineTemplatePoints(this.affected);
-            this.vibrate();
-            this.runThroughTemplate(points);
-            return this;
-        }   
-        descriptorCone(){
-            const points = this.getConeTemplatePoints(this.affected);
-            this.vibrate();
-            this.runThroughTemplate(points);
-            return this;
-        }
-        getCircularTemplatePoints(template) {
-            const points = [];
-            const stepCount = 4; // Number of pairs across the circle
-            const angleStep = (2 * Math.PI) / stepCount; // Angle between each pair in radians
+        for (let i = 0; i < stepCount; i++) {
+            // Calculate the angle for this step
+            const angle = i * angleStep;
 
-            for (let i = 0; i < stepCount; i++) {
-                // Calculate the angle for this step
-                const angle = i * angleStep;
+            // Calculate the point on one side of the circle
+            const x1 = template.x + Math.cos(angle) * template.shape.radius;
+            const y1 = template.y + Math.sin(angle) * template.shape.radius;
 
-                // Calculate the point on one side of the circle
-                const x1 = template.x + Math.cos(angle) * template.shape.radius;
-                const y1 = template.y + Math.sin(angle) * template.shape.radius;
+            // Calculate the opposite point directly across the circle
+            const x2 = template.x + Math.cos(angle + Math.PI) * template.shape.radius;
+            const y2 = template.y + Math.sin(angle + Math.PI) * template.shape.radius;
 
-                // Calculate the opposite point directly across the circle
-                const x2 = template.x + Math.cos(angle + Math.PI) * template.shape.radius;
-                const y2 = template.y + Math.sin(angle + Math.PI) * template.shape.radius;
-
-                // Add both points
-                points.push({ x: x1, y: y1 });
-                points.push({ x: x2, y: y2 });
-            }
-
-            return points;
-        }
-        getConeTemplatePoints(template) {
-            const points = [];
-            const gridSize = canvas.grid.size; // Size of one grid square in pixels
-            const length = template.document.distance * gridSize *2/3; // Convert distance to pixels
-            const halfAngle = (template.document.angle / 2) * (Math.PI / 180); // Half of the cone's angle in radians
-            const direction = template.document.direction * (Math.PI / 180); // Central direction in radians
-        
-            // Start with the cone's origin (in grid units)
-            const origin = { x: template.x, y: template.y };
-            points.push(origin);
-        
-            // Calculate the leftmost edge point
-            const leftX = template.x + Math.cos(direction - halfAngle) * length;
-            const leftY = template.y + Math.sin(direction - halfAngle) * length;
-            const leftPoint = { x: leftX, y: leftY };
-            points.push(leftPoint);
-        
-            // Calculate the rightmost edge point
-            const rightX = template.x + Math.cos(direction + halfAngle) * length;
-            const rightY = template.y + Math.sin(direction + halfAngle) * length;
-            const rightPoint = { x: rightX, y: rightY };
-            points.push(rightPoint);
-        
-            // Calculate the midpoint of the triangle (average of left and right points)
-            const midPoint = {
-                x: (leftX + rightX) / 2,
-                y: (leftY + rightY) / 2,
-            };
-            points.push(midPoint);
-        
-            // Calculate the opposite side point (reflect midpoint across origin and scale properly)
-            const oppositeX = template.x - (midPoint.x - template.x) * (length / (length + 1));
-            const oppositeY = template.y - (midPoint.y - template.y) * (length / (length + 1));
-            const oppositePoint = { x: oppositeX, y: oppositeY };
-            points.push(oppositePoint);
-        
-            // Add the final point back to the origin
-            points.push(origin);
-        
-            return points;
-        }
-        getLineTemplatePoints(template) {
-            const points = [];
-            const gridSize = canvas.grid.size; // Size of one grid square in pixels
-            const length = template.document.distance * gridSize *2/3; // Line length in pixels
-            const direction = template.document.direction * (Math.PI / 180); // Line direction in radians
-        
-            // Start with the line's origin
-            const origin = { x: template.x, y: template.y };
-            points.push(origin);
-        
-            // Calculate the endpoint of the line
-            const endX = template.x + Math.cos(direction) * length;
-            const endY = template.y + Math.sin(direction) * length;
-            const endPoint = { x: endX, y: endY };
-            points.push(endPoint);
-        
-            // Add the return point (back to origin)
-            points.push(origin);
-        
-            return points;
-        }
-        runThroughTemplate( points) { 
-        
-            const token = this.caster; 
-        
-            const tokenPosition = { x: token.x, y: token.y };
-            let farthestPoint = points[0];
-            let maxDistance = 0;
-        
-            points.forEach((point) => {
-                const distance = Math.sqrt(
-                    Math.pow(point.x - tokenPosition.x, 2) +
-                    Math.pow(point.y - tokenPosition.y, 2)
-                );
-                if (distance > maxDistance) {
-                    maxDistance = distance;
-                    farthestPoint = point;
-                }
-            });
-
-            const reorganizedPoints = [tokenPosition, farthestPoint, ...points, tokenPosition];
-            
-            super.mm3eEffect()
-                .animation()
-                .opacity(0)
-                .on(token)
-                .duration(0);
-                
-            for (let i = 0; i < reorganizedPoints.length-1; i++) {
-                super.mm3eEffect()
-                    .file(token.document.texture.src) 
-                    .scale(token.document.texture.scaleX) 
-                    .opacity(1) 
-                    .from(token)
-                    .atLocation(reorganizedPoints[i])
-                    .moveTowards(reorganizedPoints[i+1], { ease: "easeInOutCubic", rotate: true })
-                    .duration(500) 
-                    .pause(200)
-                    
-                super.mm3eEffect()
-                    .file("animated-spell-effects-cartoon.energy.16") // Trail animation
-                    .scale(4)
-                    .atLocation(reorganizedPoints[i])
-                    .stretchTo(reorganizedPoints[i+1], { gridUnits: true, proportional: true })
-                    .belowTokens()
-                    .opacity(0.75)
-                    .spriteOffset({ x: -5 }, { gridUnits: true })
-                    .filter("ColorMatrix", { brightness: 1.2 })
-                    .filter("ColorMatrix", { hue: 330 })
-                    .randomizeMirrorY()
-                    .fadeOut(200)
-                    .zIndex(0.2)
-                super.mm3eEffect()
-                    .file("animated-spell-effects-cartoon.simple.23")
-                    .filter("ColorMatrix", { hue: 180 })
-                    .playbackRate(0.9)
-                    .atLocation(reorganizedPoints[i])
-                    .stretchTo(reorganizedPoints[i+1], {onlyX:true, offest:{x:-3,y:0} })
-                        .scale(.6)
-                    .belowTokens()
-                    .opacity(0.5)
-                    .zIndex(0.3)
-                    .fadeOut(300)
-                super.mm3eEffect()
-                    .file("animated-spell-effects-cartoon.simple.29")
-                    .atLocation(reorganizedPoints[i])
-                    .rotateTowards(reorganizedPoints[i+1])
-                    .scale(0.5 * token.document.texture.scaleX)
-                    .belowTokens()
-                    .opacity(0.85)
-                    .scaleIn(0, 300, { ease: "easeOutExpo" })
-                    .spriteRotation(-90)
-                    .spriteOffset({ x: -3, y: -0.1 }, { gridUnits: true })
-                super.mm3eEffect()
-                    .delay(100)
-                    .file("animated-spell-effects-cartoon.simple.05")
-                    .filter("Glow", { color: 0x29c9ff })
-                    .spriteOffset({x: 0.5, y: 0.5}, {gridUnits:true})
-                    .randomRotation()
-                    .scale(.3)
-                    .atLocation(reorganizedPoints[i])   
-               .sound('modules/mm3e-animations/sounds/power/super%20speed/move%20quick.ogg')
-            }
-            
-            this.mm3eEffect()
-                .animation()
-                .opacity(0)
-                .on(token)
-                .duration(0)
-            this.mm3eEffect()
-                .animation()
-                .opacity(1)
-                .on(token)
-                .duration(0);
-        }
-        vibrate(duration=3000)
-         {
-             this.playSound('modules/mm3e-animations/sounds/power/super%20speed/wiff.ogg')
-             .castCommon({rotation:false})
-                 .file('animated-spell-effects-cartoon.simple.117')
-                 .scale(.5)
-            .castCommon({rotation:false})
-               .from(this.caster)
-               .fadeIn(200)
-               .fadeOut(500)
-               .loopProperty("sprite", "position.x", { from: -0.10, to: 0.10, duration: 50, pingPong: true, gridUnits: true})
-               .scaleToObject(this.caster.document.texture.scaleX)
-               .duration(3000)
-               .opacity(0.25)
-            return this;
+            // Add both points
+            points.push({ x: x1, y: y1 });
+            points.push({ x: x2, y: y2 });
         }
 
-        descriptorProject(){
-           let origin = this.getTokenCenter(this.caster);
-            let destination =this.getNearestTokenSide(origin, this.affected)
-            this.speed({caster:this.caster, position:destination})
-            function timerPromise(delay) {return new Promise((resolve) => setTimeout(resolve, delay));}  
-            //give the attack sequence time to run
-            timerPromise(1500).then(() => 
-            new Sequence().superSpeedEffect().cast(this.caster).speed({caster:this.caster, position:origin}).play()
-        )
-
-        }
-        descriptorProjectToCone(){
-            return this
-        }
-        descriptorProjectToLine(){
-            return this
-        }
-
-        descriptorAffect(){
-            this.descriptorAffectAura()
-        }
-        descriptorAffectAura(persist){
-            let duration
-            if(!persist)
-            {
-                duration = 3000
-            }
-           this.playSound('modules/mm3e-animations/sounds/power/super%20speed/wiff.ogg')
-            .fluctuate(duration)
-           
-            return this;
-        }
-        descriptorAffliction({affected}={}){
-            this.playSound('modules/mm3e-animations/sounds/action/powers/phase2.ogg')
-            .fluctuate()
-            super.affectCommon()
-            .file('animated-spell-effects-cartoon.cantrips.mending.blue')
-            .scale(.4)
-            .filter("ColorMatrix" , { hue:500,contrast: 0, saturate: 0,brightness: 1})
-            .persist()
-            return this
-        }
-        fluctuate(duration){
-             this.thenDo(async ()=>{
-                let filter = "fluctuating" + Math.random().toString()
-                let params =
-                [{
-                    filterType: "images",
-                    filterId: filter,
-                    time: 0,
-                    nbImage:4,
-                    alphaImg: 1.0,
-                    alphaChr: 0.0,
-                    blend: 4,
-                    ampX: 0.2,
-                    ampY: 0.2,
-                    padding: 10,
-                    zOrder: 20,
-                    animated :
-                    {
-                      time: 
-                      { 
-                        active: true, 
-                        speed: 0.1110, 
-                        animType: "move" 
-                      },
-                      ampX:
-                      {
-                        active: true,
-                        val1: 0.00,
-                        val2: 0.0030,
-                        chaosFactor: 0.03,
-                        animType: "syncChaoticOscillation",
-                        loopDuration: 2000
-                      },
-                      ampY:
-                      {
-                        active: true,
-                        val1: 0.00,
-                        val2: 0.030,
-                        chaosFactor: 0.04,
-                        animType: "syncChaoticOscillation",
-                        loopDuration: 1650
-                      },
-                      alphaChr:        
-                      { 
-                        active: true, 
-                        animType: "randomNumberPerLoop", 
-                        val1: 0.0, 
-                        val2: 1,
-                        loopDuration: 250
-                      },
-                      alphaImg:        
-                      { 
-                        active: true, 
-                        animType: "randomNumberPerLoop", 
-                        val1: 0.8, 
-                        val2: 0.1,
-                        loopDuration: 250
-                      },
-                      nbImage:
-                      {
-                        active: true,
-                        val1: 1,
-                        val2: 4,
-                        animType: "syncSinOscillation",
-                        loopDuration: 1400
-                      }
-                    }
-                }];
-                
-                 this.affected.TMFXaddFilters(params);
-                 if(duration){
-                     function timerPromise(delay) {return new Promise((resolve) => setTimeout(resolve, delay));}  //give the rest of the sequence time to run
-                     
-                     timerPromise(duration).then(() => 
-                         TokenMagic.deleteFilters(this.affected,filter));
-                 }
-             })
-        }
-
-        descriptorSpeed(position){
-            this.castCommon()
-            .file("animated-spell-effects-cartoon.smoke.01")
-            .rotateTowards(position)
-            .scaleToObject(1.75)
-            .belowTokens()
-            .opacity(0.65)
-            .scaleIn(0, 300, {ease: "easeOutExpo"})
-            .filter("ColorMatrix", { saturate: 0, brightness: 1 })
-            .spriteRotation(-90)
-            .spriteOffset({x:-1}, {gridUnits :true})
-
-            this.castCommon()
-                .file("jb2a.smoke.puff.side.dark_black.4")
-                .scaleToObject(2)
-                .rotateTowards(position)
-                .fadeOut(200)
-                .opacity(1)
-                .filter("ColorMatrix", { saturate: 0, brightness: 1 })
-                .moveTowards(position,{rotate:false, ease:"easeOutCirc"})
-                .spriteRotation(180)
-                .spriteOffset({x:-1.75}, {gridUnits :true})
-                .moveSpeed(1500)
-                .zIndex(0.3)
+        return points;
+    }
+    getConeTemplatePoints(template) {
+        const points = [];
+        const gridSize = canvas.grid.size; // Size of one grid square in pixels
+        const length = template.document.distance * gridSize *2/3; // Convert distance to pixels
+        const halfAngle = (template.document.angle / 2) * (Math.PI / 180); // Half of the cone's angle in radians
+        const direction = template.document.direction * (Math.PI / 180); // Central direction in radians
     
-            this.castCommon()
-                .file("jb2a.energy_strands.range.standard.grey")
-                .stretchTo(position)
-                .belowTokens()
-                .opacity(0.5)
-                .repeats(3,50,50)
-                .spriteOffset({x:0}, {gridUnits :true})
-                .filter("ColorMatrix", { saturate: 0, brightness: 2 })
-                .randomizeMirrorY() 
-                .fadeOut(200)
-                .zIndex(0.2)
+        // Start with the cone's origin (in grid units)
+        const origin = { x: template.x, y: template.y };
+        points.push(origin);
+    
+        // Calculate the leftmost edge point
+        const leftX = template.x + Math.cos(direction - halfAngle) * length;
+        const leftY = template.y + Math.sin(direction - halfAngle) * length;
+        const leftPoint = { x: leftX, y: leftY };
+        points.push(leftPoint);
+    
+        // Calculate the rightmost edge point
+        const rightX = template.x + Math.cos(direction + halfAngle) * length;
+        const rightY = template.y + Math.sin(direction + halfAngle) * length;
+        const rightPoint = { x: rightX, y: rightY };
+        points.push(rightPoint);
+    
+        // Calculate the midpoint of the triangle (average of left and right points)
+        const midPoint = {
+            x: (leftX + rightX) / 2,
+            y: (leftY + rightY) / 2,
+        };
+        points.push(midPoint);
+    
+        // Calculate the opposite side point (reflect midpoint across origin and scale properly)
+        const oppositeX = template.x - (midPoint.x - template.x) * (length / (length + 1));
+        const oppositeY = template.y - (midPoint.y - template.y) * (length / (length + 1));
+        const oppositePoint = { x: oppositeX, y: oppositeY };
+        points.push(oppositePoint);
+    
+        // Add the final point back to the origin
+        points.push(origin);
+    
+        return points;
+    }
+    getLineTemplatePoints(template) {
+        const points = [];
+        const gridSize = canvas.grid.size; // Size of one grid square in pixels
+        const length = template.document.distance * gridSize *2/3; // Line length in pixels
+        const direction = template.document.direction * (Math.PI / 180); // Line direction in radians
+    
+        // Start with the line's origin
+        const origin = { x: template.x, y: template.y };
+        points.push(origin);
+    
+        // Calculate the endpoint of the line
+        const endX = template.x + Math.cos(direction) * length;
+        const endY = template.y + Math.sin(direction) * length;
+        const endPoint = { x: endX, y: endY };
+        points.push(endPoint);
+    
+        // Add the return point (back to origin)
+        points.push(origin);
+    
+        return points;
+    }
+    runThroughTemplate( points) { 
+    
+        const token = this.caster; 
+    
+        const tokenPosition = { x: token.x, y: token.y };
+        let farthestPoint = points[0];
+        let maxDistance = 0;
+    
+        points.forEach((point) => {
+            const distance = Math.sqrt(
+                Math.pow(point.x - tokenPosition.x, 2) +
+                Math.pow(point.y - tokenPosition.y, 2)
+            );
+            if (distance > maxDistance) {
+                maxDistance = distance;
+                farthestPoint = point;
+            }
+        });
 
-            .effect()
-                .file("animated-spell-effects-cartoon.magic.mind sliver")
-                .delay(50)
-                .atLocation(this.caster)
-                .stretchTo(position)
+        const reorganizedPoints = [tokenPosition, farthestPoint, ...points, tokenPosition];
+        
+        super.mm3eEffect()
+            .animation()
+            .opacity(0)
+            .on(token)
+            .duration(0);
+            
+        for (let i = 0; i < reorganizedPoints.length-1; i++) {
+            super.mm3eEffect()
+                .file(token.document.texture.src) 
+                .scale(token.document.texture.scaleX) 
+                .opacity(1) 
+                .from(token)
+                .atLocation(reorganizedPoints[i])
+                .moveTowards(reorganizedPoints[i+1], { ease: "easeInOutCubic", rotate: true })
+                .duration(500) 
+                .pause(200)
+                
+            super.mm3eEffect()
+                .file("animated-spell-effects-cartoon.energy.16") // Trail animation
+                .scale(4)
+                .atLocation(reorganizedPoints[i])
+                .stretchTo(reorganizedPoints[i+1], { gridUnits: true, proportional: true })
                 .belowTokens()
-                .opacity(1)
-                .spriteOffset({x:0}, {gridUnits :true})
-                .filter("ColorMatrix", { saturate: 0, brightness: 1,contrast:0 })
+                .opacity(0.75)
+                .spriteOffset({ x: -5 }, { gridUnits: true })
+                .filter("ColorMatrix", { brightness: 1.2 })
+                .filter("ColorMatrix", { hue: 330 })
                 .randomizeMirrorY()
                 .fadeOut(200)
-                .zIndex(0.21)
-    
-            this.castCommon()
-                .file("animated-spell-effects-cartoon.smoke.99")
-                .filter("ColorMatrix", {brightness: 1, contrast: 1.5, saturate:0})
-                .spriteOffset({ x: -3, y: -1 }, { gridUnits: true })
-                .atLocation(position)
-                .rotateTowards(this.caster)
-                .rotate(90)
-                .scaleToObject(5, {considerTokenScale: true})
-
-        return this;
-       
+                .zIndex(0.2)
+            super.mm3eEffect()
+                .file("animated-spell-effects-cartoon.simple.23")
+                .filter("ColorMatrix", { hue: 180 })
+                .playbackRate(0.9)
+                .atLocation(reorganizedPoints[i])
+                .stretchTo(reorganizedPoints[i+1], {onlyX:true, offest:{x:-3,y:0} })
+                    .scale(.6)
+                .belowTokens()
+                .opacity(0.5)
+                .zIndex(0.3)
+                .fadeOut(300)
+            super.mm3eEffect()
+                .file("animated-spell-effects-cartoon.simple.29")
+                .atLocation(reorganizedPoints[i])
+                .rotateTowards(reorganizedPoints[i+1])
+                .scale(0.5 * token.document.texture.scaleX)
+                .belowTokens()
+                .opacity(0.85)
+                .scaleIn(0, 300, { ease: "easeOutExpo" })
+                .spriteRotation(-90)
+                .spriteOffset({ x: -3, y: -0.1 }, { gridUnits: true })
+            super.mm3eEffect()
+                .delay(100)
+                .file("animated-spell-effects-cartoon.simple.05")
+                .filter("Glow", { color: 0x29c9ff })
+                .spriteOffset({x: 0.5, y: 0.5}, {gridUnits:true})
+                .randomRotation()
+                .scale(.3)
+                .atLocation(reorganizedPoints[i])   
+            .sound('modules/mm3e-animations/sounds/power/super%20speed/move%20quick.ogg')
         }
+        
+        this.mm3eEffect()
+            .animation()
+            .opacity(0)
+            .on(token)
+            .duration(0)
+        this.mm3eEffect()
+            .animation()
+            .opacity(1)
+            .on(token)
+            .duration(0);
+    }
+    vibrate(duration=3000)
+        {
+            this.playSound('modules/mm3e-animations/sounds/power/super%20speed/wiff.ogg')
+            .castCommon({rotation:false})
+                .file('animated-spell-effects-cartoon.simple.117')
+                .scale(.5)
+        .castCommon({rotation:false})
+            .from(this.caster)
+            .fadeIn(200)
+            .fadeOut(500)
+            .loopProperty("sprite", "position.x", { from: -0.10, to: 0.10, duration: 50, pingPong: true, gridUnits: true})
+            .scaleToObject(this.caster.document.texture.scaleX)
+            .duration(3000)
+            .opacity(0.25)
+        return this;
+    }
+
+    descriptorProject(){
+        let origin = this.getTokenCenter(this.caster);
+        let destination =this.getNearestTokenSide(origin, this.affected)
+        this.speed({caster:this.caster, position:destination})
+        function timerPromise(delay) {return new Promise((resolve) => setTimeout(resolve, delay));}  
+        //give the attack sequence time to run
+        timerPromise(1500).then(() => 
+        new Sequence().superSpeedEffect().cast(this.caster).speed({caster:this.caster, position:origin}).play()
+    )
 
     }
-    class SuperStrengthSection extends PowerEffectSection {  
-         constructor(inSequence) {
-            super(inSequence);
-        }
-        castSlam({caster}={}){  
-                
-                super.castCommon({caster:caster, affected:caster}) 
-                let fs = new FlightEffect(this);
-                fs.start({caster:this.caster})
-                fs.end({caster:this.caster})
-            return this
-        }
+    descriptorProjectToCone(){
+        return this
+    }
+    descriptorProjectToLine(){
+        return this
+    }
 
-        meleeCast({caster, affected, repeats=1}={} ){
-            super.meleeCastCommon({caster:caster, affected:affected})
-            .file("jb2a.melee_attack.02.trail") 
-            .scale(this.caster.document.width*.26, {gridUnits:true})
-            .spriteOffset({x:-0.7*this.caster.document.width},{gridUnits:true})
+    descriptorAffect(){
+        this.descriptorAffectAura()
+    }
+    descriptorAffectAura(persist){
+        let duration
+        if(!persist)
+        {
+            duration = 3000
+        }
+        this.playSound('modules/mm3e-animations/sounds/power/super%20speed/wiff.ogg')
+        .fluctuate(duration)
+        
+        return this;
+    }
+    descriptorAffliction({affected}={}){
+        this.playSound('modules/mm3e-animations/sounds/action/powers/phase2.ogg')
+        .fluctuate()
+        super.affectCommon()
+        .file('animated-spell-effects-cartoon.cantrips.mending.blue')
+        .scale(.4)
+        .filter("ColorMatrix" , { hue:500,contrast: 0, saturate: 0,brightness: 1})
+        .persist()
+        return this
+    }
+    fluctuate(duration){
+            this.thenDo(async ()=>{
+            let filter = "fluctuating" + Math.random().toString()
+            let params =
+            [{
+                filterType: "images",
+                filterId: filter,
+                time: 0,
+                nbImage:4,
+                alphaImg: 1.0,
+                alphaChr: 0.0,
+                blend: 4,
+                ampX: 0.2,
+                ampY: 0.2,
+                padding: 10,
+                zOrder: 20,
+                animated :
+                {
+                    time: 
+                    { 
+                    active: true, 
+                    speed: 0.1110, 
+                    animType: "move" 
+                    },
+                    ampX:
+                    {
+                    active: true,
+                    val1: 0.00,
+                    val2: 0.0030,
+                    chaosFactor: 0.03,
+                    animType: "syncChaoticOscillation",
+                    loopDuration: 2000
+                    },
+                    ampY:
+                    {
+                    active: true,
+                    val1: 0.00,
+                    val2: 0.030,
+                    chaosFactor: 0.04,
+                    animType: "syncChaoticOscillation",
+                    loopDuration: 1650
+                    },
+                    alphaChr:        
+                    { 
+                    active: true, 
+                    animType: "randomNumberPerLoop", 
+                    val1: 0.0, 
+                    val2: 1,
+                    loopDuration: 250
+                    },
+                    alphaImg:        
+                    { 
+                    active: true, 
+                    animType: "randomNumberPerLoop", 
+                    val1: 0.8, 
+                    val2: 0.1,
+                    loopDuration: 250
+                    },
+                    nbImage:
+                    {
+                    active: true,
+                    val1: 1,
+                    val2: 4,
+                    animType: "syncSinOscillation",
+                    loopDuration: 1400
+                    }
+                }
+            }];
+            
+                this.affected.TMFXaddFilters(params);
+                if(duration){
+                    function timerPromise(delay) {return new Promise((resolve) => setTimeout(resolve, delay));}  //give the rest of the sequence time to run
+                    
+                    timerPromise(duration).then(() => 
+                        TokenMagic.deleteFilters(this.affected,filter));
+                }
+            })
+    }
+
+    descriptorSpeed(position){
+        this.castCommon()
+        .file("animated-spell-effects-cartoon.smoke.01")
+        .rotateTowards(position)
+        .scaleToObject(1.75)
+        .belowTokens()
+        .opacity(0.65)
+        .scaleIn(0, 300, {ease: "easeOutExpo"})
+        .filter("ColorMatrix", { saturate: 0, brightness: 1 })
+        .spriteRotation(-90)
+        .spriteOffset({x:-1}, {gridUnits :true})
+
+        this.castCommon()
+            .file("jb2a.smoke.puff.side.dark_black.4")
+            .scaleToObject(2)
+            .rotateTowards(position)
+            .fadeOut(200)
+            .opacity(1)
+            .filter("ColorMatrix", { saturate: 0, brightness: 1 })
+            .moveTowards(position,{rotate:false, ease:"easeOutCirc"})
+            .spriteRotation(180)
+            .spriteOffset({x:-1.75}, {gridUnits :true})
+            .moveSpeed(1500)
+            .zIndex(0.3)
+
+        this.castCommon()
+            .file("jb2a.energy_strands.range.standard.grey")
+            .stretchTo(position)
+            .belowTokens()
+            .opacity(0.5)
+            .repeats(3,50,50)
+            .spriteOffset({x:0}, {gridUnits :true})
+            .filter("ColorMatrix", { saturate: 0, brightness: 2 })
+            .randomizeMirrorY() 
+            .fadeOut(200)
+            .zIndex(0.2)
+
+        .effect()
+            .file("animated-spell-effects-cartoon.magic.mind sliver")
+            .delay(50)
+            .atLocation(this.caster)
+            .stretchTo(position)
+            .belowTokens()
+            .opacity(1)
+            .spriteOffset({x:0}, {gridUnits :true})
+            .filter("ColorMatrix", { saturate: 0, brightness: 1,contrast:0 })
+            .randomizeMirrorY()
+            .fadeOut(200)
+            .zIndex(0.21)
+
+        this.castCommon()
+            .file("animated-spell-effects-cartoon.smoke.99")
+            .filter("ColorMatrix", {brightness: 1, contrast: 1.5, saturate:0})
+            .spriteOffset({ x: -3, y: -1 }, { gridUnits: true })
+            .atLocation(position)
+            .rotateTowards(this.caster)
+            .rotate(90)
+            .scaleToObject(5, {considerTokenScale: true})
+
+    return this;
+    
+    }
+
+}
+class SuperStrengthSection extends PowerEffectSection {  
+        constructor(inSequence) {
+        super(inSequence);
+    }
+    castSlam({caster}={}){  
+            
+            super.castCommon({caster:caster, affected:caster}) 
+            let fs = new FlightEffect(this);
+            fs.start({caster:this.caster})
+            fs.end({caster:this.caster})
+        return this
+    }
+
+    meleeCast({caster, affected, repeats=1}={} ){
+        super.meleeCastCommon({caster:caster, affected:affected})
+        .file("jb2a.melee_attack.02.trail") 
+        .scale(this.caster.document.width*.26, {gridUnits:true})
+        .spriteOffset({x:-0.7*this.caster.document.width},{gridUnits:true})
+        .filter("ColorMatrix", {
+            hue: 500, // Keep hue neutral for grey
+            contrast: 0, 
+            saturate: 0, // Set saturation to 0 to remove color
+            brightness: 1
+        })
+        .lungeTowardTarget({scale:1})
+        return this;
+    }
+
+    cast({caster, affected}={}){
+        this.castCommon({caster:caster, affected:affected})
+            .file("jb2a.melee_generic.slash.01.orange").spriteOffset({x:-20, y:-10})
+            .scaleToObject(1.5)
+            .zIndex(1)
             .filter("ColorMatrix", {
-                hue: 500, // Keep hue neutral for grey
-                contrast: 0, 
-                saturate: 0, // Set saturation to 0 to remove color
+                hue: 0, 
+                contrast: 1, 
+                saturate: 0, 
+                brightness: 3 
+            })        
+        .repeatEffect()
+        //       .mirrorY()
+        //       .pause(400)
+        .castCommon()
+        //     .file("jb2a.impact.001.orange")
+            .scaleToObject(2)
+            .filter("ColorMatrix", {
+                hue: 50,
+                contrast: 1,
+                saturate: 0,
                 brightness: 1
             })
-            .lungeTowardTarget({scale:1})
-            return this;
-        }
+        //  .playSound("modules/mm3e-animations/sounds/action/powers/Hit6.ogg")
+        return this;
+    }
 
-        cast({caster, affected}={}){
-            this.castCommon({caster:caster, affected:affected})
-                .file("jb2a.melee_generic.slash.01.orange").spriteOffset({x:-20, y:-10})
-                .scaleToObject(1.5)
-                .zIndex(1)
-                .filter("ColorMatrix", {
-                    hue: 0, 
-                    contrast: 1, 
-                    saturate: 0, 
-                    brightness: 3 
-                })        
-            .repeatEffect()
-         //       .mirrorY()
-         //       .pause(400)
-            .castCommon()
-           //     .file("jb2a.impact.001.orange")
-                .scaleToObject(2)
-                .filter("ColorMatrix", {
-                    hue: 50,
-                    contrast: 1,
-                    saturate: 0,
-                    brightness: 1
-                })
-          //  .playSound("modules/mm3e-animations/sounds/action/powers/Hit6.ogg")
-            return this;
-        }
+    burst({caster, affected}={}){
+        super.burstCommon({caster:caster, affected:affected})
+            .file(`animated-spell-effects-cartoon.simple.47`)
+            .scaleToObject(3)
+        return this
+    }
 
-        burst({caster, affected}={}){
-            super.burstCommon({caster:caster, affected:affected})
-                .file(`animated-spell-effects-cartoon.simple.47`)
-                .scaleToObject(3)
-            return this
-        }
+    burstSlam({caster,affected}={}){
+        super.shake({strength:150, duration:1500, rotation:false, fadeOutDuration:1000})
+        super.burstCommon({caster:caster, affected:affected})
+            .file("jb2a.impact.ground_crack.02.white")
+        return this
+    }
 
-        burstSlam({caster,affected}={}){
-            super.shake({strength:150, duration:1500, rotation:false, fadeOutDuration:1000})
-            super.burstCommon({caster:caster, affected:affected})
-                .file("jb2a.impact.ground_crack.02.white")
-            return this
-        }
-
-        burstDazzle({caster,affected}={}){
-            super.burstCommon({caster:caster, affected:affected})
-                .file("animated-spell-effects-cartoon.energy.pulse.blue") 
+    burstDazzle({caster,affected}={}){
+        super.burstCommon({caster:caster, affected:affected})
+            .file("animated-spell-effects-cartoon.energy.pulse.blue") 
+            .filter("ColorMatrix", {
+                hue: 50,         
+                contrast: 0,     
+                saturate: 0,    
+                brightness: 5   
+            })  
+            .duration(600)
+            .playSound('modules/mm3e-animations/sounds/action/powers/Shadowpunch4.ogg')
+            .pause(600)
+        .repeatEffect().playSound('')
                 .filter("ColorMatrix", {
                     hue: 50,         
                     contrast: 0,     
                     saturate: 0,    
                     brightness: 5   
-                })  
-                .duration(600)
-                .playSound('modules/mm3e-animations/sounds/action/powers/Shadowpunch4.ogg')
-                .pause(600)
-            .repeatEffect().playSound('')
-                    .filter("ColorMatrix", {
-                        hue: 50,         
-                        contrast: 0,     
-                        saturate: 0,    
-                        brightness: 5   
-                    }) 
-            super.shake({strength:150, duration:1500, rotation:false, fadeOutDuration:1000})
-            return this
-        }
+                }) 
+        super.shake({strength:150, duration:1500, rotation:false, fadeOutDuration:1000})
+        return this
+    }
 
-        projectToCone({caster, affected}={}){
-            super.projectToConeCommon()
-          //  affected = canvas.templates.placeables[0]
-            const coneStart = { x: this.affected.x, y: this.affected.y };
-            this.mm3eEffect() 
-                .atLocation(this.caster)
-                .aboveLighting()
-                .stretchTo(coneStart)
-                //super.projectToConeCommon({caster:caster, affected:affected})
-                .file('animated-spell-effects-cartoon.air.bolt.square')
-                .playSound('modules/mm3e-animations/sounds/action/powers/whoosh8.ogg')
+    projectToCone({caster, affected}={}){
+        super.projectToConeCommon()
+        //  affected = canvas.templates.placeables[0]
+        const coneStart = { x: this.affected.x, y: this.affected.y };
+        this.mm3eEffect() 
+            .atLocation(this.caster)
+            .aboveLighting()
+            .stretchTo(coneStart)
+            //super.projectToConeCommon({caster:caster, affected:affected})
+            .file('animated-spell-effects-cartoon.air.bolt.square')
+            .playSound('modules/mm3e-animations/sounds/action/powers/whoosh8.ogg')
 
-            return this
-        }   
+        return this
+    }   
 
-        cone({caster, affected}={}){
-            super.coneCommon({caster:caster, affected:affected})
-                .file("animated-spell-effects-cartoon.energy.blast.03") 
-                .aboveLighting()
-                .filter("ColorMatrix", {
-                    hue: 0,
-                    contrast: 1,
+    cone({caster, affected}={}){
+        super.coneCommon({caster:caster, affected:affected})
+            .file("animated-spell-effects-cartoon.energy.blast.03") 
+            .aboveLighting()
+            .filter("ColorMatrix", {
+                hue: 0,
+                contrast: 1,
+                saturate: 0,
+                brightness: 1
+            })
+        return this
+    }
+
+    line({caster, affected}={}){
+        super.lineCommon({caster:caster, affected:affected})
+            .file("jb2a.wind_stream") 
+            .aboveLighting()
+            .filter("ColorMatrix", {
+                hue: 0,
+                contrast: 1,
+                saturate: 0,
+                brightness: 3
+            })
+            .filter("ColorMatrix",{            
+                saturation: 0, 
+                brightness: 1.5 
+            })
+            .scale({ x: 1, y: 0.1 })
+        return this
+    }
+
+    affectAffliction({affected}={}){
+        //super.affectCommon({affected:affected})
+        this.affectDamage({affected:affected,persistent:true})
+            
+        return this
+    }
+
+    affectDamage({affected = this.affected, persistent=false}){          
+        this.affect({affected:affected})
+        this.file("jb2a.dizzy_stars.200px.yellow")
+            //.scaleIn(0, 100, {ease: "easeOutCubic"}) 
+            .scaleToObject(1)
+            .opacity(1)
+            .attachTo(affected, {offset:{y:-0.5*affected.document.width}, gridUnits:true})
+            .persist(persistent)
+        .affect()
+            .file("animated-spell-effects-cartoon.misc.spark") 
+            .scale(affected.document.width*.65, {gridUnits:true})
+            .playSound("modules/mm3e-animations/sounds/action/powers/PunchHit*.ogg")
+        .recoilAwayFromSelected({affected:affected})
+        .pause(1000)
+        .affect()
+            .from(affected)
+            .fadeIn(200)
+            .fadeOut(500)
+            .loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
+            .scaleToObject(affected.document.texture.scaleX)
+            .duration(1500)
+            .opacity(0.25)
+        return this
+    } 
+
+    start({caster}={}){
+        this.originalEffectSection.castCommon({caster:caster, affected:caster})
+            .loopUp({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
+            .file("animated-spell-effects-cartoon.energy.16")
+            .rotate(90)
+            .scaleToObject(1)
+            .filter("ColorMatrix" , {
+                    hue: 500, 
+                    contrast: 0, 
                     saturate: 0,
                     brightness: 1
                 })
-            return this
-        }
-
-        line({caster, affected}={}){
-            super.lineCommon({caster:caster, affected:affected})
-                .file("jb2a.wind_stream") 
-                .aboveLighting()
-                .filter("ColorMatrix", {
-                    hue: 0,
-                    contrast: 1,
-                    saturate: 0,
-                    brightness: 3
-                })
-                .filter("ColorMatrix",{            
-                 saturation: 0, 
-                    brightness: 1.5 
-                })
-                .scale({ x: 1, y: 0.1 })
-            return this
-        }
-
-        affectAffliction({affected}={}){
-            //super.affectCommon({affected:affected})
-            this.affectDamage({affected:affected,persistent:true})
-                
-            return this
-        }
-
-        affectDamage({affected = this.affected, persistent=false}){          
-            this.affect({affected:affected})
-            this.file("jb2a.dizzy_stars.200px.yellow")
-                //.scaleIn(0, 100, {ease: "easeOutCubic"}) 
-                .scaleToObject(1)
-                .opacity(1)
-                .attachTo(affected, {offset:{y:-0.5*affected.document.width}, gridUnits:true})
-                .persist(persistent)
-            .affect()
-                .file("animated-spell-effects-cartoon.misc.spark") 
-                .scale(affected.document.width*.65, {gridUnits:true})
-                .playSound("modules/mm3e-animations/sounds/action/powers/PunchHit*.ogg")
-            .recoilAwayFromSelected({affected:affected})
-            .pause(1000)
-            .affect()
-                .from(affected)
-                .fadeIn(200)
-                .fadeOut(500)
-                .loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
-                .scaleToObject(affected.document.texture.scaleX)
-                .duration(1500)
-                .opacity(0.25)
-            return this
-        } 
-
-        start({caster}={}){
-            this.originalEffectSection.castCommon({caster:caster, affected:caster})
-                .loopUp({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
-                .file("animated-spell-effects-cartoon.energy.16")
-                .rotate(90)
-                .scaleToObject(1)
-                .filter("ColorMatrix" , {
-                     hue: 500, 
-                     contrast: 0, 
-                     saturate: 0,
-                     brightness: 1
-                 })
-                .repeatEffect()    //inherit last effect with any modifications we want below
-                    .spriteOffset({x:0, y: 25})
-                    .playSound("modules/mm3e-animations/sounds/action/powers/whoosh9.ogg")
-                .repeatEffect()   //inherit last effect with any modifications we want below
-                    .spriteOffset({x:0, y: -25})
-                    .pause(900)
-                return this.originalEffectSection;
-            }
-        
-        end({caster}={}){
-             this.originalEffectSection.castCommon({caster:caster, affected:caster})
-                .loopDown({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
- 
-                .castCommon()
-                .file("animated-spell-effects-cartoon.energy.16")
-                .rotate(270)
-                .scaleToObject(1)
-                .filter("ColorMatrix" , {
-                     hue: 500, 
-                     contrast: 0, 
-                     saturate: 0,
-                     brightness: 1
-                 })
-            .repeatEffect()   //inherit last effect with any modifications we want below
+            .repeatEffect()    //inherit last effect with any modifications we want below
                 .spriteOffset({x:0, y: 25})
+                .playSound("modules/mm3e-animations/sounds/action/powers/whoosh9.ogg")
             .repeatEffect()   //inherit last effect with any modifications we want below
-                .playSound("modules/mm3e-animations/sounds/action/powers/Whoosh2.ogg")
                 .spriteOffset({x:0, y: -25})
-                .pause(300)
-            .endMovement()
+                .pause(900)
             return this.originalEffectSection;
         }
-    }
-
-    class FlightEffect  {
-        constructor(originalEffectSection){
-            this.originalEffectSection = originalEffectSection
-        }
-
-        start({caster}={}){
-            this.originalEffectSection.castCommon({caster:caster, affected:caster})
-                .loopUp({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
-                .file("animated-spell-effects-cartoon.energy.16")
-                .rotate(90)
-                .scaleToObject(1)
-                .filter("ColorMatrix" , {
-                     hue: 500, 
-                     contrast: 0, 
-                     saturate: 0,
-                     brightness: 1
-                 })
-                .repeatEffect()    //inherit last effect with any modifications we want below
-                    .spriteOffset({x:0, y: 25})
-                    .playSound("modules/mm3e-animations/sounds/action/powers/whoosh9.ogg")
-                .repeatEffect()   //inherit last effect with any modifications we want below
-                    .spriteOffset({x:0, y: -25})
-                    .pause(900)
-                return this.originalEffectSection;
-            }
-        
-        end({caster}={}){
-             this.originalEffectSection.castCommon({caster:caster, affected:caster})
-                .loopDown({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
- 
-                .castCommon()
-                .file("animated-spell-effects-cartoon.energy.16")
-                .rotate(270)
-                .scaleToObject(1)
-                .filter("ColorMatrix" , {
-                     hue: 500, 
-                     contrast: 0, 
-                     saturate: 0,
-                     brightness: 1
-                 })
-            .repeatEffect()   //inherit last effect with any modifications we want below
-                .spriteOffset({x:0, y: 25})
-            .repeatEffect()   //inherit last effect with any modifications we want below
-                .playSound("modules/mm3e-animations/sounds/action/powers/Whoosh2.ogg")
-                .spriteOffset({x:0, y: -25})
-                .pause(300)
-            .endMovement()
-            return this.originalEffectSection;
-        }
-    }
-
-   
-
-    class WaterEffectSection extends TemplatedDescriptorEffect {
-        constructor(inSequence) {
-            super(inSequence);
-
-        }
-       /* castCone({affected, caster}={}){
-            return this
-        }*/
     
-        descriptorCast(){
-             super.castCommon({rotation:false})
-                .file("jb2a.particles.outward.blue.01.04")
-                .fadeIn(500)
-                .fadeOut(500)
-                .scaleToObject(6)
-                .duration(5000)
-                .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 3000})
-                .scaleOut(0, 5000, {ease: "easeOutQuint", delay: -3000})
-                .zIndex(1)
-            super.castCommon()
-                .file("jb2a.particles.outward.blue.01.03")
-                .anchor({x:0.4})
-                .scaleToObject(1.75)
-                .animateProperty("sprite", "position.x", { from: 0, to: -1000, duration: 15000})
-                .rotateTowards(this.affected, {cacheLocation: true})
-                .scaleIn(0, 500, {ease: "easeOutQuint"})
-                .duration(6000)
-                .playbackRate(2)
-                .fadeOut(2000)
-                .delay(4000)
-                .zIndex(2)
-            .sound().file("modules/dnd5e-animations/assets/sounds/Spells/Elemental/spell-water-jet-1.mp3")
-            .delay(10)
-            super.castCommon({rotation:false})
-                .file("animated-spell-effects-cartoon.mix.water.01")
-                .playbackRate(1.3)
-                .delay(2000)
-                .scaleToObject(2)
-                .waitUntilFinished(-2000)
-            return this;
-        }
-        descriptorMeleeCast(){
-            this.file("jb2a.cast_generic.water.02.blue")
-             .playbackRate(1.3)
-                .scale(1)
-                .belowTokens()
-                .waitUntilFinished(-1500)
-            .meleeCastCommon({rotation:false}) 
-              .file("animated-spell-effects-cartoon.water.79")
-              .attachTo(this.caster, { align: "center", edge: "outer", offset: { x: 0, y: 0 }, gridUnits: true, local:true })
-              .scale(0.3)
-              .delay(500)
-            .meleeCastCommon({rotation:false})
-                .file("jb2a.unarmed_strike.physical.02.blue")
-                .atLocation(this.caster, { edge: "outer" })
-                .stretchTo(this.affected)
-                .filter("ColorMatrix", { hue: 0, brightness: 1, contrast: 0, saturate: 0 })
-                .scale(3)
-                .delay(100)
-                .playbackRate(1.25)
-                .fadeOut(100)
-                .zIndex(2)
-            .pause(750) 
-            .meleeCastCommon({rotation:false})
-                .file("jb2a.swirling_leaves.outburst.01.pink")
-            .scaleIn(0, 500, {ease: "easeOutCubic"}) 
-            .filter("ColorMatrix", { saturate: 1, hue: -105 })
-            .scaleToObject(0.75)
-            .fadeOut(2000)
-            .zIndex(1)
-        .meleeCastCommon()   
-            .lungeTowardTarget()
-            .duration(600)
-            .scaleToObject(1, {considerTokenScale: true})
-            .delay(600)      
-         .canvasPan()
-                .delay(250)
-                .shake({duration: 250, strength: 2, rotation: false })
+    end({caster}={}){
+            this.originalEffectSection.castCommon({caster:caster, affected:caster})
+            .loopDown({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
 
-            return this
+            .castCommon()
+            .file("animated-spell-effects-cartoon.energy.16")
+            .rotate(270)
+            .scaleToObject(1)
+            .filter("ColorMatrix" , {
+                    hue: 500, 
+                    contrast: 0, 
+                    saturate: 0,
+                    brightness: 1
+                })
+        .repeatEffect()   //inherit last effect with any modifications we want below
+            .spriteOffset({x:0, y: 25})
+        .repeatEffect()   //inherit last effect with any modifications we want below
+            .playSound("modules/mm3e-animations/sounds/action/powers/Whoosh2.ogg")
+            .spriteOffset({x:0, y: -25})
+            .pause(300)
+        .endMovement()
+        return this.originalEffectSection;
+    }
+}
+
+class FlightEffect  {
+    constructor(originalEffectSection){
+        this.originalEffectSection = originalEffectSection
+    }
+
+    start({caster}={}){
+        this.originalEffectSection.castCommon({caster:caster, affected:caster})
+            .loopUp({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
+            .file("animated-spell-effects-cartoon.energy.16")
+            .rotate(90)
+            .scaleToObject(1)
+            .filter("ColorMatrix" , {
+                    hue: 500, 
+                    contrast: 0, 
+                    saturate: 0,
+                    brightness: 1
+                })
+            .repeatEffect()    //inherit last effect with any modifications we want below
+                .spriteOffset({x:0, y: 25})
+                .playSound("modules/mm3e-animations/sounds/action/powers/whoosh9.ogg")
+            .repeatEffect()   //inherit last effect with any modifications we want below
+                .spriteOffset({x:0, y: -25})
+                .pause(900)
+            return this.originalEffectSection;
         }
-        castPersonal({caster,affected}={}){
-            super.castCommon({caster:caster,affected:affected}={})
-                .file("animated-spell-effects-cartoon.water.create.01")
-                .scale(0.4)
-                .aboveLighting()
-            super.castCommon()
-                .file("jb2a.impact.water.02.blue.0")
-                .playbackRate(1)
-                .scale(0.8)
-                .delay(400)
-            .sound()
-                .file("modules/dnd5e-animations/assets/sounds/Spells/Elemental/spell-water-jet-1.mp3")
-                .delay(10)
-            return this
-        }
-        castLine({caster, affected=this.firstTemplate}={}){
-            super.castCommon({caster:caster, affected:affected,rotation:false})
-            .file("jb2a.cast_generic.water.02.blue")
-            .playbackRate(1)
+    
+    end({caster}={}){
+            this.originalEffectSection.castCommon({caster:caster, affected:caster})
+            .loopDown({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
+
+            .castCommon()
+            .file("animated-spell-effects-cartoon.energy.16")
+            .rotate(270)
+            .scaleToObject(1)
+            .filter("ColorMatrix" , {
+                    hue: 500, 
+                    contrast: 0, 
+                    saturate: 0,
+                    brightness: 1
+                })
+        .repeatEffect()   //inherit last effect with any modifications we want below
+            .spriteOffset({x:0, y: 25})
+        .repeatEffect()   //inherit last effect with any modifications we want below
+            .playSound("modules/mm3e-animations/sounds/action/powers/Whoosh2.ogg")
+            .spriteOffset({x:0, y: -25})
+            .pause(300)
+        .endMovement()
+        return this.originalEffectSection;
+    }
+}
+
+class WaterEffectSection extends TemplatedDescriptorEffect {
+    constructor(inSequence) {
+        super(inSequence);
+
+    }
+    /* castCone({affected, caster}={}){
+        return this
+    }*/
+
+    descriptorCast(){
+            super.castCommon({rotation:false})
+            .file("jb2a.particles.outward.blue.01.04")
+            .fadeIn(500)
+            .fadeOut(500)
+            .scaleToObject(6)
+            .duration(5000)
+            .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 3000})
+            .scaleOut(0, 5000, {ease: "easeOutQuint", delay: -3000})
+            .zIndex(1)
+        super.castCommon()
+            .file("jb2a.particles.outward.blue.01.03")
+            .anchor({x:0.4})
+            .scaleToObject(1.75)
+            .animateProperty("sprite", "position.x", { from: 0, to: -1000, duration: 15000})
+            .rotateTowards(this.affected, {cacheLocation: true})
+            .scaleIn(0, 500, {ease: "easeOutQuint"})
+            .duration(6000)
+            .playbackRate(2)
+            .fadeOut(2000)
+            .delay(4000)
+            .zIndex(2)
+        .sound().file("modules/dnd5e-animations/assets/sounds/Spells/Elemental/spell-water-jet-1.mp3")
+        .delay(10)
+        super.castCommon({rotation:false})
+            .file("animated-spell-effects-cartoon.mix.water.01")
+            .playbackRate(1.3)
+            .delay(2000)
+            .scaleToObject(2)
+            .waitUntilFinished(-2000)
+        return this;
+    }
+    descriptorMeleeCast(){
+        this.file("jb2a.cast_generic.water.02.blue")
+            .playbackRate(1.3)
             .scale(1)
-            .belowTokens()       
-        
+            .belowTokens()
+            .waitUntilFinished(-1500)
+        .meleeCastCommon({rotation:false}) 
+            .file("animated-spell-effects-cartoon.water.79")
+            .attachTo(this.caster, { align: "center", edge: "outer", offset: { x: 0, y: 0 }, gridUnits: true, local:true })
+            .scale(0.3)
+            .delay(500)
+        .meleeCastCommon({rotation:false})
+            .file("jb2a.unarmed_strike.physical.02.blue")
+            .atLocation(this.caster, { edge: "outer" })
+            .stretchTo(this.affected)
+            .filter("ColorMatrix", { hue: 0, brightness: 1, contrast: 0, saturate: 0 })
+            .scale(3)
+            .delay(100)
+            .playbackRate(1.25)
+            .fadeOut(100)
+            .zIndex(2)
+        .pause(750) 
+        .meleeCastCommon({rotation:false})
+            .file("jb2a.swirling_leaves.outburst.01.pink")
+        .scaleIn(0, 500, {ease: "easeOutCubic"}) 
+        .filter("ColorMatrix", { saturate: 1, hue: -105 })
+        .scaleToObject(0.75)
+        .fadeOut(2000)
+        .zIndex(1)
+    .meleeCastCommon()   
+        .lungeTowardTarget()
+        .duration(600)
+        .scaleToObject(1, {considerTokenScale: true})
+        .delay(600)      
+        .canvasPan()
+            .delay(250)
+            .shake({duration: 250, strength: 2, rotation: false })
+
+        return this
+    }
+    castPersonal({caster,affected}={}){
+        super.castCommon({caster:caster,affected:affected}={})
+            .file("animated-spell-effects-cartoon.water.create.01")
+            .scale(0.4)
+            .aboveLighting()
+        super.castCommon()
+            .file("jb2a.impact.water.02.blue.0")
+            .playbackRate(1)
+            .scale(0.8)
+            .delay(400)
+        .sound()
+            .file("modules/dnd5e-animations/assets/sounds/Spells/Elemental/spell-water-jet-1.mp3")
+            .delay(10)
+        return this
+    }
+    castLine({caster, affected=this.firstTemplate}={}){
+        super.castCommon({caster:caster, affected:affected,rotation:false})
+        .file("jb2a.cast_generic.water.02.blue")
+        .playbackRate(1)
+        .scale(1)
+        .belowTokens()       
+    
+        super.castCommon()
+            .file("jb2a.liquid.splash_side.blue")
+            .attachTo(this.caster, { align: "center", edge: "on", offset: { x: -0.5, y: 0 }, gridUnits: true, local:true })
+            .rotateTowards(this.affected)
+            .delay(2000)
+    
             super.castCommon()
-                .file("jb2a.liquid.splash_side.blue")
-                .attachTo(this.caster, { align: "center", edge: "on", offset: { x: -0.5, y: 0 }, gridUnits: true, local:true })
-                .rotateTowards(this.affected)
-                .delay(2000)
+            .file("animated-spell-effects-cartoon.water.79")
+            .attachTo(this.caster, { align: "center", edge: "outer", offset: { x: 0, y: 0 }, gridUnits: true, local:true })
+            .rotateTowards({
+                x:  this.affected.center.x,
+                y:  this.affected.center.y + this.randomYOffset
+                })
+            .scale(0.5)
+            .delay(2000)
+            return this
+    }
+    descriptorCastBurrow(position){
+            let hue = 140
+            let leaves = 'pink'
+            let saturate = -0.3
+            let  tint = "#1a57a8"
+            this.affectCommon({caster:caster, affected:affected})
+        this.file(`jb2a.swirling_leaves.complete.02.${leaves}`)
+        .scaleToObject(2.25)
+        .fadeOut(300)
+        .tint(tint)
+        .filter("ColorMatrix", { saturate: saturate })
+        .animateProperty("sprite", "width", { from: this.caster.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
+        .animateProperty("sprite", "height", { from: this.caster.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
+        .animateProperty("sprite", "width", { from: 0, to: this.caster.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
+        .animateProperty("sprite", "height", { from: 0, to: this.caster.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
+        .playbackRate(2)
+        .belowTokens()
+
+        super.affectCommon()
+        .file("jb2a.cast_generic.water.02.blue")
+        .attachTo(this.caster)
+        .playbackRate(1.3)
+        .scale(1)
+        .belowTokens()
+        .waitUntilFinished(-1200)
+
+        super.affectCommon()
+        .delay(1300)
+        .file("jb2a.impact.water.02.blue.0")
+        .size(4, {gridUnits:true})
+        .waitUntilFinished(-3000)
+
+        super.affectCommon()
+            .file("animated-spell-effects-cartoon.water.water splash.01")
+            .delay(0)
+            .scale(1)
+
+        super.affectCommon()
+        .file("animated-spell-effects-cartoon.water.85")
+        .scaleToObject(4)
+        .opacity(0.8)
+
+        super.affectCommon()
+            .file("jb2a.liquid.splash_side.blue")
+            .rotateTowards(position)
+
+        super.affectCommon()
+            .file("animated-spell-effects-cartoon.water.79")
+            .rotateTowards(position)
+            .scale(0.5)
+
+        .pause(500)
+
+        super.affectCommon()
+        .file("jb2a.burrow.out.01.still_frame.0")
+        .duration(5000)
+        .fadeIn(500)
+        .fadeOut(1000)
+        .belowTokens()
+        .scaleToObject(6)
+        .tint(tint)
+        .filter("ColorMatrix", { hue: hue })
+        .zIndex(1)
+
+        super.affectCommon()
+        .file("jb2a.template_line_piercing.water.01.blue")
+        .opacity(1)
+        .scale(this.caster.w / canvas.grid.size)
+        .stretchTo(position)
+        .zIndex(1)
+        return this
+
+    }
+    descriptorCastLeap(position){}
+    descriptorCastTeleport(position){}
+    descriptorCastSpeed(position){}
+    descriptorCastFlight(position){}
+    descriptorProject() {
+        return this.file("jb2a.template_line_piercing.water.01.blue")
+            .delay(500)
+            .waitUntilFinished(-3000)
+            
+            .sound()
+            .file("modules/dnd5e-animations/assets/sounds/Spells/Ray/spell-ray-2.mp3")
+            .volume(1);;
+    }
+    descriptorProjectToLine() {
+        return this.descriptorProject()
+    }
+    descriptorProjectToCone() {
+        return this.descriptorProject()
+    }   
+    descriptorBurst() {
+        return this.waterExplosion();
+    }
+
+    burstCreate({caster,affected}={}){
+            super.burstCommon({caster:caster,affected:affected}).file("animated-spell-effects-cartoon.mix.water.01")
+            .attachTo(this.affected)
+            .playbackRate(1.3)
+            .delay(0)
+            .opacity(0.8)
+            .scaleToObject(1)
+        super.burstCommon()
+            .file("animated-spell-effects-cartoon.water.create.01")
+            .attachTo(this.affected)
+            .playbackRate(0.8)
+            .delay(0)
+            .scaleToObject(1)
+        return this.waterExplosion();
+    }
+    burstTransform({affected, caster}={})
+    {
+        return this.burstCreate({affected:affected, caster:caster})
+            .file(`jb2a.impact.water.02.blue.0`)
+            .name("splash")
+            .scaleToObject(3)
+            .endTime(2600)
+            .randomRotation()
+            .noLoop()
+            .persist()
+            .belowTokens()
+            .fadeOut(1000)
+            .scaleIn(0, 600, {ease: "easeOutCubic"})
+    }
+    
+    burstDamage({caster,affected}={}){
+        let sound = 'modules/dnd5e-animations/assets/sounds/Spells/Create-or-Destroy-Water.mp3'
+        super.burstCommon({caster:caster, affected:affected})
+        this.waterExplosion({caster, affected, sound})
+        return this
         
-                super.castCommon()
-                .file("animated-spell-effects-cartoon.water.79")
-                .attachTo(this.caster, { align: "center", edge: "outer", offset: { x: 0, y: 0 }, gridUnits: true, local:true })
-                .rotateTowards({
-                    x:  this.affected.center.x,
-                    y:  this.affected.center.y + this.randomYOffset
-                    })
-                .scale(0.5)
-                .delay(2000)
-                return this
+    }
+    waterExplosion({affected,caster, sound="modules/dnd5e-animations/assets/sounds/Damage/Acid/acid-bubbling-2.mp3"}={}){
+        this.file("animated-spell-effects-cartoon.water.water splash.01")
+            .scaleToObject (1.7)
+            .scaleIn(0, 500, {ease: "easeOutQuint"})
+            .zIndex(2)
+            .sound()
+            .file(sound)
+            .delay(0)
+        super.affectCommon()
+            .file(`jb2a.impact.water.02.blue.0`)
+            .name("splash")
+            .scaleToObject(3)
+            .endTime(2600)
+            .noLoop()
+            .persist()
+            .belowTokens()
+            .fadeOut(1000)
+            .scaleIn(0, 600, {ease: "easeOutCubic"})
+        
+            let delayDuration = 10000;
+            let  splashFilters = {
+                name: "splash"
+        };
+
+        function endEffectsWithDelay(filters, delay) {
+            setTimeout(() => {
+            Sequencer.EffectManager.endEffects(filters);
+            }, delay);
         }
-        descriptorCastBurrow(position){
-             let hue = 140
-             let leaves = 'pink'
-             let saturate = -0.3
-             let  tint = "#1a57a8"
-             this.affectCommon({caster:caster, affected:affected})
-            this.file(`jb2a.swirling_leaves.complete.02.${leaves}`)
+        endEffectsWithDelay(splashFilters, delayDuration);
+        return this;
+    }
+    
+    burstHealing({caster,affected}={}){
+        super.burstCommon()
+            .file("animated-spell-effects-cartoon.water.water splash.01")
+            .scaleToObject (1.7)
+            .scaleIn(0, 500, {ease: "easeOutQuint"})
+            .zIndex(2)
+        .sound()
+            .file("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-buff-short-5.mp3")
+            .delay(1000)
+            super.burstCommon()
+            .file(" animated-spell-effects-cartoon.water.29")
+            .anchor({ x: 0.8, y: 0.45 })
+            .rotate(-35)
+            .playbackRate(1)
+            .scale(0.5)
+            super.burstCommon()
+            .file(" animated-spell-effects-cartoon.water.29")
+            .anchor({ x: 0.2, y: 0.45 })
+            .rotate(35)
+            .playbackRate(1)
+            .scale(0.5)
+            .mirrorX()
+            super.burstCommon()
+            .file(" animated-spell-effects-cartoon.water.29")
+            .anchor({ x: 0.8, y: 0.45 })
+            .rotate(90)
+            .playbackRate(1)
+            .scale(0.5)   
+            super.burstCommon()
+            .file(`jb2a.impact.water.02.blue.0`)
+            .name("splash")
+                .scaleToObject(3)
+                .endTime(2200)
+                .noLoop()
+                .persist()
+                .belowTokens()
+                .fadeOut(1000)
+                .scaleIn(0, 600, {ease: "easeOutCubic"})
+        super.burstCommon()
+                .file("jb2a.healing_generic.burst.bluewhite")        
+                .opacity(1)
+                .scaleToObject(1)
+        return this
+    }
+    waterSwirls(){
+        super.affectCommon()
+            .file("animated-spell-effects-cartoon.water.water splash.01")
+            .scaleToObject (1.7)
+            .scaleIn(0, 500, {ease: "easeOutQuint"})
+            .zIndex(2)
+        .sound()
+            .file("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-buff-short-5.mp3")
+            .delay(1000)
+            super.affectCommon()
+            .file(" animated-spell-effects-cartoon.water.29")
+            .anchor({ x: 0.8, y: 0.45 })
+            .rotate(-35)
+            .playbackRate(1)
+            .scale(0.5)
+            super.affectCommon()
+            .file(" animated-spell-effects-cartoon.water.29")
+            .anchor({ x: 0.2, y: 0.45 })
+            .rotate(35)
+            .playbackRate(1)
+            .scale(0.5)
+            .mirrorX()
+            super.affectCommon()
+            .file(" animated-spell-effects-cartoon.water.29")
+            .anchor({ x: 0.8, y: 0.45 })
+            .rotate(90)
+            .playbackRate(1)
+            .scale(0.5)   
+            super.affectCommon()
+            .file(`jb2a.impact.water.02.blue.0`)
+            .name("splash")
+                .scaleToObject(3)
+                .endTime(2200)
+                .noLoop()
+                .persist()
+                .belowTokens()
+                .fadeOut(1000)
+                .scaleIn(0, 600, {ease: "easeOutCubic"})
+        super.affectCommon()
+                .file("jb2a.healing_generic.burst.bluewhite")        
+                .opacity(1)
+                .scaleToObject(1)
+    }
+    descriptorLine() {
+                this.file("jb2a.impact.water.02.blue.0")
+            .atLocation(this.templateStart)
+            .scaleToObject(2)
+            .delay(2000)
+            .fadeIn(100)
+            .fadeOut(100)
+
+        this.atLocation(this.templateStart)
+        super.lineCommon()
+            this.file("jb2a.breath_weapons.acid.line.green")
+            .atLocation(this.templateStart)
+            .spriteScale(2)
+            .stretchTo(this.affected)
+            .aboveLighting()
+            .delay(-4000)
+            .filter("ColorMatrix", {hue:50, contrast: 0.7, saturate: -0.2,brightness: 0.4,})
+            .playbackRate(1)
+            .fadeIn(50)
+            .fadeOut(50)
+        return this
+
+    }
+
+    lineCreate(){
+        super.lineCommon()
+            .descriptor
+            .file("jb2a.impact.water.02.blue.0")
+            .atLocation(this.templateStart)
+            .scaleToObject(2)
+            .delay(2000)
+            .fadeIn(100)
+            .fadeOut(100)
+        super.affectCommon()
+            .file("jb2a.impact.water.02.blue.0")
+            .atLocation(this.center)
+            .scaleToObject(5)
+            .delay(2000)
+            .fadeIn(100)
+            .fadeOut(100)
+        return this
+    }
+    descriptorCone() {
+        return this;
+    }
+
+    waterImpact()
+    {
+        super.affectCommon()
+            .file("animated-spell-effects-cartoon.water.85")
+            .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+            .scaleToObject(2.8)
+            .filter("ColorMatrix", {hue: 5, brightness: 1, contrast: 0, saturate: -0.8})
+            .randomRotation()
+            .sound()
+            .file("modules/lancer-weapon-fx/soundfx/Axe_Hit.ogg")
+            .fadeInAudio(500)
+            .fadeOutAudio(500)
+            .sound()
+            .file("modules/lancer-weapon-fx/soundfx/Axe_swing.ogg")
+            .fadeInAudio(500)
+            .fadeOutAudio(500)
+        super.affectCommon()
+            .file("animated-spell-effects-cartoon.water.water splash.01")
+            .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+            .scaleToObject(2.5)              
+            .randomRotation()
+            .belowTokens()
+        super.affectCommon()
+            .file("jb2a.impact.water.02.blue.0")
+            .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+            .scaleToObject(4)
+            .randomRotation()
+            .belowTokens()
+        return this
+    }
+    waterPulse()
+    {
+        super.affectCommon()
+            .delay(200)
+            .file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
+            .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+            .scaleToObject(1.75)
+            .opacity(0.5)
+            
+            .belowTokens()
+        super.affectCommon()
+            .delay(200)
+            .file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
+            .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+            .scaleToObject(2.5)
+            .opacity(0.5)
+            .belowTokens()
+        return this
+    }
+    waterBall(){
+            return super.affectCommon()
+            .file("animated-spell-effects-cartoon.water.ball")   
+            .attachTo(this.affected)
+            .playbackRate(1)
+            .scaleToObject()
+            .scale(1.2)
+            .fadeIn(500)
+            .fadeOut(500)
+            .rotateIn(180, 600, {ease: "easeOutCubic"})
+            .scaleIn(0, 600, {ease: "easeOutCubic"})
+            .persist()
+    }
+    descriptorAffliction() { 
+        this.waterExplosion()
+            .waterImpact()
+            .waterBall()
+        this.waterPulse()
+        super.affectCommon()
+        .from(this.affected)
+            .fadeIn(200)
+            .fadeOut(500)
+            .delay(2000)
+            .loopProperty("sprite", "position.x", { from: -0.1, to: 0.1, duration: 50, pingPong: true, gridUnits: true})
+            .scaleToObject(this.affected.document.texture.scaleX)
+            .duration(3000)
+            .opacity(0.25)
+        return this;
+    }
+    descriptorAura(){
+        return this
+    }
+    descriptorBurrow(){
+        let hue = 140
+        let leaves = 'pink'
+        let saturate = -0.3
+        let tint = "#1a57a8" 
+        this.file(`jb2a.swirling_leaves.complete.02.${leaves}`)
+            .atLocation(this.affected)
             .scaleToObject(2.25)
             .fadeOut(300)
             .tint(tint)
             .filter("ColorMatrix", { saturate: saturate })
-            .animateProperty("sprite", "width", { from: this.caster.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
-            .animateProperty("sprite", "height", { from: this.caster.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
-            .animateProperty("sprite", "width", { from: 0, to: this.caster.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
-            .animateProperty("sprite", "height", { from: 0, to: this.caster.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
+            .animateProperty("sprite", "width", { from: this.affected.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
+            .animateProperty("sprite", "height", { from: this.affected.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
+            .animateProperty("sprite", "width", { from: 0, to: this.affected.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
+            .animateProperty("sprite", "height", { from: 0, to: this.affected.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
             .playbackRate(2)
             .belowTokens()
+        .pause(1000)
+        super.affectCommon()
+            .file("jb2a.burrow.out.01.still_frame.0")
+            .atLocation(this.affected)
+            .opacity(0.8)
+            .fadeIn(50)
+            .belowTokens()
+            .scaleToObject(4)
+            .zIndex(1)
+        .animation()
+        .delay(1400)
+        .on(this.affected)
+        .fadeIn(200)
+        super.affectCommon()
+            .file("animated-spell-effects-cartoon.water.85")
+            .playbackRate(1)
+            .scale(0.5)
+        super.affectCommon()
+            .file("jb2a.impact.water.02.blue.0")
+            .scaleToObject(5)
+        super.affectCommon()
+            .file("animated-spell-effects-cartoon.water.water splash.01")
+            .delay(0)
+            .opacity(0.5)
+            .scale(1)
+        super.affectCommon()
+            .file("jb2a.impact.water.02.blue.0")
+            .atLocation(this.affected)
+            .opacity(0.9)
+            .scaleToObject(5)
+            .fadeIn(100)
+            .fadeOut(1000)
+            .duration(3000)
+            .belowTokens()
+            .waitUntilFinished(-2000)
+        return this
+    }
+    descriptorLeap(){}
+    descriptorTeleport(){}
+    descriptorSpeed(){}
+    descriptorFlight(){}
+    descriptorDamage(){
+        this.waterImpact()
+        this.from(this.affected)
+            .fadeIn(200)
+            .fadeOut(500)
+            .delay(3000)
+            .loopProperty("sprite", "position.x", { from: -0.1, to: 0.1, duration: 50, pingPong: true, gridUnits: true})
+            .scaleToObject(this.affected.document.texture.scaleX)
+            .duration(3000)
+            .opacity(0.25)
+        return this.waterPulse()
+    }
+    descriptorHealing(){ 
+        this.waterSwirls()
+        this.file("jb2a.impact.water.02.blue.0")
+            .scaleToObject(2)
+            .delay(1000)
+        super.affectCommon()
+            .file("jb2a.healing_generic.400px.blue")
+            .scaleToObject(2.5)
+            .delay(1200)
+        return this
+    }
 
-            super.affectCommon()
+    descriptorInsubstantial(){
+        this.playSound("modules/dnd5e-animations/assets/sounds/Spells/Elemental/spell-water-jet-1.mp3")
+            .delay(10)
+        .affectCommon()
             .file("jb2a.cast_generic.water.02.blue")
-            .attachTo(this.caster)
-            .playbackRate(1.3)
+            .playbackRate(1.5)
             .scale(1)
             .belowTokens()
             .waitUntilFinished(-1200)
-
-            super.affectCommon()
-            .delay(1300)
+        .affectCommon()
             .file("jb2a.impact.water.02.blue.0")
-            .size(4, {gridUnits:true})
-            .waitUntilFinished(-3000)
-
-            super.affectCommon()
-                .file("animated-spell-effects-cartoon.water.water splash.01")
-                .delay(0)
-                .scale(1)
-
-            super.affectCommon()
-            .file("animated-spell-effects-cartoon.water.85")
-            .scaleToObject(4)
-            .opacity(0.8)
-
-            super.affectCommon()
-                .file("jb2a.liquid.splash_side.blue")
-                .rotateTowards(position)
-
-            super.affectCommon()
-                .file("animated-spell-effects-cartoon.water.79")
-                .rotateTowards(position)
-                .scale(0.5)
-
-            .pause(500)
-
-            super.affectCommon()
-            .file("jb2a.burrow.out.01.still_frame.0")
-            .duration(5000)
-            .fadeIn(500)
-            .fadeOut(1000)
-            .belowTokens()
-            .scaleToObject(6)
-            .tint(tint)
-            .filter("ColorMatrix", { hue: hue })
-            .zIndex(1)
-
-            super.affectCommon()
-            .file("jb2a.template_line_piercing.water.01.blue")
-            .opacity(1)
-            .scale(this.caster.w / canvas.grid.size)
-            .stretchTo(position)
-            .zIndex(1)
-            return this
-
-        }
-        descriptorCastLeap(position){}
-        descriptorCastTeleport(position){}
-        descriptorCastSpeed(position){}
-        descriptorCastFlight(position){}
-        descriptorProject() {
-            return this.file("jb2a.template_line_piercing.water.01.blue")
-                .delay(500)
-                .waitUntilFinished(-3000)
-                
-                .sound()
-                .file("modules/dnd5e-animations/assets/sounds/Spells/Ray/spell-ray-2.mp3")
-                .volume(1);;
-        }
-        descriptorProjectToLine() {
-            return this.descriptorProject()
-        }
-        descriptorProjectToCone() {
-            return this.descriptorProject()
-        }   
-        descriptorBurst() {
-            return this.waterExplosion();
-        }
-
-        burstCreate({caster,affected}={}){
-             super.burstCommon({caster:caster,affected:affected}).file("animated-spell-effects-cartoon.mix.water.01")
-                .attachTo(this.affected)
-                .playbackRate(1.3)
-                .delay(0)
-                .opacity(0.8)
-                .scaleToObject(1)
-            super.burstCommon()
-                .file("animated-spell-effects-cartoon.water.create.01")
-                .attachTo(this.affected)
-                .playbackRate(0.8)
-                .delay(0)
-                .scaleToObject(1)
-            return this.waterExplosion();
-        }
-        burstTransform({affected, caster}={})
-        {
-            return this.burstCreate({affected:affected, caster:caster})
-                .file(`jb2a.impact.water.02.blue.0`)
-                .name("splash")
-                .scaleToObject(3)
-                .endTime(2600)
-                .randomRotation()
-                .noLoop()
-                .persist()
-                .belowTokens()
-                .fadeOut(1000)
-                .scaleIn(0, 600, {ease: "easeOutCubic"})
-        }
-        
-        burstDamage({caster,affected}={}){
-            let sound = 'modules/dnd5e-animations/assets/sounds/Spells/Create-or-Destroy-Water.mp3'
-            super.burstCommon({caster:caster, affected:affected})
-            this.waterExplosion({caster, affected, sound})
-            return this
-            
-        }
-        waterExplosion({affected,caster, sound="modules/dnd5e-animations/assets/sounds/Damage/Acid/acid-bubbling-2.mp3"}={}){
-            this.file("animated-spell-effects-cartoon.water.water splash.01")
-                .scaleToObject (1.7)
-                .scaleIn(0, 500, {ease: "easeOutQuint"})
-                .zIndex(2)
-                .sound()
-                .file(sound)
-                .delay(0)
-            super.affectCommon()
-                .file(`jb2a.impact.water.02.blue.0`)
-                .name("splash")
-                .scaleToObject(3)
-                .endTime(2600)
-                .noLoop()
-                .persist()
-                .belowTokens()
-                .fadeOut(1000)
-                .scaleIn(0, 600, {ease: "easeOutCubic"})
-            
-                let delayDuration = 10000;
-                let  splashFilters = {
-                  name: "splash"
-            };
-
-            function endEffectsWithDelay(filters, delay) {
-              setTimeout(() => {
-                Sequencer.EffectManager.endEffects(filters);
-              }, delay);
-            }
-            endEffectsWithDelay(splashFilters, delayDuration);
-            return this;
-        }
-        
-        burstHealing({caster,affected}={}){
-            super.burstCommon()
-                .file("animated-spell-effects-cartoon.water.water splash.01")
-                .scaleToObject (1.7)
-                .scaleIn(0, 500, {ease: "easeOutQuint"})
-                .zIndex(2)
-            .sound()
-                .file("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-buff-short-5.mp3")
-                .delay(1000)
-             super.burstCommon()
-                .file(" animated-spell-effects-cartoon.water.29")
-                .anchor({ x: 0.8, y: 0.45 })
-                .rotate(-35)
-                .playbackRate(1)
-                .scale(0.5)
-             super.burstCommon()
-                .file(" animated-spell-effects-cartoon.water.29")
-                .anchor({ x: 0.2, y: 0.45 })
-                .rotate(35)
-                .playbackRate(1)
-                .scale(0.5)
-                .mirrorX()
-             super.burstCommon()
-                .file(" animated-spell-effects-cartoon.water.29")
-                .anchor({ x: 0.8, y: 0.45 })
-                .rotate(90)
-                .playbackRate(1)
-                .scale(0.5)   
-             super.burstCommon()
-                .file(`jb2a.impact.water.02.blue.0`)
-                .name("splash")
-                  .scaleToObject(3)
-                  .endTime(2200)
-                  .noLoop()
-                  .persist()
-                  .belowTokens()
-                  .fadeOut(1000)
-                  .scaleIn(0, 600, {ease: "easeOutCubic"})
-            super.burstCommon()
-                  .file("jb2a.healing_generic.burst.bluewhite")        
-                  .opacity(1)
-                  .scaleToObject(1)
-            return this
-        }
-        waterSwirls(){
-            super.affectCommon()
-                .file("animated-spell-effects-cartoon.water.water splash.01")
-                .scaleToObject (1.7)
-                .scaleIn(0, 500, {ease: "easeOutQuint"})
-                .zIndex(2)
-            .sound()
-                .file("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-buff-short-5.mp3")
-                .delay(1000)
-             super.affectCommon()
-                .file(" animated-spell-effects-cartoon.water.29")
-                .anchor({ x: 0.8, y: 0.45 })
-                .rotate(-35)
-                .playbackRate(1)
-                .scale(0.5)
-             super.affectCommon()
-                .file(" animated-spell-effects-cartoon.water.29")
-                .anchor({ x: 0.2, y: 0.45 })
-                .rotate(35)
-                .playbackRate(1)
-                .scale(0.5)
-                .mirrorX()
-             super.affectCommon()
-                .file(" animated-spell-effects-cartoon.water.29")
-                .anchor({ x: 0.8, y: 0.45 })
-                .rotate(90)
-                .playbackRate(1)
-                .scale(0.5)   
-             super.affectCommon()
-                .file(`jb2a.impact.water.02.blue.0`)
-                .name("splash")
-                  .scaleToObject(3)
-                  .endTime(2200)
-                  .noLoop()
-                  .persist()
-                  .belowTokens()
-                  .fadeOut(1000)
-                  .scaleIn(0, 600, {ease: "easeOutCubic"})
-            super.affectCommon()
-                  .file("jb2a.healing_generic.burst.bluewhite")        
-                  .opacity(1)
-                  .scaleToObject(1)
-        }
-        descriptorLine() {
-                 this.file("jb2a.impact.water.02.blue.0")
-                .atLocation(this.templateStart)
-                .scaleToObject(2)
-                .delay(2000)
-                .fadeIn(100)
-                .fadeOut(100)
-
-            this.atLocation(this.templateStart)
-            super.lineCommon()
-                this.file("jb2a.breath_weapons.acid.line.green")
-                .atLocation(this.templateStart)
-                .spriteScale(2)
-                .stretchTo(this.affected)
-                .aboveLighting()
-                .delay(-4000)
-                .filter("ColorMatrix", {hue:50, contrast: 0.7, saturate: -0.2,brightness: 0.4,})
-                .playbackRate(1)
-                .fadeIn(50)
-                .fadeOut(50)
-            return this
- 
-        }
-
-        lineCreate(){
-            super.lineCommon()
-                .descriptor
-                .file("jb2a.impact.water.02.blue.0")
-                .atLocation(this.templateStart)
-                .scaleToObject(2)
-                .delay(2000)
-                .fadeIn(100)
-                .fadeOut(100)
-            super.affectCommon()
-                .file("jb2a.impact.water.02.blue.0")
-                .atLocation(this.center)
-                .scaleToObject(5)
-                .delay(2000)
-                .fadeIn(100)
-                .fadeOut(100)
-            return this
-        }
-        descriptorCone() {
-            return this;
-        }
-
-        waterImpact()
-        {
-            super.affectCommon()
-                .file("animated-spell-effects-cartoon.water.85")
-                .scaleIn(0, 100, {ease: "easeOutCubic"}) 
-                .scaleToObject(2.8)
-                .filter("ColorMatrix", {hue: 5, brightness: 1, contrast: 0, saturate: -0.8})
-                .randomRotation()
-                .sound()
-                .file("modules/lancer-weapon-fx/soundfx/Axe_Hit.ogg")
-                .fadeInAudio(500)
-                .fadeOutAudio(500)
-                .sound()
-                .file("modules/lancer-weapon-fx/soundfx/Axe_swing.ogg")
-                .fadeInAudio(500)
-                .fadeOutAudio(500)
-            super.affectCommon()
-                .file("animated-spell-effects-cartoon.water.water splash.01")
-                .scaleIn(0, 100, {ease: "easeOutCubic"}) 
-                .scaleToObject(2.5)              
-                .randomRotation()
-                .belowTokens()
-            super.affectCommon()
-                .file("jb2a.impact.water.02.blue.0")
-                .scaleIn(0, 100, {ease: "easeOutCubic"}) 
-                .scaleToObject(4)
-                .randomRotation()
-                .belowTokens()
-            return this
-        }
-        waterPulse()
-        {
-            super.affectCommon()
-                .delay(200)
-                .file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
-                .scaleIn(0, 100, {ease: "easeOutCubic"}) 
-                .scaleToObject(1.75)
-                .opacity(0.5)
-                
-                .belowTokens()
-            super.affectCommon()
-                .delay(200)
-                .file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
-                .scaleIn(0, 100, {ease: "easeOutCubic"}) 
-                .scaleToObject(2.5)
-                .opacity(0.5)
-                .belowTokens()
-            return this
-        }
-        waterBall(){
-             return super.affectCommon()
-                .file("animated-spell-effects-cartoon.water.ball")   
-                .attachTo(this.affected)
-                .playbackRate(1)
-                .scaleToObject()
-                .scale(1.2)
-                .fadeIn(500)
-                .fadeOut(500)
-                .rotateIn(180, 600, {ease: "easeOutCubic"})
-                .scaleIn(0, 600, {ease: "easeOutCubic"})
-                .persist()
-        }
-        descriptorAffliction() { 
-            this.waterExplosion()
-                .waterImpact()
-                .waterBall()
-            this.waterPulse()
-            super.affectCommon()
-            .from(this.affected)
-                .fadeIn(200)
-                .fadeOut(500)
-                .delay(2000)
-                .loopProperty("sprite", "position.x", { from: -0.1, to: 0.1, duration: 50, pingPong: true, gridUnits: true})
-                .scaleToObject(this.affected.document.texture.scaleX)
-                .duration(3000)
-                .opacity(0.25)
-            return this;
-        }
-        descriptorAura(){
-            return this
-        }
-        descriptorBurrow(){
-            let hue = 140
-            let leaves = 'pink'
-            let saturate = -0.3
-            let tint = "#1a57a8" 
-            this.file(`jb2a.swirling_leaves.complete.02.${leaves}`)
-                .atLocation(this.affected)
-                .scaleToObject(2.25)
-                .fadeOut(300)
-                .tint(tint)
-                .filter("ColorMatrix", { saturate: saturate })
-                .animateProperty("sprite", "width", { from: this.affected.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
-                .animateProperty("sprite", "height", { from: this.affected.document.width*2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits:true, delay: 500})
-                .animateProperty("sprite", "width", { from: 0, to: this.affected.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
-                .animateProperty("sprite", "height", { from: 0, to: this.affected.document.width*2.25, duration: 500, ease: "easeOutCubic", gridUnits:true, delay: 2500})
-                .playbackRate(2)
-                .belowTokens()
-            .pause(1000)
-            super.affectCommon()
-                .file("jb2a.burrow.out.01.still_frame.0")
-                .atLocation(this.affected)
-                .opacity(0.8)
-                .fadeIn(50)
-                .belowTokens()
-                .scaleToObject(4)
-                .zIndex(1)
-            .animation()
-            .delay(1400)
-            .on(this.affected)
-            .fadeIn(200)
-            super.affectCommon()
-                .file("animated-spell-effects-cartoon.water.85")
-                .playbackRate(1)
-                .scale(0.5)
-            super.affectCommon()
-                .file("jb2a.impact.water.02.blue.0")
-                .scaleToObject(5)
-            super.affectCommon()
-                .file("animated-spell-effects-cartoon.water.water splash.01")
-                .delay(0)
-                .opacity(0.5)
-                .scale(1)
-            super.affectCommon()
-                .file("jb2a.impact.water.02.blue.0")
-                .atLocation(this.affected)
-                .opacity(0.9)
-                .scaleToObject(5)
-                .fadeIn(100)
-                .fadeOut(1000)
-                .duration(3000)
-                .belowTokens()
-                .waitUntilFinished(-2000)
-            return this
-        }
-        descriptorLeap(){}
-        descriptorTeleport(){}
-        descriptorSpeed(){}
-        descriptorFlight(){}
-        descriptorDamage(){
-            this.waterImpact()
-            this.from(this.affected)
-                .fadeIn(200)
-                .fadeOut(500)
-                .delay(3000)
-                .loopProperty("sprite", "position.x", { from: -0.1, to: 0.1, duration: 50, pingPong: true, gridUnits: true})
-                .scaleToObject(this.affected.document.texture.scaleX)
-                .duration(3000)
-                .opacity(0.25)
-            return this.waterPulse()
-        }
-        descriptorHealing(){ 
-            this.waterSwirls()
-            this.file("jb2a.impact.water.02.blue.0")
-                .scaleToObject(2)
-                .delay(1000)
-            super.affectCommon()
-                .file("jb2a.healing_generic.400px.blue")
-                .scaleToObject(2.5)
-                .delay(1200)
-            return this
-        }
-
-        descriptorInsubstantial(){
-            this.playSound("modules/dnd5e-animations/assets/sounds/Spells/Elemental/spell-water-jet-1.mp3")
-                .delay(10)
-            .affectCommon()
-                .file("jb2a.cast_generic.water.02.blue")
-                .playbackRate(1.5)
-                .scale(1)
-                .belowTokens()
-                .waitUntilFinished(-1200)
-            .affectCommon()
-                .file("jb2a.impact.water.02.blue.0")
-                .delay(800)
-                .scale(1)
-            .affectCommon()
-                .file("animated-spell-effects-cartoon.water.create.01")
-                .delay(505)
-                .scale(0.4)
-                .aboveLighting()
-        }
-
-        descriptorCreate(){
-            return this.waterImpact()
-        }
-        descriptorAura(){
-            return this.file("animated-spell-effects-cartoon.water.create.01")
+            .delay(800)
+            .scale(1)
+        .affectCommon()
+            .file("animated-spell-effects-cartoon.water.create.01")
+            .delay(505)
             .scale(0.4)
             .aboveLighting()
-            super.affectCommon()
-                .file("jb2a.impact.water.02.blue.0")
-                .playbackRate(1)
-                .scale(0.8)
-                .delay(400)
-            .sound()
-                .file("modules/dnd5e-animations/assets/sounds/Spells/Elemental/spell-water-jet-1.mp3")
-                .delay(10)
-        }
-        descriptorProtection(){
-            return this.affectAura()
-                .waterBall()
-        }
+    }
+
+    descriptorCreate(){
+        return this.waterImpact()
+    }
+    descriptorAura(){
+        return this.file("animated-spell-effects-cartoon.water.create.01")
+        .scale(0.4)
+        .aboveLighting()
+        super.affectCommon()
+            .file("jb2a.impact.water.02.blue.0")
+            .playbackRate(1)
+            .scale(0.8)
+            .delay(400)
+        .sound()
+            .file("modules/dnd5e-animations/assets/sounds/Spells/Elemental/spell-water-jet-1.mp3")
+            .delay(10)
+    }
+    descriptorProtection(){
+        return this.affectAura()
+            .waterBall()
+    }
 /*
-        descriptorConcealment()
-        {
-            return this;
-        }
+    descriptorConcealment()
+    {
+        return this;
+    }
 
-        descriptorIllusion(){
-            return this
-        }
-        descriptorInsubstantial(){
-            return this
-        }
+    descriptorIllusion(){
+        return this
+    }
+    descriptorInsubstantial(){
+        return this
+    }
 
-        descriptorMindControl(){
-            return this
-        }
+    descriptorMindControl(){
+        return this
+    }
 
-        descriptorMindControl(){
-            return this
-        }
+    descriptorMindControl(){
+        return this
+    }
 
-        descriptorNullify(){
-            return this
-        }
-
-
-
-        descriptorTransform(){
-            return this
-        }
-
-        descriptorWeaken(){
-            return this
-        }*/
-    
+    descriptorNullify(){
+        return this
     }
 
 
-    
+
+    descriptorTransform(){
+        return this
+    }
+
+    descriptorWeaken(){
+        return this
+    }*/
+
+}
+
     Sequencer.SectionManager.registerSection("myModule", "mm3eEffect", BaseEffectSection)
     Sequencer.SectionManager.registerSection("myModule", "powerEffect", PowerEffectSection) 
     Sequencer.SectionManager.registerSection("myModule", "noDescriptorEffect", NoDescriptorEffectSection)
@@ -9636,29 +9856,53 @@ class GameHelper{
 const selectedTargets = Array.from(game.user.targets);
 const selected = GameHelper.selected;
 `;
-
-            if ((areaMethod === "none" || areaMethod === undefined)  && affectedType === "target") {
-                script += `
+            if(('Burrow' | "Leaping"| 'Swimming' | 'Flight' | 'Teleport' | 'Speed' ) in affectTypes){
+                 script+= `let position = await GameHelper.placeEffectTargeter('${GameHelper.effects[effect]}')`
+            }
+            if ((areaMethod === "none" || areaMethod === undefined)  && affectedType === "target" || affectedType=="selected") {
+               if(affectedType=="target"){
+                    script += `
 for (let target of selectedTargets) {
+    `
+                 }
+                 script += `
     new Sequence()
-        .${effect}()
-        .${castMethod?castMethod:"cast"}({affected: target})`
+        .${effect}()`
+                if(('Burrow' | "Leaping"| 'Swimming' | 'Flight' | 'Teleport' | 'Speed' ) in affectTypes){
+          script +=`.${castMethod?castMethod:"cast"}({affected: ${affectedType}, position:position})`
+                }
+                else{
+          script +=`
+                      .${castMethod?castMethod:"cast"}({affected: ${affectedType}})`           
+                }
                 script += projectMethod !== "none" && projectMethod !=="" ? 
-`       
+`        
         .${projectMethod}()` : "";
             affectTypes.forEach((affectType) => {
-                script += 
-`       
-        .${affectType}({affected: target})
-`;
+                if(('Burrow' | "Leaping"| 'Swimming' | 'Flight' | 'Teleport' | 'Speed' ) in affectTypes){
+                    script += 
+            `
+            .${affectType}({affected: ${affectedType}, position:position})
+`
+                 }
+                else
+                {
+                    script += 
+`                   
+.${affectType}({affected: ${affectedType}})
+`
+                }
             });
             script +=
 `
-        .play(); 
-    }
-    `;
-            } else {
-                script += `
+        .play(); `
+             if(affectedType=="target"){
+                script +=
+
+    `}`
+             }
+        } else {
+            script += `
 let template = GameHelper.template
 let target = Array.from(game.user.targets)[0];
 new Sequence()
@@ -9678,11 +9922,10 @@ for (let target of selectedTargets) {
     new Sequence()
     .${effect}()`
          affectTypes.forEach((affectType) => {
-                script += 
-`
-    .${affectType}({affected: target})
+            script +=
+    `.${affectType}({affected: ${affectedType}})
 `;
-            });
+        });
         script += 
 `   .play();
 }
@@ -9867,5 +10110,3 @@ for (let target of selectedTargets) {
         }).render(true);
     }
 }
-
-
