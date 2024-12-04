@@ -234,6 +234,9 @@ Hooks.on("ready", () => {
     cast2({caster , affected}={}){
         return this.cast({caster:caster, affected:affected})
     } 
+    affectHealing2({affected = this.firstSelected}={}){
+        return this.affectCommon({affected:affected, persist:false})
+        }
 
     castToTemplate({caster =(this.caster)}={}){
         return this.cast({caster:caster, affected:this.firstTemplate})
@@ -1494,6 +1497,13 @@ Hooks.on("ready", () => {
             return this;
         }
 
+        affectHealing2({affected = this.firstSelected}={}){
+
+            this.affectCommon({affected:affected})
+            .healing()
+            return this;
+        }
+
         affectIllusion({affected = this.affected}={})
         {
             this. affectCommon({affected:affected})
@@ -2311,47 +2321,519 @@ Hooks.on("ready", () => {
        /* castCone({affected, caster}={}){
             return this
         }*/
+
+        cast({caster, affected , duration = 1}={}){
+             super.castCommon({caster:caster, affected:affected})
+                .file("animated-spell-effects-cartoon.air.portal")
+                .playbackRate(1)
+                .scaleToObject(3)
+                .waitUntilFinished(-800)
+
+                super.castCommon()
+                .sound()
+                .file("modules/dnd5e-animations/assets/sounds/Spells/Elemental/spell-air-moving-2.mp3")
+             return this;
+        }
+        cast2({caster, affected , duration = 1}={}){
+             super.castCommon({caster:caster, affected:affected})
+                .file("animated-spell-effects-cartoon.air.portal")
+                .scaleToObject(3)
+                .playbackRate(1)
+                .waitUntilFinished(-500)
+
+                .sound()
+                .file("modules/dnd5e-animations/assets/sounds/Spells/Elemental/spell-air-moving-2.mp3")
+            
+             super.castCommon()
+                .file("animated-spell-effects-cartoon.air.spiral.gray")
+                .scaleToObject(2.5)
+                .playbackRate(1)
+                .waitUntilFinished(-200)
+
+            return this;
+        }
+        castRange({caster, affected , duration = 1}={}){
+            //this is for healing//
+             super.castCommon({caster:caster, affected:affected})
+                .file("animated-spell-effects-cartoon.air.portal")
+                .attachTo(this.caster, {offset:{x:0, y: -0.0}, gridUnits:true, followRotation: false})
+                .scaleToObject(2.5)
+                .fadeIn(250)
+                .scaleIn(0, 500, {ease: "easeOutCubic"})
+                .fadeOut(500)
+                .belowTokens()
+                .opacity(0.85)
+                .filter("ColorMatrix", { saturate:-1 })
+                
+             super.castCommon()
+                .file("animated-spell-effects-cartoon.air.explosion.gray")
+                .attachTo(this.caster, {offset:{x:0, y: -0.0}, gridUnits:true, followRotation: false})
+                .scaleToObject(1.45)
+                .fadeIn(250)
+                .scaleIn(0, 500, {ease: "easeOutCubic"})
+                .fadeOut(500)
+                .belowTokens()
+
+                .sound()
+                .file("modules/dnd5e-animations/assets/sounds/Spells/Elemental/spell-air-moving-2.mp3") 
+                
+             super.castCommon()
+                .file("jb2a.wind_stream.white")
+                .attachTo(this.caster, {offset:{x:0, y: 0}, gridUnits:true, followRotation: false})
+                .scaleToObject(2)
+                .fadeIn(1000)
+                .fadeOut(500)
+                .opacity(0.5)
+                .filter("ColorMatrix", { saturate:1, brightness:2 })
+                .rotate(90)
+                .mask()
+
+            super.castCommon()
+                .file("animated-spell-effects-cartoon.smoke.19")
+                .attachTo(this.caster, {offset:{x:0.2*token.document.width, y: 0.45*this.caster.document.width}, gridUnits:true, followRotation: false})
+                .scaleToObject(1.5, {considerTokenScale: true})
+                .rotate(-30)
+                
+                .filter("ColorMatrix", {saturate: -1, brightness: 0  })
+                .filter("Blur", {blurX: 5, blurY:10 })
+                .opacity(0.5)
+                
+            super.castCommon()
+                .file("animated-spell-effects-cartoon.smoke.19")
+                .attachTo(this.caster, {offset:{x:0.2*this.caster.document.width, y: 0.35*this.caster.document.width}, gridUnits:true, followRotation: false})
+                .scaleToObject(1.5, {considerTokenScale: true})
+                .rotate(-30)
+                .zIndex(0.1)
+                
+            super.castCommon()
+                .delay(700)
+                .file("animated-spell-effects-cartoon.smoke.19")
+                .attachTo(this.caster, {offset:{x:-0.4*this.caster.document.width, y: -0.25*this.caster.document.width}, gridUnits:true, followRotation: false})
+                .scaleToObject(1.2, {considerTokenScale: true})
+                .belowTokens(false)
+                .mirrorY(true)
+                .rotate(110)
+                
+                .filter("ColorMatrix", {saturate: -1, brightness: 0  })
+                .filter("Blur", {blurX: 5, blurY:10 })
+                .opacity(0.5)
+                
+            super.castCommon()
+                .delay(700)
+                .file("animated-spell-effects-cartoon.smoke.19")
+                .attachTo(this.caster, {offset:{x:-0.4*this.caster.document.width, y: -0.35*this.caster.document.width}, gridUnits:true, followRotation: false})
+                .scaleToObject(1.2, {considerTokenScale: true})
+                .belowTokens(false)
+                .mirrorY(true)
+                .rotate(110)
+                .zIndex(0.1)
+
+            return this;
+        }
     
         descriptorCast(){
-             return this
+            
+return this
+        }
+        meleeCast({caster, affected, repeats=1}={} ){
+            super.meleeCastCommon({caster:caster, affected:affected}) 
+            let target = Array.from(game.user.targets)[0];
+            let targetCenter = {
+                x: this.affected.x+canvas.grid.size*this.affected.document.width/2,
+                y: this.affected.y+canvas.grid.size*this.affected.document.width/2,
+                };
+                
+                const tokenCenter = {
+                x: this.caster.x+canvas.grid.size*this.caster.document.width/2,
+                y: this.caster.y+canvas.grid.size*this.caster.document.width/2,
+                };
+                
+                const middleposition = {
+                  x: (targetCenter.x - tokenCenter.x)* 0.25,
+                  y: (targetCenter.y - tokenCenter.y)* 0.25,
+                };
+
+
+  this.effect()
+  .file("animated-spell-effects-cartoon.air.portal")
+  .atLocation(this.caster) 
+  .playbackRate(1)
+  .scale(0.5)
+  .delay(500)
+  .belowTokens(false)
+  .waitUntilFinished(-1000)
+
+  .wait(1000)
+
+super.meleeCastCommon()
+  .file("jb2a.unarmed_strike.no_hit.01.blue")
+  .atLocation(this.caster, { edge: "outer" })
+  .stretchTo(this.affected)
+  .filter("ColorMatrix", { hue: 0, brightness: 1, contrast: 0, saturate: -0.8 })
+  .tint("#e6e6e6")
+  .delay(100)
+  .playbackRate(1.25)
+  .fadeOut(100)
+  .zIndex(2)
+
+  .sound()
+  .file("modules/dnd5e-animations/assets/sounds/Spells/Elemental/spell-air-moving-2.mp3")
+  .fadeInAudio(500)
+  .fadeOutAudio(500)
+ 
+.wait(750)
+
+.canvasPan()
+  .delay(250)
+  .shake({duration: 250, strength: 2, rotation: false })
+
+super.meleeCastCommon()
+  .file("jb2a.swirling_leaves.outburst.01.pink")
+  .scaleIn(0, 500, {ease: "easeOutCubic"}) 
+  .filter("ColorMatrix", { saturate: 1, hue: -105 })
+  .scaleToObject(0.75)
+  .fadeOut(2000)
+  .atLocation(this.caster)
+  .zIndex(1)
+
+.animation()
+  .on(this.caster)
+  .opacity(0)
+
+super.meleeCastCommon()
+  .from(this.caster)
+  .atLocation(this.caster)
+  .mirrorX(this.caster.document.mirrorX)
+  .animateProperty("sprite", "position.x", { from: 0, to: middleposition.x, duration: 100, ease:"easeOutExpo"})
+  .animateProperty("sprite", "position.y", { from: 0, to: middleposition.y, duration: 100, ease:"easeOutExpo"})
+  .animateProperty("sprite", "position.x", { from: 0, to: -middleposition.x, duration: 350, ease:"easeInOutQuad", fromEnd:true})
+  .animateProperty("sprite", "position.y", { from: 0, to: -middleposition.y, duration: 350, ease:"easeInOutQuad", fromEnd:true})
+  .scaleToObject(1, {considerTokenScale: true})
+  .duration(600)
+
+.animation()
+  .on(this.caster)
+  .opacity(1)
+  .delay(600)
+
+super.meleeCastCommon()
+    .file("animated-spell-effects-cartoon.water.85")
+    .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+    .scaleToObject(2.8)
+    .atLocation(this.affected)
+    .filter("ColorMatrix", {hue: 5, brightness: 1, contrast: 0, saturate: -0.8})
+    .randomRotation()
+
+super.meleeCastCommon()
+    .file("animated-spell-effects-cartoon.air.spiral.gray")
+    .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+    .scaleToObject(2.8)
+    .atLocation(this.affected)
+    .filter("ColorMatrix", {hue: 5, brightness: 1, contrast: 0, saturate: -0.8})
+    .randomRotation()
+
+  .sound()
+  .file("modules/dnd5e-animations/assets/sounds/Spells/Hunter%27s-Mark_Sneak-Attack.mp3")
+  .fadeInAudio(500)
+  .fadeOutAudio(500)
+
+  .sound()
+  .file("modules/lancer-weapon-fx/soundfx/Axe_swing.ogg")
+  .fadeInAudio(500)
+  .fadeOutAudio(500)
+
+super.meleeCastCommon()
+    .file("jb2a.impact.ground_crack.white")
+    .scaleToObject(3)
+    .atLocation(target)
+    .randomRotation()
+    .belowTokens()
+
+super.meleeCastCommon()
+    .file("jb2a.smoke.puff.ring.01.white.0")
+    .atLocation(target)
+    .scale(1.5)
+    .zIndex(4)
+    
+    super.meleeCastCommon()
+    .delay(200)
+    .file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
+    .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+    .scaleToObject(1.75)
+    .opacity(0.5)
+    .atLocation(target)
+    .belowTokens()
+    
+    super.meleeCastCommon()
+    .delay(200)
+    .file("jb2a.extras.tmfx.border.circle.outpulse.01.fast")
+    .scaleIn(0, 100, {ease: "easeOutCubic"}) 
+    .scaleToObject(2.5)
+    .opacity(0.5)
+    .atLocation(target)
+    .belowTokens()
+    
+    super.meleeCastCommon()
+    .from(target)
+    .atLocation(target)
+    .fadeIn(200)
+    .fadeOut(500)
+    .loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
+    .scaleToObject(target.document.texture.scaleX)
+    .duration(3000)
+    .opacity(0.25)
+            return this
         }
         descriptorMeleeCast(){
             return this
         }
+        
+        projectRange({caster, target }={}){ 
+           super.projectCommon({caster:caster,target:target})
+            .file("animated-spell-effects-cartoon.air.bolt.square")
+            .stretchTo(this.affected)
+            .playbackRate(1)
+            .scale(1.5)
+            
+        super.projectCommon()
+            .sound()
+            .file("modules/dnd5e-animations/assets/sounds/Spells/Whoosh/spell-whoosh-22.mp3")
+            .delay(1000)            
+            return this;
+        }            
 
         descriptorProject() {
+        super.projectCommon({caster: this.caster,target: this.affected})
+            .file("animated-spell-effects-cartoon.air.bolt.ray")
+            .stretchTo(this.affected)
+            .playbackRate(1)
+            .scale(1.5)
+
+        super.projectCommon()
+            .sound()
+            .file("modules/dnd5e-animations/assets/sounds/Spells/Whoosh/spell-whoosh-22.mp3")
+            .delay(1000)
             return this;
         }
         descriptorProjectToLine() {
-            return this.descriptorProject()
+            return this.file("animated-spell-effects-cartoon.air.bolt.square")
+            .playbackRate(1)
+            .scale(1.5)
+            
+            .sound()
+            .file("modules/dnd5e-animations/assets/sounds/Spells/Whoosh/spell-whoosh-22.mp3")
+            .delay(1000)
         }
         descriptorProjectToCone() {
-            return this.descriptorProject()
+            return this.descriptorProjectToLine()
         }   
 
         descriptorBurst() {
+            this.file("animated-spell-effects-cartoon.air.explosion.gray")
+                .scaleToObject (1)
+                .scaleIn(0, 500, {ease: "easeOutQuint"})
+                .zIndex(2)
+
+            super.burstCommon()    
+                .file("animated-spell-effects-cartoon.air.puff.02")
+                .scaleToObject(1)
+                .opacity(1)
+                .playbackRate(0.8)
+                .belowTokens()
+                .filter("ColorMatrix", {saturate: -2, brightness: 1  })
+                .tint("#FFFFFF")
             return this;
         }
         descriptorLine() {
+             let template = canvas.templates.placeables[canvas.templates.placeables.length - 1];
+            const lineTemplate = canvas.templates.placeables.at(-1).document;
+
+            const start = { x: lineTemplate.x, y: lineTemplate.y };
+
+            this.file("animated-spell-effects-cartoon.air.blast.circle")
+                .atLocation(start)
+                .playbackRate(1)
+                .scale(0.5)
+                .delay(800)
+
+                .sound()
+                .file("modules/dnd5e-animations/assets/sounds/Spells/Hunter%27s-Mark_Sneak-Attack.mp3")
+                .delay(1800)
+                
+                super.affectCommon()
+                .file("animated-spell-effects-cartoon.air.spiral.gray")
+                .atLocation(start)
+                .playbackRate(1)
+                .scale(0.5)
+                .delay(800)
+                .waitUntilFinished(-2500)
+                        
+                super.affectCommon()
+                .file("animated-spell-effects-cartoon.smoke.87")
+                .atLocation(start)
+                .scale(1, 2.5)
+                .stretchTo(template)
+                .aboveLighting()
+                .rotate(-90)
+                .anchor({ x: 1, y: 0.7 })
+                .fadeIn(50)
+                .fadeOut(50)
             return this
         }
-        descriptorCone() {
+        descriptorCone({affected} = {}) {
+            const template = canvas.templates.placeables[canvas.templates.placeables.length - 1];
+            const coneStart = { x: template.data.x, y: template.data.y };
+            
+            this.file("animated-spell-effects-cartoon.air.blast.circle")
+                .atLocation(coneStart)
+                .playbackRate(1)
+                .scale(0.5)
+                .delay(800)
+
+                .sound()
+                .file("modules/dnd5e-animations/assets/sounds/Spells/Hunter%27s-Mark_Sneak-Attack.mp3")
+                .delay(1800)
+                
+                super.affectCommon()
+                .file("animated-spell-effects-cartoon.air.spiral.gray")
+                .atLocation(coneStart)
+                .playbackRate(1)
+                .scale(0.5)
+                .delay(800)
+                .waitUntilFinished(-2500)
+                        
+                super.affectCommon()
+                .file("animated-spell-effects-cartoon.air.gust.gray")
+                .atLocation(coneStart)
+                .stretchTo(template)
+                .fadeIn(100)
+                .fadeOut(100)
+                .delay(1)
+                .rotate(-90)
+                .anchor({ x: 1, y: 0.8 })
+                .playbackRate(1.5)
+
+            	.canvasPan()
+            	.delay(1500)
+            	.shake({duration: 800, strength: 1, rotation: false })
             return this;
         }
         descriptorAffliction() {
-             
+            this.file("animated-spell-effects-cartoon.air.wall")
+                .attachTo(this.affected)
+                .playbackRate(1.5)
+                .scale(0.8)
+                .fadeIn(500)
+                .mask()
+                .persist()
+                
+                .sound()
+                .file("modules/dnd5e-animations/assets/sounds/Spells/Elemental/spell-wind-howling-1.mp3")
+                .duration(5000)
+                .fadeOutAudio(800)
             return this;
         }
         descriptorAura(){
             return this
         }
         descriptorDamage(){
+       
+            this.file("animated-spell-effects-cartoon.air.blast.circle")
+            .playbackRate(1)
+            .scale(0.5)
+            .delay(800)
+
+            .sound()
+            .file("modules/dnd5e-animations/assets/sounds/Spells/Hunter%27s-Mark_Sneak-Attack.mp3")
+            .delay(1000)
             return this;
+            
         }
         descriptorHealing(){
-           
+            this.file("jb2a.healing_generic.03.burst.bluegreen")
+                .delay(700)
+                .scaleToObject(3)
+                .filter("ColorMatrix", {saturate: -2, brightness: 1  })
+                .tint("#FFFFFF")
+                .opacity(1)
+
+                .sound()
+                .file("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-lively-3.mp3")
+                .fadeOutAudio(800)            
             return this
         }
+        affectHealing2({affected = this.affected|| this.firstSelected}={}){
+            super.affectCommon({affected:affected, persist:false})
+                .file("animated-spell-effects-cartoon.air.portal")
+                .attachTo(this.affected, {offset:{x:0, y: -0.0}, gridUnits:true, followRotation: false})
+                .scaleToObject(2.5)
+                .fadeIn(250)
+                .scaleIn(0, 500, {ease: "easeOutCubic"})
+                .fadeOut(500)
+                .belowTokens()
+                .opacity(0.85)
+                .filter("ColorMatrix", { saturate:-1 })
+                
+                super.affectCommon()
+                .file("animated-spell-effects-cartoon.air.explosion.gray")
+                .attachTo(this.affected, {offset:{x:0, y: -0.0}, gridUnits:true, followRotation: false})
+                .scaleToObject(1.45)
+                .fadeIn(250)
+                .scaleIn(0, 500, {ease: "easeOutCubic"})
+                .fadeOut(500)
+                .belowTokens()
+                
+                super.affectCommon()
+                .file("animated-spell-effects-cartoon.smoke.19")
+                .attachTo(this.affected, {offset:{x:0.2*token.document.width, y: 0.45*token.document.width}, gridUnits:true, followRotation: false})
+                .scaleToObject(1.5, {considerTokenScale: true})
+                .rotate(-30)
+                
+                .filter("ColorMatrix", {saturate: -1, brightness: 0  })
+                .filter("Blur", {blurX: 5, blurY:10 })
+                .opacity(0.5)
+                
+                super.affectCommon()
+                .file("animated-spell-effects-cartoon.smoke.19")
+                .attachTo(this.affected, {offset:{x:0.2*token.document.width, y: 0.35*token.document.width}, gridUnits:true, followRotation: false})
+                .scaleToObject(1.5, {considerTokenScale: true})
+                .rotate(-30)
+                .zIndex(0.1)
+                
+                super.affectCommon()
+                .delay(700)
+                .file("animated-spell-effects-cartoon.smoke.19")
+                .attachTo(this.affected, {offset:{x:-0.4*token.document.width, y: -0.25*token.document.width}, gridUnits:true, followRotation: false})
+                .scaleToObject(1.2, {considerTokenScale: true})
+                .belowTokens(false)
+                .mirrorY(true)
+                .rotate(110)
+                
+                .filter("ColorMatrix", {saturate: -1, brightness: 0  })
+                .filter("Blur", {blurX: 5, blurY:10 })
+                .opacity(0.5)
+                
+                super.affectCommon()
+                .delay(700)
+                .file("animated-spell-effects-cartoon.smoke.19")
+                .attachTo(this.affected, {offset:{x:-0.4*token.document.width, y: -0.35*token.document.width}, gridUnits:true, followRotation: false})
+                .scaleToObject(1.2, {considerTokenScale: true})
+                .belowTokens(false)
+                .mirrorY(true)
+                .rotate(110)
+                
+                .zIndex(0.1)
+                
+                super.affectCommon()
+                .delay(700)
+                .file("jb2a.healing_generic.03.burst.bluegreen")
+                .atLocation(this.affected)
+                .scaleToObject(3)
+                .filter("ColorMatrix", {saturate: -2, brightness: 1  })
+                .tint("#FFFFFF")
+                .opacity(1)
+                .waitUntilFinished()
+            return this;
 
         /*
        
