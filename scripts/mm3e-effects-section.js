@@ -1,7 +1,7 @@
 Hooks.on('renderItemSheet', (app, html, data) => { 
     if (!html.find('.header-button.control.my-custom-button').length) {
         console.log('Adding the original buttion with a  change');  
-      const button = $(`
+      const button = $(`   
         <a class="header-button control my-custom-button" 
            title="Edit Power Animation" 
            style="display: flex; align-items: center; gap: 5px; background: transparent; border: none; color: white; padding: 0; cursor: pointer;">
@@ -16,7 +16,7 @@ Hooks.on('renderItemSheet', (app, html, data) => {
    
       if (configButton.length) {
         configButton.before(button);
-      }
+      }  
   
       button.on('click', async (event) => {
         event.preventDefault();
@@ -26,6 +26,7 @@ Hooks.on('renderItemSheet', (app, html, data) => {
     }
 });
 Hooks.on("ready", () => {  
+    
         
     class BaseEffectSection extends Sequencer.BaseSection {
         constructor(inSequence) {
