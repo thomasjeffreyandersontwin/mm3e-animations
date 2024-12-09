@@ -1,3 +1,30 @@
+Hooks.on('renderItemSheet', (app, html, data) => { 
+    if (!html.find('.header-button.control.my-custom-button').length) {
+        console.log('Adding the original buttion with a  change');  
+      const button = $(`
+        <a class="header-button control my-custom-button" 
+           title="Edit Power Animation" 
+           style="display: flex; align-items: center; gap: 5px; background: transparent; border: none; color: white; padding: 0; cursor: pointer;">
+          <i class="fas fa-film"></i>
+          <span>Edit</span>
+        </a>
+      `); 
+  
+      const appId = app.appId;
+      const header = $(`.app[data-appid="${appId}"] .window-header.flexrow.draggable.resizable`);
+      const configButton = header.find('.header-button.control.configure-sheet');
+   
+      if (configButton.length) {
+        configButton.before(button);
+      }
+  
+      button.on('click', async (event) => {
+        event.preventDefault();
+        GameHelper.SequenceRunnerHelper(app);
+  
+      });
+    }
+});
 Hooks.on("ready", () => {  
         
     class BaseEffectSection extends Sequencer.BaseSection {
