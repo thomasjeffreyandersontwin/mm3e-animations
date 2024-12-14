@@ -1,4 +1,4 @@
-Hooks.on('renderItemSheet', (app, html, data) => { 
+Hooks.on('renderItemSheet', (app, html, data) => {   
     if (!html.find('.header-button.control.my-custom-button').length) {
         console.log('Adding the original buttion with a  change');  
       const button = $(`   
@@ -25,13 +25,66 @@ Hooks.on('renderItemSheet', (app, html, data) => {
       });
     }
 });
-Hooks.on("ready", () => {  
+
+Hooks.on("renderActorSheet", (app, html, data) => {
+	html.find(".pwr.summary").each((index, element) => {
+        const powerSummary = $(element);
+        const powerName = powerSummary.find(".pwrheader .header").text().trim();
+        let animationText;
+        if (powerName) {
+            const itemId = powerSummary.data("item-id");
+            const item = app.actor.items.get(itemId);
+            let powerItem = new PowerItem(item);
+            let animation = powerItem.animation;
+            let animationLabel = animation.name + " ("+ animation.type + ")"
+            const labelElement = $(
+                `<div style="font-weight: normal; text-align: center">
+                    <b> Animation:</b>${animationLabel}
+                </div><br>`);
+            const firstDataContainer = powerSummary.find(".allData .data").first();
+            if (firstDataContainer.length > 0) {
+                firstDataContainer.append(labelElement);
+            } else {
+                console.warn("Could not find the target .data element for inserting the label.");
+            }
+        };
+    })  
+
+    html.find(".reorderDrop[data-type='attaque']").each(async (index, element) => {
+        let actor = app.actor    
+        const attackId = $(element).find(".editAtk").data("id"); // Get the `data-id` from `.editAtk`
+          const attack = Object.values(actor.system.attaque).find(atk => atk._id === attackId);
+          if (!attack) return;
+          let powerItem = new PowerItem();
+          powerItem.attack = attack;
+          powerItem.token = actor;    
+        const label = powerItem.animation.name + " ("+ powerItem.animation.type + ")"
+       //   const label = await getAttackLabel(actor, attackData);
+          const labelElement = $(`
+              <div class="attack-label-full-row" style="font-size: 0.9em; font-style: ; font-weight: normal; text-align: left; margin-top: -6px; margin-bottom: 8px; padding-left: 10px; width: 100%;">
+                  <b>Animation:</b> ${label}
+              </div>
+          `);
+          $(element).after(labelElement);
+    });
+});
     
-        
+
+    
+Hooks.on("ready", () => {  
+    Hooks.on('rollPower', async (atk, token,strategie, altKey) => {
+        let powerItem = new PowerItem(atk);
+        powerItem.animation.play(token);
+      })
+
+    Hooks.on('rollAttack', async (atk, token,strategie, altKey) => {
+        let item = token.actor.items.get(atk.links.pwr)
+        let powerItem = new PowerItem(item);
+        powerItem.animation.play(token); 
+    })
     class BaseEffectSection extends Sequencer.BaseSection {
         constructor(inSequence) {
-        super(inSequence)
-        //online  made a change   
+        super(inSequence) 
         this._effect;
         this.sequence = new Sequence();
 
@@ -44,8 +97,6 @@ Hooks.on("ready", () => {
             rotation: 0
         };
 
-        //easy access to tokens
-        //comment
         this.targets = Array.from(game.user.targets);
         this.tiles = canvas.tiles.placeables;
         this.selecteds = canvas.tokens.controlled
@@ -56,12 +107,10 @@ Hooks.on("ready", () => {
         this.firstTarget = this.targets[0];
         this.firstTargeted = this.targets[0];
         
-        //tokens participating in sequence
         this.caster = this.firstSelected
-        this.affected = undefined //this.firstTargeted || this.caster
+        this.affected = undefined
         
         this._methodLog = [];
-
     }
 
     on(inObject) {
@@ -112,8 +161,7 @@ Hooks.on("ready", () => {
         return Array.from(game.user.targets);
     }
 
-    getTokenCenter(token)
-    {
+    getTokenCenter(token){
         return {
             x: token.x + ( token.width ) / 2,
             y: token.y + (token.height ) / 2
@@ -264,7 +312,7 @@ Hooks.on("ready", () => {
     } 
     affectHealing2({affected = this.firstSelected}={}){
         return this.affectCommon({affected:affected, persist:false})
-        }
+    }
 
     castToTemplate({caster =(this.caster)}={}){
         return this.cast({caster:caster, affected:this.firstTemplate})
@@ -11010,9 +11058,22 @@ class WaterEffectSection extends TemplatedDescriptorEffect {
     Sequencer.SectionManager.registerSection("myModule", "waterEffect",WaterEffectSection)
 
 });
-  
 class GameHelper{ 
-    
+     static waitForTemplatePlacement() {
+        ui.notifications.warn("Waiting for template placement to target tokens before rolling attack");
+        return new Promise( (resolve) => {
+            Hooks.once("createMeasuredTemplate", (template) => {
+                console.log("Template placed:", template);
+                clearTimeout(timeout)
+                resolve(template);
+                
+            });
+            const timeout = setTimeout(() => {
+              ui.notifications.warn("Template placement timed out.");
+              reject(new Error("Template placement timed out after 10 seconds."));
+            }, 10000); 
+          });
+      }
       static get selected(){
           return canvas.tokens.controlled[0];
       }
@@ -11142,34 +11203,53 @@ class GameHelper{
           
     }   
 }   
-class AffectedByPowerView{
+
+class AffectedByPowerSequence{
+    constructor(descriptorSequence) {
+        this.descriptorSequence = descriptorSequence;
+        this.affectedType = "target";
+    }
+    updateFrom(powerItem){
+        if((powerItem.range=="Range" || powerItem.range=="melee") || powerItem.areaShape){
+            this.affectedType = "target";
+        }
+        else{
+            if(powerItem.range=="Personal"){
+                this.affectedType = "selected";
+            }
+        }
+    }
+}
+class AffectedByPowerSequenceView{
     constructor(sequenceRunnerEditor) {
         this.sequenceRunnerEditor = sequenceRunnerEditor;
+        this.affectedByPowerSequence = this.sequenceRunnerEditor.descripterView.descriptorSequence.affectedByPowerSequence
     }
     get html() {
         return this.sequenceRunnerEditor.html;
     }
     get chosen() {
-        return this.html.find('[name="who-is-affected"]:checked').val(); // Affected type (target or selected)
+        return this.html.find('[name="who-is-affected"]:checked').val(); 
     }
     set chosen(affectedType) {    
         const affectedRadio = this.html.find(`#affected-${affectedType}`);
+        this.affectedByPowerSequence.affectedType = affectedType;
         affectedRadio.prop("checked", true).trigger("change");
+
+        
     }
     update(){
-
         const areaMethodsContainer = document.querySelector("#who-is-selected-choices");
-        this.html.find("input[type='radio'][name='who-is-affected']").on("change", async () => this.sequenceRunnerEditor.scriptView.generate());
+        this.html.find("input[type='radio'][name='who-is-affected']").on("change", async () =>{
+            this.affectedByPowerSequence.affectedType = this.chosen;
+            this.sequenceRunnerEditor.scriptView.generate()      
+        }                                                        
+    );
+        this.chosen = this.affectedByPowerSequence.affectedType;
     }
     updateFrom(powerItem){
-        if((powerItem.range=="Range" || powerItem.range=="melee") || powerItem.areaShape){
-            this.chosen = "target";
-        }
-        else{
-            if(powerItem.range=="Personal"){
-                this.chosen = "selected";
-            }
-        }
+        this.affectedByPower.updateFrom(powerItem);
+        this.chosen = this.affectedByPower.affectedType;
     }
     get content() {
         return `<fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
@@ -11185,23 +11265,71 @@ class AffectedByPowerView{
                 </div>
               </div>
           </fieldset>`;
-    }
+    } 
 
 }
-class PowerEffectsMethodsView{
+
+class PowerEffectSequence{
+    constructor(descriptorSequence) {
+        this.descriptorSequence = descriptorSequence;
+        this.selectedEffectMethods = [];
+    }
+
+    updateFrom(powerItem){
+        let powerEffect = powerItem.effect;
+        powerEffect = powerEffect?powerEffect.replace(/\s/g, ''):undefined;
+        if(powerEffect){
+            this.selectedEffectMethods = [{ original: "affect" + powerEffect, display: powerEffect }];
+        }
+    }
+
+    get methods() {
+        const powerEffectClass = Sequencer.SectionManager.externalSections["powerEffect"];
+        const methodNames = Object.getOwnPropertyNames(powerEffectClass.prototype)
+                .filter(name=> name.startsWith("affect") && 
+                typeof powerEffectClass.prototype[name] === "function"
+            );
+        return methodNames.map((methodName) => ({
+            original: methodName, // Original method name
+            display: methodName.replace(/^affect/, "").replace(/([A-Z])/g, " $1").trim() // Strip "affect" and format
+        }));
+    }
+
+    get hasMovementEffect(){
+        //look for all movements in the selected effects
+        const array = ['Burrow', 'Leaping', 'Swimming', 'Flight', 'Teleport', 'Speed'];
+        for (let i = 0; i < this.descriptorSequence.powerEffectSequence.selectedEffectMethods.length; i++) {
+            if (array.some(effect =>
+                this.descriptorSequence.powerEffectSequence.selectedEffectMethods[i].original.includes(effect))) {
+                return true
+            } else {
+               return false
+            }
+        }
+        return false
+    }
+}
+class PowerEffectsSequenceView{
     constructor(sequenceRunnerEditor) {
           this.sequenceRunnerEditor= sequenceRunnerEditor;
+          this.powerEffectSequence = this.sequenceRunnerEditor.descripterView.descriptorSequence.powerEffectSequence;
+        
     }
     get html() {
         return this.sequenceRunnerEditor.html;
-    }
+    } 
+    
     get selectedEffects() {
         let selectedPowerEffectRows = this.html.find("#power-effect-methods-table tbody tr");
         let selectedPowerEffectMethods=[];
         selectedPowerEffectRows.each((index, row) => {
-            const affectType = $(row).find('select[name="power-effect-method"]').val();
-            if (affectType) selectedPowerEffectMethods.push(affectType);
+            const powerEffect = $(row).find('select[name="power-effect-method"]').val();
+            if (powerEffect) selectedPowerEffectMethods.push(powerEffect);
         });
+        selectedPowerEffectMethods =selectedPowerEffectMethods.map((methodName) => ({
+            original: methodName, // Original method name
+            display: methodName.replace(/^affect/, "").replace(/([A-Z])/g, " $1").trim() // Strip "affect" and format
+        }));
         return selectedPowerEffectMethods; 
     }
     set selectedEffects(powerEffectMethods) {
@@ -11222,7 +11350,10 @@ class PowerEffectsMethodsView{
                     .text(type.display)
                     .appendTo(select);
     
-                select.on("change", () => this.sequenceRunnerEditor.scriptView.generate());
+                select.on("change", () => {
+                    this.powerEffectSequence.selectedEffectMethods = this.selectedEffects    
+                    this.sequenceRunnerEditor.scriptView.generate();
+                });
                 row.append($("<td>").append(select));
                 row.append(
                     $("<td>").append(
@@ -11239,14 +11370,15 @@ class PowerEffectsMethodsView{
                 tbody.append(row);
             }
         });
+          this.powerEffectSequence.selectedEffectMethods= powerEffectMethods
         this.sequenceRunnerEditor.scriptView.generate();
     }
 
     updateFrom(powerItem){
-        let powerEffect = powerItem.effect;
-        powerEffect = powerEffect.replace(/\s/g, '');
-        this.selectedEffects = [{ original: "affect" + powerEffect, display: powerEffect }];
+        this.powerEffectSequence.updateFrom(powerItem);
+        this.selectedEffects = this.powerEffectSequence.selectedEffectMethods;
     }
+   
     update() {
         const selectedPowerEffectsTable = document.querySelector("#power-effect-methods-table");
         const addselectPowerEffectRowButton = document.querySelector("#add-affect-row");
@@ -11256,8 +11388,14 @@ class PowerEffectsMethodsView{
             row.innerHTML = `<td colspan="2">No affect methods available</td>`;
             return;
         }
-        addselectPowerEffectRowButton.addEventListener("click", () => this.addPowerEffect(selectedPowerEffectsTable, powerEffectMethods));
-        this.sequenceRunnerEditor.scriptView.generate()
+        addselectPowerEffectRowButton.addEventListener("click", () => {
+            this.addPowerEffect(selectedPowerEffectsTable, powerEffectMethods)
+            this.powerEffectSequence.selectedEffectsMethods = this.selectedEffects
+            this.sequenceRunnerEditor.scriptView.generate()
+
+        });
+        this.selectedEffects = this.powerEffectSequence.selectedEffectMethods;
+        
     }
     get content() {
         return `<fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
@@ -11290,6 +11428,7 @@ class PowerEffectsMethodsView{
         });
         selectCell.appendChild(select);
         select.addEventListener("change", () => {
+            this.powerEffectSequence.selectedEffectMethods = this.selectedEffects
             this.sequenceRunnerEditor.scriptView.generate();
         });
     
@@ -11302,68 +11441,41 @@ class PowerEffectsMethodsView{
         removeButton.style.marginLeft = "10px";
         removeButton.addEventListener("click", () => {
             row.remove();
+                this.powerEffectSequence.selectedEffectMethods = this.selectedEffects
                 this.sequenceRunnerEditor.scriptView.generate(); // Re-trigger script generation when a row is removed
             });
             removeCell.appendChild(removeButton);
             this.sequenceRunnerEditor.scriptView.generate();
     } 
     get methods() { 
-        const powerEffectClass = Sequencer.SectionManager.externalSections["powerEffect"];
-        const methodNames = Object.getOwnPropertyNames(powerEffectClass.prototype)
-                .filter(name=> name.startsWith("affect") && 
-                typeof powerEffectClass.prototype[name] === "function"
-            );
-        return methodNames.map((methodName) => ({
-            original: methodName, // Original method name
-            display: methodName.replace(/^affect/, "").replace(/([A-Z])/g, " $1").trim() // Strip "affect" and format
-        }));
+        return this.powerEffectSequence.methods
     }
-    hasMovementEffect(){
-        //look for all movements in the selected effects
-        const array = ['Burrow', 'Leaping', 'Swimming', 'Flight', 'Teleport', 'Speed'];
-        for (let i = 0; i < this.selectedEffects.length; i++) {
-            if (array.some(effect => this.selectedEffects[i].includes(effect))) {
-                return true
-            } else {
-               return false
-            }
-        }
-        return false
+    get hasMovementEffect(){
+        return this.powerEffectSequence.hasMovementEffect
     }
 }
-class AreaMethodsView{
-    constructor(sequenceRunnerEditor) {
-        this.sequenceRunnerEditor = sequenceRunnerEditor;
-    }
-    get html() {
-        return this.sequenceRunnerEditor.html;
-    }
-    get chosen() {
-        return this.html.find('[name="areaMethod"]:checked').val(); // Area type (Burst, Line, Cone, or None)
-    }
-    set chosen(chosenAreaMethod) {
-        const areaRadio = this.html.find(`#area-${chosenAreaMethod}`);
-        areaRadio.prop("checked", true).trigger("change");
+
+class AreaSequence{
+    constructor(descriptorSequence){ 
+        this.descriptorSequence = descriptorSequence;
+        this.method = "none";
     }
     updateFrom(powerItem){
         if(powerItem.areaShape){
-            //look ofr an area method with the area in it
             let areaMethods = this.methods
             if(areaMethods){
-                
                 let areaShapeMethods = areaMethods.find(method => method.original.toLowerCase().includes(powerItem.areaShape.toLowerCase()));
                 if(areaShapeMethods){
-                   
-                    this.chosen = areaShapeMethods.original;
+                    this.method = areaShapeMethods.original;
                 }
                 else{
-                    this.chosen = areaMethods[0].original;
+                    this.method = areaMethods[0].original;
                 }
             }
         }
     }
     get methods() {
-        const allMethods = this.sequenceRunnerEditor.effectSectionView.methods;
+        const allMethods = this.descriptorSequence.methods;
         let p = allMethods
             .filter(method => method.toLowerCase().includes("burst") || method.toLowerCase().includes("cone") || method.toLowerCase().includes("line"))
             .map(method => {
@@ -11383,6 +11495,30 @@ class AreaMethodsView{
         p =p.filter(method => !method.original.toLowerCase().includes("get"))
         p = p.filter(method => !method.original.toLowerCase().includes("cast"))
         return p;
+    }
+}
+class AreaSequenceView{
+    constructor(sequenceRunnerEditor) {
+        this.sequenceRunnerEditor = sequenceRunnerEditor;
+        this.areaSequence = sequenceRunnerEditor.descripterView.descriptorSequence.areaSequence;
+    }
+    get html() {
+        return this.sequenceRunnerEditor.html;
+    }
+    get chosen() {
+        return this.html.find('[name="areaMethod"]:checked').val(); // Area type (Burst, Line, Cone, or None)
+    }
+    set chosen(chosenAreaMethod) {
+        const areaRadio = this.html.find(`#area-${chosenAreaMethod}`);
+        areaRadio.prop("checked", true).trigger("change");
+        this.areaSequence.method = chosenAreaMethod;
+    }
+    updateFrom(powerItem){
+        this.areaSequence.updateFrom(powerItem);
+        this.chosen = this.areaSequence.method;
+    }
+    get methods() {
+       return this.areaSequence.methods
     }
     update() {
         const areaMethodsContainer = document.querySelector("#area-methods");
@@ -11404,13 +11540,16 @@ class AreaMethodsView{
                     <label for="area-none">None</label>
                 </div>
             `;
-            this.html.find("input[type='radio'][name='areaMethod']").on("change", async () => this.sequenceRunnerEditor.scriptView.generate());
-
+            this.html.find("input[type='radio'][name='areaMethod']").on("change", async () => {
+                this.areaSequence.method = this.chosen
+                this.sequenceRunnerEditor.scriptView.generate();
+            });
         } else {
             areaMethods.innerHTML = `
                 <p>No methods containing "area" found for this effect.</p>
             `;
         }
+        this.chosen = this.areaSequence.method;
     }
     get content() {
         return ` <fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
@@ -11421,22 +11560,19 @@ class AreaMethodsView{
           </fieldset>`;
     }
 }
-class ProjectionMethodsView{
-    constructor(sequenceRunnerEditor) {
-        this.sequenceRunnerEditor = sequenceRunnerEditor;
+
+class ProjectionSequence{
+    constructor(descriptorSequence){
+        this.descriptorSequence = descriptorSequence;
+        this.method = "project";
     }
-    get html() {
-        return this.sequenceRunnerEditor.html;
-    }
-    get chosen() {
-        return this.html.find('[name="projectMethod"]:checked').val(); // Check if there's a project method
-    }
-    set chosen(projectMethod) {
-        const projectRadio = this.html.find(`#project-${projectMethod}`);
-        projectRadio.prop("checked", true).trigger("change");
-    }
+
     updateFrom(powerItem){
         let projectMethods = this.methods;
+        if(powerItem.range == "Personal"){
+            this.method = "none"
+            return
+        }
         if(powerItem.areaShape && powerItem.range == "Range"){
            let areaProjectMethods = projectMethods.find(method => method.original.toLowerCase().includes(powerItem.areaShape.toLowerCase()));
             if(areaProjectMethods){
@@ -11444,7 +11580,7 @@ class ProjectionMethodsView{
             }
             else
             {
-                this.chosen ='project'
+                this.method ='project'
             }
         }
         else{
@@ -11456,18 +11592,18 @@ class ProjectionMethodsView{
                     }
                     else
                     {
-                        this.chosen ='project'
+                        this.method ='project'
                     }
                 }
             else
             {
-                this.chosen = 'none';
+                this.method = 'none';
             }
         }
     }
-    
+
     get methods() {
-        const allMethods = this.sequenceRunnerEditor.effectSectionView.methods
+        const allMethods = this.descriptorSequence.methods
         let p = allMethods
             .filter(method => method.toLowerCase().includes("project")) 
             .map(method => {
@@ -11482,6 +11618,33 @@ class ProjectionMethodsView{
             });
 
         return p;
+    }
+
+}
+class ProjectionSequenceView{
+    constructor(sequenceRunnerEditor) {
+        this.sequenceRunnerEditor = sequenceRunnerEditor;
+        this.projectionSequence = sequenceRunnerEditor.descripterView.descriptorSequence.projectionSequence;
+    }
+    get html() {
+        return this.sequenceRunnerEditor.html;
+    }
+    get chosen() {
+
+        return this.html.find('[name="projectMethod"]:checked').val(); // Check if there's a project method
+    }
+    set chosen(projectMethod) {
+        const projectRadio = this.html.find(`#project-${projectMethod}`);
+        projectRadio.prop("checked", true).trigger("change");
+        this.projectionSequence.method = projectMethod;
+    }
+    updateFrom(powerItem){
+        this.projectionSequence.updateFrom(powerItem);  
+         this.chosen = this.projectionSequence.method;
+    }
+    
+    get methods() {
+        return this.projectionSequence.methods;
     }
     update() {
 
@@ -11504,12 +11667,16 @@ class ProjectionMethodsView{
                     <label for="project-none">None</label>
                 </div>
             `;
-            this.html.find("input[type='radio'][name='projectMethod']").on("change", async () => await this.sequenceRunnerEditor.scriptView.generate());
+            this.html.find("input[type='radio'][name='projectMethod']").on("change", async () => {
+                this.projectionSequence.method = this.chosen;
+                await this.sequenceRunnerEditor.scriptView.generate()
+            });
         } else {
             projectMethodsContainer.innerHTML = `
                 <p>No methods containing "project" found for this effect.</p>
             `;
         }
+        this.chosen = this.projectionSequence.method
     }
     get content() {
         return `<fieldset>
@@ -11520,63 +11687,14 @@ class ProjectionMethodsView{
           </fieldset>`;
     }
 }
-class CastMethodsView{
-    constructor(sequenceRunnerEditor) {
-        this.sequenceRunnerEditor = sequenceRunnerEditor;
-    }
-    get html() {
-        return this.sequenceRunnerEditor.html;
-    }
-    get chosen() {
-        return this.html.find('[name="castMethod"]:checked').val();
-    }
-    set chosen(castMethod) {
-        const castRadio = this.html.find(`#cast-${castMethod}`);
-        castRadio.prop("checked", true).trigger("change");
-    }
-    updateFrom(powerItem){
-        let effectSectionView =this.sequenceRunnerEditor.effectSectionView
-        let castFound = false;
-        let castMethods = this.methods;
-        if(powerItem.range=="Range"){
-            let rangeCastMethods = castMethods.find(method => method.original.toLowerCase().includes("range"));
-            if(rangeCastMethods){
-                this.chosen = rangeCastMethods.original;
-                castFound = true;
-            }
-        }
-        else
-        {
-            if(powerItem.range=="Melee"){
-                let meleeCastMethods = castMethods.find(method => method.original.toLowerCase().includes("melee"));
-                if(meleeCastMethods){
-                    this.chosen = meleeCastMethods.original;
-                    castFound = true;
-                }
-            }
-        }
-        if(!castFound){
-            let powerEffectCastMethods = castMethods.find(method => method.original.toLowerCase().includes(powerItem.effect.toLowerCase()));
-            if(powerEffectCastMethods){
-                this.chosen = powerEffectCastMethods.original;
-                castFound = true;
-            }
-        }
-        if(!castFound && powerItem.areaShape){
-            let areaCastMethods = castMethods.find(method => method.original.toLowerCase().includes(powerItem.areaShape.toLowerCase()));
-            if(areaCastMethods){
-                //first castmethod with area in it set from the value
-                this.chosen = areaCastMethods.original;
-                castFound =true
-            }
-        }
-        if(!castFound){
-                //if no range or melee cast method is found, set the first cast method
-                this.chosen = "cast";
-        }
+
+class CastSequence{
+    constructor(descriptorSequence){
+        this.descriptorSequence = descriptorSequence;
+        this.method = "cast";
     }
     get methods() {
-        const allMethods = this.sequenceRunnerEditor.effectSectionView.methods
+        const allMethods = this.descriptorSequence.methods
         let castMethods = allMethods.filter(method => method.toLowerCase().includes("cast"));
         if (!castMethods.includes("cast")) {
             castMethods.unshift("cast");
@@ -11601,10 +11719,74 @@ class CastMethodsView{
         
         return castMethods;
     }
+    updateFrom(powerItem){
+        let castFound = false;
+        let castMethods = this.methods;
+        if(powerItem.range=="Range"){
+            let rangeCastMethods = castMethods.find(method => method.original.toLowerCase().includes("range"));
+            if(rangeCastMethods){
+                this.method = rangeCastMethods.original;
+                castFound = true;
+            }
+        }
+        else
+        {
+            if(powerItem.range=="Melee"){
+                let meleeCastMethods = castMethods.find(method => method.original.toLowerCase().includes("melee"));
+                if(meleeCastMethods){
+                    this.method = meleeCastMethods.original;
+                    castFound = true;
+                }
+            }
+        }
+        if(!castFound){
+            let powerEffectCastMethods = castMethods.find(method => method.original.toLowerCase().includes(powerItem?.effect?.toLowerCase()));
+            if(powerEffectCastMethods){
+                this.method = powerEffectCastMethods.original;
+                castFound = true;
+            }
+        }
+        if(!castFound && powerItem.areaShape){
+            let areaCastMethods = castMethods.find(method => method.original.toLowerCase().includes(powerItem.areaShape?.toLowerCase()));
+            if(areaCastMethods){
+                //first castmethod with area in it set from the value
+                this.method = areaCastMethods.original;
+                castFound =true
+            }
+        }
+        if(!castFound){
+                //if no range or melee cast method is found, set the first cast method
+                this.method = "cast";
+        }
+    }
+}
+class CastSequenceView{
+    constructor(sequenceRunnerEditor) {
+        this.sequenceRunnerEditor = sequenceRunnerEditor;
+        this.castSequence= this.sequenceRunnerEditor.descripterView.descriptorSequence.castSequence;
+    }
+    get html() {
+        return this.sequenceRunnerEditor.html;
+    }
+    get chosen() { 
+        return this.html.find('[name="castMethod"]:checked').val();
+    }
+    set chosen(castMethod) {
+        const castRadio = this.html.find(`#cast-${castMethod}`);
+        castRadio.prop("checked", true).trigger("change");
+        this.castSequence.method = castMethod;
+    }
+    updateFrom(powerItem){
+        this.castSequence.updateFrom(powerItem);
+        this.chosen = this.castSequence.method;
+    }
+    get methods() {
+        return this.castSequence.methods;
+    }
     update() {
         const castMethodsContainer = document.querySelector("#cast-methods");
         castMethodsContainer.innerHTML = "Choose a sequencer effect that animates on the caster's token"; 
-        const castMethods = this.methods;
+        const castMethods = this.methods; 
         if (castMethods.length > 0) {
             castMethods.forEach(({ original, display }) => {
                 castMethodsContainer.innerHTML += `
@@ -11615,13 +11797,17 @@ class CastMethodsView{
            `;
             });
 
-            this.html.find("input[type='radio'][name='castMethod']").on("change", async () => await this.sequenceRunnerEditor.scriptView.generate());
+            this.html.find("input[type='radio'][name='castMethod']").on("change", async () => {
+                this.castSequence.method = this.chosen
+                await this.sequenceRunnerEditor.scriptView.generate();
+            });
 
         } else {
             castMethodsContainer.innerHTML = `
            <p>No methods containing "cast" found for this effect.</p>
        `;
         }
+        this.chosen = this.castSequence.method
     }
     get content() {
         return `
@@ -11634,11 +11820,11 @@ class CastMethodsView{
         `
     }
 }
-class EffectSectionView{
-    constructor(sequenceRunnerEditor) {
-        this.sequenceRunnerEditor = sequenceRunnerEditor;
-       
-        this.effectSections = {
+
+class DescriptorSequence{
+    constructor(powerItem){
+        this.powerItem = powerItem;
+        this.descriptorClasses = {
             "darkness":"Darkness",
             "earthEffect": "Earth",
             "electricityEffect": "Electricity",
@@ -11667,95 +11853,210 @@ class EffectSectionView{
             "superStrengthEffect": "Super Strength",
             "waterEffect": "Water"
         };
+        if(this.powerItem){
+             this.descriptorClass = Sequencer.SectionManager.externalSections[this.powerItem.descriptor.toLowerCase()+"Effect"];
+        }
+        this.castSequence = new CastSequence(this);
+        this.projectionSequence = new ProjectionSequence(this);
+        this.areaSequence = new AreaSequence(this);
+        this.powerEffectSequence = new PowerEffectSequence(this);
+        this.affectedByPowerSequence = new AffectedByPowerSequence(this);
+        this.sequencerScript = new SequencerScript(this)
         
-        this.castMethodsView = new CastMethodsView(this.sequenceRunnerEditor);
-        this.projectionMethodsView = new ProjectionMethodsView(this.sequenceRunnerEditor);
-        this.areaMethodsView = new AreaMethodsView(this.sequenceRunnerEditor);
-        this.powerEffectMethodsView = new PowerEffectsMethodsView(this.sequenceRunnerEditor);
-        this.affectedByPowerView = new AffectedByPowerView(this.sequenceRunnerEditor);
-
+        //this.descriptorClass = Sequencer.SectionManager.externalSections[P"powerEffect"];
     }
-    registerOnEffectSelected(){
-        this.html.find("#effect-section").on("change", async (event) => {
-           if(this.selected != event.target.value){
-               this.selected = event.target.value
-            }  
+    get methods() {
+        let methods =  Object.getOwnPropertyNames(this.descriptorClass.prototype).filter(name =>
+            typeof this.descriptorClass.prototype[name] === "function"
+        );
+        return methods;
+    } 
+
+    get summary(){
+        let name =  this.descriptorClass.name +"-"+ this.castSequence.method 
+        if(this.projectionSequence.method!="none")
+           name+="-"+this.projectionSequence.method
+        if(this.areaSequence.method!="none")
+           name+="-"+this.areaSequence.method
+        if(this.powerEffectSequence.selectedEffects){
+            for (effect in powerEffectSequence){
+                name+="-"+effect
+            }
+        }
+        else {
+            name+="-"+ "none"
+        }
+            
+        return name;
+    }
+
+    get name(){
+        let descriptor =  this.descriptorClass.name.replace(/\b[A-Z]/g, char => char.toLowerCase()).replace("Section","");
+        
+        let name = this.descriptorClasses[descriptor]
+        if(this.projectionSequence.method!="none")
+           name+="-"+"Range"
+        else if(this.powerItem.range=="Melee"){
+            name+="-"+"Melee"
+        }
+        else if(this.powerItem.range=="Personal"){
+            name+="-"+"Personal"
+        }
+        if(this.areaSequence.method!="none")
+           name+="-"+this.areaSequence.method
+        if(this.powerEffectSequence.selectedEffectMethods){
+      
+            for (const effect of this.powerEffectSequence.selectedEffectMethods){
+                name+="-"+effect.display
+            }
+        }
+        else {
+            name+="-"+ "None"
+        }
+            
+        return name;
+        
+    }
+
+    set selectedDescriptor(selectedDescriptor) {
+        this._selectedDescriptor = selectedDescriptor;
+        this.descriptorClass = Sequencer.SectionManager.externalSections[selectedDescriptor];
+    }
+
+    get selectedDescriptor() {
+        return this._selectedDescriptor;
+    }
+
+    updateFromPowerItem(){ 
+        this.selectedDescriptor = this.powerItem.descriptor.toLowerCase()+"Effect"
+        this.castSequence.updateFrom(this.powerItem);
+        this.projectionSequence.updateFrom(this.powerItem);
+        this.areaSequence.updateFrom(this.powerItem);
+        this.affectedByPowerSequence.updateFrom(this.powerItem);
+        this.powerEffectSequence.updateFrom(this.powerItem);
+    }
+}
+class DescriptorSequenceView{
+    constructor(sequenceRunnerEditor) {
+        this.sequenceRunnerEditor = sequenceRunnerEditor;
+        this.sequenceRunnerEditor.descripterView = this;
+        
+        this.powerItem = new PowerItem(this.sequenceRunnerEditor.foundryApplication);
+        
+        this.descriptorSequence = new DescriptorSequence(this.powerItem);
+        this.descriptorClasses = this.descriptorSequence.descriptorClasses;
+
+        
+        
+       
+        this.castMethodsView = new CastSequenceView(this.sequenceRunnerEditor);
+        this.projectionMethodsView = new ProjectionSequenceView(this.sequenceRunnerEditor);
+        this.areaMethodsView = new AreaSequenceView(this.sequenceRunnerEditor);
+        this.powerEffectMethodsView = new PowerEffectsSequenceView(this.sequenceRunnerEditor);
+        this.affectedByPowerView = new AffectedByPowerSequenceView(this.sequenceRunnerEditor);
+    }
+    registerOnDescriptorSelected(){
+        this.html.find("#descriptor").on("change", async (event) => {
+        this.selected = event.target.value
         });
     }
-    updateFromPowerItem(){ 
-        this.powerItem = new PowerItem(this.sequenceRunnerEditor.foundryApplication);
-        this.selected = this.powerItem.descriptor
-        this.castMethodsView.updateFrom(this.powerItem);
-        this.projectionMethodsView.updateFrom(this.powerItem);
-        this.areaMethodsView.updateFrom(this.powerItem);
-        this.affectedByPowerView.updateFrom(this.powerItem);
-        this.powerEffectMethodsView.updateFrom(this.powerItem);
-    }
+   
     get html() { 
         return this.sequenceRunnerEditor.html;
     }
     get selected() {
-        return this.html.find('[name="effect-section"]').val(); // Descriptor
+        //let selected = this.descriptorSequence.selectedDescriptor;
+        return this.html.find('[name="descriptor"]').val(); // Descriptor
     }
-    set selected(selectedEffect) {
-        selectedEffect = selectedEffect.toLowerCase() +"Effect"
-        const effectDropdown = this.html.find("#effect-section");
-        effectDropdown.val(selectedEffect); 
-        
-      //  const event = new Event("change", { bubbles: true, cancelable: true });
-      //  effectDropdown[0].dispatchEvent(event); 
-        this.effectClass = Sequencer.SectionManager.externalSections[selectedEffect];
-        if (!this.effectClass) {
-            console.warn(`Effect class "${selectedEffect}" not found in SectionManager.externalSections.`);
-            castMethodsContainer.innerHTML = `<p>No class found for the selected effect.</p>`;
-            projectMethodsContainer.innerHTML = `<p>No class found for the selected effect.</p>`;
-            return;
-        }
+    set selected(selectedDescriptor) {
+        //selectedDescriptor = selectedDescriptor.toLowerCase() +"Effect"
+        const effectDropdown = this.html.find("#descriptor");
+        effectDropdown.val(selectedDescriptor); 
+        this.descriptorSequence.selectedDescriptor = selectedDescriptor;
+
         this.update()
-        return selectedEffect;
+        return selectedDescriptor;
     }
-    get methods() {
-        let methods =  Object.getOwnPropertyNames(this.effectClass.prototype).filter(name =>
-            typeof this.effectClass.prototype[name] === "function"
-        );
-        return methods;
-    }
+    
     get content()   
     {
         return `<div>
-        <label for="effect-section">Select Effect:</label>
-        <select id="effect-section" name="effect-section">
-            <option value="" disabled selected>Choose an effect</option>
-            ${Object.keys(this.effectSections).map(effectSection => `<option value="${effectSection}">${Object(this.effectSections)[effectSection]}</option>`).join("")}
+        <label for="descriptor">Select Effect:</label>
+        <select id="descriptor" name="descriptor">
+            <option value="" disabled selected>Choose a descriptor</option>
+            ${Object.keys(this.descriptorClasses).map(descriptor => `<option value="${descriptor}">${Object(this.descriptorClasses)[descriptor]}</option>`).join("")}
         </select>
     </div>`
         + this.castMethodsView.content
         + this.projectionMethodsView.content
         + this.areaMethodsView.content
-            + this.affectedByPowerView.content
+        + this.affectedByPowerView.content
         + this.powerEffectMethodsView.content
     }
     update() {
+        if(this.selected !=this.descriptorSequence.selectedDescriptor){
+            this.selected =this.descriptorSequence.selectedDescriptor
+        }
         this.castMethodsView.update()
         this.projectionMethodsView.update()
         this.areaMethodsView.update()
-        this.affectedByPowerView.update()
+        this.affectedByPowerView.update() 
         this.powerEffectMethodsView.update()
        this.sequenceRunnerEditor.scriptView.generate();
     }
+    updateFromPowerItem(){
+        this.descriptorSequence.updateFromPowerItem();
+    }
 }
-
 class PowerItem{
-    constructor(foundryApplication) {
-         this.powerItem = foundryApplication.document;
+
+    constructor(input=undefined) {
+        if(input){
+            if(input.document){
+             this.item = input.document;
+            }
+            else
+            {
+                this.item = input;
+            }
+        }
+
     }
 
-    get descriptor(){  
-        let power = this.powerItem;
-        return power.system.descripteurs["2"] ?power.system.descripteurs["2"]:power.system.descripteurs["1"]?power.system.descripteurs["1"]:power.system.descripteurs["0"]?power.system.descripteurs["0"]:"No Descriptor"
+    set token(token){
+        this._token = token;
+        if(this._token.actor && this.attack){
+            this.item = this._token.actor.items.get(this.attack.links.pwr) 
+        }
+        else if( this.attack){
+            this.item = this._token.items.get(this.attack.links.pwr)
+        }
+    }
+    get token(){
+        return this._token;
+    }
+    set attack(attack)
+    {
+        this._attack = attack;
+        if(this.token){
+           if(this.token.actor){
+                this.item = this.token.actor.items.get(this.attack.links.pwr) //why doesnt attaque.pwr work?
+            }
+            else
+            {
+                this.item = this.token.items.get(this.attack.links.pwr) //why doesnt attaque.pwr work?
+            }
+        }
+    }
+    get attack(){
+        return this._attack;
+    }
+   get descriptor(){  
+        let item = this.item;
+        return item.system.descripteurs["2"] ?item.system.descripteurs["2"]:item.system.descripteurs["1"]?item.system.descripteurs["1"]:item.system.descripteurs["0"]?item.system.descripteurs["0"]:"No Descriptor"
    }
    get effect() {
-       let power = this.powerItem;
+       let power = this.item;
        let effect = power.system.effetsprincipaux;
        if (effect=="")
        {
@@ -11788,7 +12089,7 @@ class PowerItem{
        return matchedEffect;
    } 
    get areaShape() {
-       let power = this.powerItem;
+       let power = this.item;
        for (const key in power.system.extras) {
            const item = power.system.extras[key];
            if (item.name && item.name.includes("Cone")) {
@@ -11802,48 +12103,149 @@ class PowerItem{
            }
        }
    }
-   
    get range() {
-       let power = this.powerItem;
-       for (const key in power.system.extras) {
-            const item = power.system.extras[key];
-
-            if(item.name && item.name.includes("Range") || item.name.includes("Ranged"))
+       if(this.attack){
+            if (this.attack.save.passive.type == 'parade') {
+                return  'Melee';
+            } else {
+                return 'Range';
+            }
+       }
+       for (const key in this.item.system.extras) {
+            const extra = this.item.system.extras[key];
+            if(extra.name && (extra.name.includes("Range") || extra.name.includes("Ranged")))
             {
-            return "Range"
+                return "Range"
             }
         }
-       if(power.system.portee=="distance"){
+       if(this.item.system.portee=="distance"){
          return "Range"
        }
-       if(power.system.portee=="perception"){
+       if(this.item.system.portee=="perception"){
          return "Range" 
        }
-       if(power.system.portee=="contact"){
+       if(this.item.system.portee=="contact"){
          return "Melee"
        }
-       if(power.system.portee=="personnelle"){
-       
+       if(this.item.system.portee=="personnelle"){
            return "Personal"
        }
        return "Range";
    }
-} 
+   get descriptorName(){
+       let area = this.areaShape;
+       if(!area)
+       {
+           return `${this.descriptor}-${this.range}-${this.effect}`;
+       }
+       return `${this.descriptor}-${this.range}-${area}-${this.effect}`;
+       
+   }
+   get autoRecEntryLabel(){
+         return this.matchingAutoRecEntry?.label
+   }
+   get matchingAutoRecEntry(){
+        let powerName =this.item.name
+        let result = this.findAutoRecEntry(powerName)
+        if(result)
+        {
+            return result
+        }
+        else{
+            powerName = this.descriptorName
+            return this.findAutoRecEntry(powerName)
+        }
+   }
+    findAutoRecEntry(search){
+        const melee =  game.settings.get("autoanimations", "aaAutorec-melee")
+        const range =  game.settings.get("autoanimations", "aaAutorec-range")
+        const ontoken =   game.settings.get("autoanimations", "aaAutorec-ontoken")
+        const preset =   game.settings.get("autoanimations", "aaAutorec-preset")
+        const templatefx =   game.settings.get("autoanimations", "aaAutorec-templatefx")
+    
+        const allEntries = [...melee, ...range, ...ontoken, ...preset, ...templatefx];
+        const matchedEntry = allEntries.find(entry => entry.label === search);
+        if(matchedEntry){
+            return matchedEntry
+        }
+        return matchedEntry;
+   }
 
-class SequencerScriptView{
-    constructor(sequenceRunnerEditor) {
-        this.sequenceRunnerEditor = sequenceRunnerEditor;
+    get animation(){
+        let animation = {}
+        let macroId = this.item.getFlag('mm3e-animations', 'descriptorMacro')
+        if(macroId){
+            let macro = game.macros.get(macroId)
+            if(macro)
+            {
+                animation.name  = macro.name;
+                animation.type = 'attached';
+                animation.play =()=>{
+                    macro.execute()
+                }
+            }
+        }
+        if(!animation.name){
+            let macroName = this.descriptorName ;
+            let macro = game.macros.find(macro => macro.name === macroName)
+            if(macro)
+            {
+                animation.name = macroName 
+                animation.type =  'match';
+                animation.play =(source)=>{
+                    macro.execute()
+                }
+            }
+        }
+        if(!animation.name){
+            animation.name = this.autoRecEntryLabel;
+            if(animation.name)
+            {
+                animation.type = "autorec";
+                animation.play = (source)=>{
+                  let options = {};
+                  let item = {
+                    name: animation.name,
+                    type: "spell"
+                  }
+                  window.AutomatedAnimations.playAnimation(source, item, options);
+                }
+            } 
+        }
+        if(!animation.name){
+            let descripterSequence = new DescriptorSequence(this)
+            descripterSequence.updateFromPowerItem();
+            if(descripterSequence.descriptorClass){
+                
+                animation.name = descripterSequence.name;
+                 animation.type = "descriptor"
+                 animation.play = (source)=>{
+                    descripterSequence.sequencerScript.generate() 
+                    descripterSequence.sequencerScript.run()
+                }
+
+            }
+        }
+        if(!animation.name){
+            animation.name = this.descriptorName;
+            animation.type = "none"
+            animation.play = (source)=>{
+                console.log("No power to play for " +  animation.name)
+            }
+        }
+        return animation
+        
     }
-    get html() {
-        return this.sequenceRunnerEditor.html;
+}
+ 
+class SequencerScript{
+    constructor(descriptorSequence){
+        this.descriptorSequence = descriptorSequence;
+        this.descriptorSequence.sequencerScript = this
+        this.script = "";
+
     }
 
-    get script() {
-        return this.html.find("#generated-script").val(); // Get the generated script
-    }
-    set script(script){
-        this.html.find("#generated-script").val(script)
-    }
     async run() {
         try {
             const asyncWrapper = new Function(`return (async () => { ${this.script} })();`);
@@ -11855,21 +12257,21 @@ class SequencerScriptView{
     }
 
     get range(){
-        return this.sequenceRunnerEditor.effectSectionView.projectionMethodsView.chosen && this.sequenceRunnerEditor.effectSectionView.projectionMethodsView.chosen !== "none" 
+        return this.descriptorSequence.projectionSequence.method && this.descriptorSequence.projectionSequence.method !== "none" 
             ? "Range" 
-            : this.sequenceRunnerEditor.effectSectionView.affectedByPowerView && this.sequenceRunnerEditor.effectSectionView.affectedByPowerView.chosen  === "selected" 
+            : this.descriptorSequence.affectedByPowerSequence && this.descriptorSequence.affectedByPowerSequence.chosen  === "selected" 
                 ? "Personal" 
                 : "Melee";
     }
     get area(){
-        return this.sequenceRunnerEditor.effectSectionView.areaMethodsView.chosen && this.sequenceRunnerEditor.effectSectionView.areaMethodsView.chosen !== "none"
-            ? ["cone", "line", "burst"].find(keyword => this.sequenceRunnerEditor.effectSectionView.areaMethodsView.chosen.includes(keyword.toLowerCase())) || ""
+        return this.descriptorSequence.areaSequence.chosen && this.descriptorSequence.areaSequence.chosen !== "none"
+            ? ["cone", "line", "burst"].find(keyword => this.descriptorSequence.areaSequence.chosen.includes(keyword.toLowerCase())) || ""
             : "";
     } 
 
     get powerEffects(){
-        return this.sequenceRunnerEditor.effectSectionView.powerEffectMethodsView.selectedEffects.length > 0 
-            ? this.sequenceRunnerEditor.effectSectionView.powerEffectMethodsView.selectedEffects.map(effect => effect.replace(/^affect/, "")).join("_") 
+        return this.descriptorSequence.powerEffectSequence.selectedEffects.length > 0 
+            ? this.descriptorSequence.powerEffectSequence.selectedEffects.map(effect => effect.replace(/^affect/, "")).join("-") 
             : "None";
     }
 
@@ -11877,102 +12279,111 @@ class SequencerScriptView{
         let range = this.range;
         let area = this.area;
         let powerEffects = this.powerEffects;
-        return  `${this.sequenceRunnerEditor.effectSectionView.effectSections[this.sequenceRunnerEditor.effectSectionView.selected]}-${range}${area ? `-${area}` : ""}-${powerEffects}`;
+        return  `${this.descriptorSequence.descriptorClasses[this.descriptorSequence.selected]}-${range}${area ? `-${area}` : ""}-${powerEffects}`;
+    } 
+
+    get descriptor(){
+        return this.descriptorSequence.selectedDescriptor
     }
 
-    get effectSectionView(){
-        return this.sequenceRunnerEditor.effectSectionView
-    } 
     async generate() {  
-        const selectedEffectSection = this.effectSectionView.selected;
-        const castMethod = this.effectSectionView.castMethodsView.chosen;
-        const projectMethod = this.effectSectionView.projectionMethodsView.chosen;
+        const selectedDescriptor = this.descriptorSequence.selectedDescriptor;
+        const selectedDescripptorClass = this.descriptorSequence.selectedDescriptor
+        const castMethod = this.descriptorSequence.castSequence.method;
+        const projectMethod = this.descriptorSequence.projectionSequence.method;
                 
-        const areaMethod = this.effectSectionView.areaMethodsView.chosen;
-        const whoIsAffected = this.effectSectionView.affectedByPowerView.chosen;
-        const powerEffectMethods = this.effectSectionView.powerEffectMethodsView.selectedEffects;
+        const areaMethod = this.descriptorSequence.areaSequence.method;
+        const whoIsAffected = this.descriptorSequence.affectedByPowerSequence.affectedType; 
+        const powerEffectMethods = this.descriptorSequence.powerEffectSequence.selectedEffectMethods;
  
         
-        this.html.find("#macro-name").val(this.name);
+        //this.html.find("#macro-name").val(this.name);
 
-        let script = `
-const selectedTargets = Array.from(game.user.targets);
-const selected = GameHelper.selected;
-`;
-        if(this.effectSectionView.powerEffectMethodsView.hasMovementEffect()){
-             script+= `let position = await GameHelper.placeEffectTargeter('${selectedEffectSection}')`
+        let script = ``
+        if(whoIsAffected=='selected'){
+            script+=
+`const selected = GameHelper.selected;
+`
+        }
+         script+=        
+`const selectedTargets = Array.from(game.user.targets);
+`
+        if(this.descriptorSequence.powerEffectSequence.hasMovementEffects){
+             script+= `let position = await GameHelper.placeEffectTargeter('${selectedDescriptor}')`
         }
         if ((areaMethod === "none" || areaMethod === undefined)  && whoIsAffected === "target" || whoIsAffected=="selected") {
            if(whoIsAffected=="target"){
-                script += `
-for (let target of selectedTargets) {
-`
-             }
-             script += `
-new Sequence()
-    .${selectedEffectSection}()`
-            if(this.effectSectionView.powerEffectMethodsView.hasMovementEffect()){
-      script +=`.${castMethod?castMethod:"cast"}({affected: ${whoIsAffected}, position:position})`
+                script += 
+
+`for (let target of selectedTargets) {
+    `
+          }  
+             script += `new Sequence()
+        .${selectedDescripptorClass}()`
+            if(this.descriptorSequence.powerEffectSequence.hasMovementEffect){
+      script +=
+`       .${castMethod?castMethod:"cast"}({affected: ${whoIsAffected}, position:position})`
             }
             else{
       script +=`
-                  .${castMethod?castMethod:"cast"}({affected: ${whoIsAffected}})`           
+        .${castMethod?castMethod:"cast"}({affected: ${whoIsAffected}})`           
             }
             if (projectMethod !== "none" && projectMethod!=undefined && projectMethod !=="") 
             { 
                 script +=`        
-    .${projectMethod}()`
+        .${projectMethod}()`
             }
         powerEffectMethods.forEach((powerEffectMethod) => {
-            if(this.effectSectionView.powerEffectMethodsView.hasMovementEffect()){
+            if(this.descriptorSequence.powerEffectSequence.hasMovementEffect){
                 script += 
         `
-        .${powerEffectMethod}({affected: ${whoIsAffected}, position:position})
+        .${powerEffectMethod.original}({affected: ${whoIsAffected}, position:position})
 `
              }
             else
             {
                 script += 
 `                   
-.${powerEffectMethod}({affected: ${whoIsAffected}})
+        .${powerEffectMethod.original}({affected: ${whoIsAffected}})
 `
             }
         });
         script +=
-`
-    .play(); `
+`   .play(); `
          if(whoIsAffected=="target"){
             script +=
-
-`}`
+`
+}`
          }
     } else {
-        script += `
+        script += 
+`await GameHelper.waitForTemplatePlacement()
 let template = GameHelper.template
+
 let target = Array.from(game.user.targets)[0];
 new Sequence()
-.${selectedEffectSection}()
-.${castMethod?castMethod:"cast"}({affected: template})`
+    .${selectedDescripptorClass}()
+    .${castMethod?castMethod:"cast"}({affected: template})`
            script += projectMethod !== "none" && projectMethod !=="" ? 
 `   
-.${projectMethod}()
+     .${projectMethod}()
 ` : "";
         script += 
-`   
-.${areaMethod !== "none" ?`${areaMethod}()` : ""}
+`    .${areaMethod !== "none" ?`${areaMethod}()` : ""}
 .play()
 
 await new Promise(resolve => setTimeout(resolve, 2000));
 for (let target of selectedTargets) {
-new Sequence()
-.${selectedEffectSection}()`
-     powerEffectMethods.forEach((affectType) => {
+    new Sequence()
+        .${selectedDescripptorClass}()`
+     powerEffectMethods.forEach((powerEffectMethod) => {
         script +=
-`.${affectType}({affected: ${whoIsAffected}})
+`
+        .${powerEffectMethod.original}({affected: ${whoIsAffected}})
 `;
     });
     script += 
-`   .play();
+`   .play(); 
 }
 `; 
     
@@ -11995,34 +12406,48 @@ this.script = script;
             let macro = game.macros.find(m => m.name === this.name);
             if (!macro) {
                 macro = await Macro.create({
-                    name: macroName,
+                    name: this.name,
                     type: "script",
                     scope: "global",
-                    command: this.this.sequenceRunnerEditor.scriptView.script,
+                    command: this.script,
                 });
-                ui.notifications.info(`Macro "${macroName}" has been created.`);
+                ui.notifications.info(`Macro "${this.name}" has been created.`);
             } else {
                 let overwrite = await Dialog.confirm({
                     title: "Overwrite Macro",
-                    content: `<p>The macro "${macroName}" already exists. Do you want to overwrite it?</p>`,
+                    content: `<p>The macro "${this.name}" already exists. Do you want to overwrite it?</p>`,
                     yes: () => true,
                     no: () => false,
                     defaultYes: false
                 });
-
+                
                 if (!overwrite) {
-                    ui.notifications.info(`Macro "${macroName}" was not overwritten.`);
+                    ui.notifications.info(`Macro "${this.name}" was not overwritten.`);
                     return false;
                 }
-                await macro.update({ command: this.this.sequenceRunnerEditor.scriptView.script });
-                ui.notifications.info(`Macro "${macroName}" has been updated.`);
+                await macro.update({ command: this.script });  
+                ui.notifications.info(`Macro "${this.name}" has been updated.`);
             }
+
+            let item = this.descriptorSequence.powerItem.item;
+            await item.setFlag('mm3e-animations', 'descriptorMacro',  macro.id);
+           console.log(item)
         } catch (error) {
             ui.notifications.error(`Error saving macro: ${error.message}`);
             console.error("Macro Save Error:", error);
         }
 
         return false;
+    }
+
+    updateFromPowerItem(){
+        let item = this.descriptorSequence.powerItem.item;
+        let macroName = item.getFlag('mm3e-animations', 'descriptorMacro')
+        let macro = game.macros.get(macroName)
+        if (macro)
+        {
+            this.script = macro.command;
+        }
     }
 
     get content() {
@@ -12033,29 +12458,91 @@ this.script = script;
                     <textarea id="generated-script" style="width: 100%; height: 300px;"></textarea>
                     <button id="run-macro" type="button" style="margin-top: 10px;">Run Macro</button>
                 </fieldset>`
+    } 
+}
+class SequencerScriptView{
+    constructor(sequenceRunnerEditor) {
+        this.sequenceRunnerEditor = sequenceRunnerEditor;
+        this.sequencerScript = this.sequenceRunnerEditor.descripterView.descriptorSequence.sequencerScript
+    } 
+    get html() {
+        return this.sequenceRunnerEditor.html;
     }
+
+    get script() {
+       
+        return this.html.find("#generated-script").val(); // Get the generated script
+       
+    }
+    set script(script){
+        this.html.find("#generated-script").val(script)
+        this.sequencerScript.script = script;
+    }
+    async run() {
+        this.sequencerScript.run()
+    }
+
+    get range(){
+        return this.sequencerScript.range()
+    }
+    get area(){
+        return this.sequencerScript.area()
+    } 
+
+    get powerEffects(){
+        return this.sequencerScript.powerEffects()
+    }
+
+    get name(){
+        return this.sequencerScript.powerEffects()
+    } 
+
+    get descriptorView(){
+        return this.sequenceRunnerEditor.descripterView
+    }
+
+    async generate() {  
+        this.sequencerScript.generate() 
+        this.script = this.sequencerScript.script
+    }
+    async save(){
+        this.sequencerScript.save()
+    }
+
+    updateFromPowerItem(){
+        this.sequencerScript.updateFromPowerItem();
+    }
+
+    get content() {
+        return `       
+                <fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+                    <legend>Output</legend>
+                    <input id="macro-name" type="text" style="width: 100%; margin-bottom: 10px;">
+                    <textarea id="generated-script" style="width: 100%; height: 300px;"></textarea>
+                    <button id="run-macro" type="button" style="margin-top: 10px;">Run Macro</button>
+                </fieldset>`
+    } 
 
     registerOnSaveClicked(){
         this.html.find("#run-macro").on("click", async () => {
-            await this.run();
+            await this.sequencerScript.run();
         });
     }
 }
 class SequenceRunnerEditor {
-    
     constructor({html=undefined,foundryApplication}={}) {
         this.foundryApplication = foundryApplication;
-        this.effectSectionView = new EffectSectionView(this);
+        this.descripterView = new DescriptorSequenceView(this);
         this.scriptView = new SequencerScriptView(this)
         if(html){
             this.html = html;
         }
         
-        return new Dialog(
+        return new Dialog( 
         {
             title: "Select Effect, Cast, and Project Methods to generate  a sequencer script  for your power",
             content: `<form>
-                ` + this.effectSectionView.content +
+                ` + this.descripterView.content +
                 this.scriptView.content
                 + `
             </form>
@@ -12074,19 +12561,13 @@ class SequenceRunnerEditor {
             },
             render: (html) => {
                 this.html = html;
-
-                console.log("goodbye")
+               
                 this.moveDialogueToFarRightOfCanvas();
-                this.effectSectionView.registerOnEffectSelected();
-
+                this.descripterView.registerOnDescriptorSelected();
                 this.scriptView.registerOnSaveClicked();
-
-                //this may be unessesary
-             //   this.html.find("input[type='radio'], select").on("change", async() => {
-                 //   await this.scriptView.generate();
-             //   });
-
-                this.effectSectionView.updateFromPowerItem();
+                this.descripterView.updateFromPowerItem();
+                this.scriptView.updateFromPowerItem();
+                this.descripterView.update()    
             }
         }, 
         {
@@ -12107,8 +12588,6 @@ class SequenceRunnerEditor {
             top: `10px`, // Position 10px from the top
             width: `${dialogWidth}px`,
             height: `${dialogHeight}px`
-        });
+        }); 
     }
-
-}
-//# sourceMappingURL=mm3e-effects-section.js.map
+}  
