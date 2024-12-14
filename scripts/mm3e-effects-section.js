@@ -334,7 +334,15 @@ Hooks.on("ready", () => {
     projectRay({caster , affected}={}){
         this.projectCommon({caster:caster, affected:affected})
         return this
-    }      
+    }
+    projectChain({ caster = this.firstSelected, affected = Array.from(game.user.targets), } = {}) {
+        this.projectCommon({caster:caster, affected:affected})
+        return this
+    }
+        projectChainHealing({ caster = this.firstSelected, affected = Array.from(game.user.targets), } = {}) {
+        this.projectCommon({caster:caster, affected:affected})
+        return this
+    }        
     projectCommon({caster = (this.caster || this.firstSelected), affected = (this.affected || this.firstTarget)}={}){
         this.castCommon({caster:caster, affected:affected,rotation:false})
         let stretchToLocation=affected;
@@ -7856,7 +7864,7 @@ class LightningEffectSection extends TemplatedDescriptorEffect {
         super(inSequence);
     }
     castDamage({affected,caster}={}) {
-        return super.castCommon({affected:affected, caster:caster, rotation:false})
+       return super.castCommon({affected:affected, caster:caster, rotation:false})
             .file("animated-spell-effects-cartoon.fire.03") // Fire casting animation
             .spriteOffset({ x: 15, y: 0 })
             .scale(0.3)
@@ -7867,187 +7875,413 @@ class LightningEffectSection extends TemplatedDescriptorEffect {
             .fadeIn(100)
             .fadeOut(50)
     }
-    cast({caster, affected , duration = 1}={}){
+    cast({caster, affected , duration = 1}={}){ //bigger
         super.castCommon({caster:caster, affected:affected})
-        .file("animated-spell-effects-cartoon.fire.03")
-            .spriteOffset({ x: 15, y: 0 })
-            .playbackRate(1)
-            .scale(0.3)
-            .waitUntilFinished(-1000)
-        super.cast()
-            .file("modules/animated-spell-effects-cartoon/spell-effects/cartoon/fire/fire_55_800x800.webm")
-            .scale(0.08)
-            .zeroSpriteRotation(true)
-            .attachTo(this.caster, { bindVisibility: false })
-            .name("Fire_attack")
-            .duration(2000)
-            .fadeIn(100)
-            .fadeOut(50)
-            .spriteOffset({ x: 20, y: 0 })
-            .scaleIn(0, 500, {ease: "easeOutCubic"})
-            .zeroSpriteRotation(true)
-            .waitUntilFinished(-100)
-        return this;
-    }
-    cast2({caster, affected , duration = 1}={}){
-        super.castCommon({caster:caster, affected:affected})
-        .file("animated-spell-effects-cartoon.fire.03")
-            .playbackRate(1)
-            .spriteOffset({ x: -10, y: 0 })
-            .scale(0.5)
-            .waitUntilFinished(-1000)
-        return this;
-    }
+       .file("jb2a.static_electricity.01.blue")
+          .playbackRate(1)
+          .opacity(0.9)
+          .scaleToObject(1.5)
+          .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+          .duration(5000)
+      super.cast()
+          .file("jb2a.static_electricity.02.blue")
+          .opacity(0.9)
+          .scaleToObject(1.5)
+          .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+          .duration(5000)
+      super.cast()
+          .file("jb2a.static_electricity.02.blue")
+          .fadeIn(350)
+          .fadeOut(350)
+          .opacity(0.9)
+          .scaleToObject(3)
+          .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+          .randomRotation()
+          .belowTokens()
+          .duration(1800)
 
-    castRange({caster, affected , duration = 1}={}){
-        super.cast({caster:caster, affected:affected})
-        .file("animated-spell-effects-cartoon.fire.19")
-        .playbackRate(1)
-        .scale(0.3)
-        .waitUntilFinished(-800)
-            
-        super.cast()
-        .file("jb2a.cast_generic.fire.side01.orange.0")
-        .playbackRate(1)
+        .sound()
+        .file("modules/dnd5e-animations/assets/sounds/Damage/Lightning/electric-continuous-1.mp3")
+        .volume(0)
+        .startTime(15000)
+        .duration(5000)
+        .fadeOutAudio(800)
+          
+      return this;
+  }
+   cast2({caster, affected , duration = 1}={}){ //simpler
+        super.castCommon({caster:caster, affected:affected})
+       .file("jb2a.static_electricity.02.blue")
+        .opacity(0.9)
         .scaleToObject(1.5)
-        .rotateTowards(this.affected)
-        .anchor({ x: 0.4, y: 0.5 })
-        .waitUntilFinished(-100)
-        .duration(600)
+        .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+        .duration(6000)
+       return this;
+  }
+
+  castRange({caster, affected , duration = 1}={}){
+        super.cast({caster:caster, affected:affected})
+      .file("animated-spell-effects-cartoon.fire.19")
+      .playbackRate(1)
+      .scale(0.3)
+      .waitUntilFinished(-800)
+            
+      super.cast()
+      .file("jb2a.cast_generic.fire.side01.orange.0")
+      .playbackRate(1)
+      .scaleToObject(1.5)
+      .rotateTowards(this.affected)
+      .anchor({ x: 0.4, y: 0.5 })
+      .waitUntilFinished(-100)
+      .duration(600)
+      return this;
+  }
+  project({caster, target }={}){ 
+      super.projectCommon({caster:caster,target:target})
+           .file("jb2a.chain_lightning.primary.blue")
+          .spriteOffset({ x: 20, y: 0 })
+          .playbackRate(1)
+          .scale(1)
+          .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+          .waitUntilFinished(-2000)
+    return this;
+  }
+
+  projectRange({caster, target }={}){ 
+      super.projectCommon({caster:caster,target:target})
+          .file("jb2a.lightning_bolt.wide.blue")
+          .spriteOffset({ x: 20, y: 0.5 })
+          .playbackRate(1.5)
+          .scale(1)
+          .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+    return this;
+  }
+
+  projectRay({caster, target }={}){ 
+      const targets = Array.from(game.user.targets);
+const origin = this.caster.center;
+
+// Sort targets based on distance from the origin token
+targets.sort((a, b) => canvas.grid.measureDistance(origin, a.center) - canvas.grid.measureDistance(origin, b.center));
+
+      super.projectCommon({caster:caster,target:target})
+        .atLocation(targets[index])
+        .stretchTo(targets[index + 1])
+        .file("jb2a.chain_lightning.secondary.blue")
+        .delay((index + 1) * 600)
+    return this;
+  }
+  affectDamage({affected = this.affected, repeats=1}={} ){ 
+    this.affectCommon({affected: affected})
+        .file(`jb2a.static_electricity.02.blue`)
+        .scaleToObject(1.5)
+        .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+        .duration(3000)
+        
+    this.affectCommon()
+        .from(this.affected)
+        .fadeIn(200)
+        .fadeOut(500)
+        .loopProperty("sprite", "position.x", { from: -0.05, to: 0.05, duration: 50, pingPong: true, gridUnits: true})
+        .scaleToObject(this.affected.document.texture.scaleX)
+        .duration(6000)
+        .opacity(0.25)
+
+       .canvasPan()
+       .shake({duration: 800, strength: 1, rotation: false })
+   return this
+}
+    projectChain({ caster = this.firstSelected, targets = Array.from(game.user.targets), } = {}) {
+    if (targets.length === 0) return this;
+
+    // Sort targets by distance from the caster
+    targets.sort((a, b) =>
+        canvas.grid.measureDistance(this.getTokenCenter(caster), this.getTokenCenter(a)) -
+        canvas.grid.measureDistance(this.getTokenCenter(caster), this.getTokenCenter(b))
+    );
+
+    // Start chain lightning from caster to the first target
+    this.mm3eEffect()
+        .atLocation(caster)
+        .stretchTo(targets[0])
+        .file("jb2a.chain_lightning.primary.blue")
+
+    // Chain between each target
+    for (let index = 0; index < targets.length - 1; index++) {
+        this.mm3eEffect()
+            .atLocation(targets[index])
+            .stretchTo(targets[index + 1])
+            .file("jb2a.chain_lightning.secondary.blue")
+            .delay((index + 1) * 600)
+
+
+    }
+
+
+    return this;
+}
+    projectChainHealing({ caster = this.firstSelected, targets = Array.from(game.user.targets), } = {}) {
+    if (targets.length === 0) return this;
+
+    // Sort targets by distance from the caster
+    targets.sort((a, b) =>
+        canvas.grid.measureDistance(this.getTokenCenter(caster), this.getTokenCenter(a)) -
+        canvas.grid.measureDistance(this.getTokenCenter(caster), this.getTokenCenter(b))
+    );
+
+    // Start chain lightning from caster to the first target
+    this.mm3eEffect()
+        .atLocation(caster)
+        .stretchTo(targets[0])
+        .file("jb2a.chain_lightning.primary.blue")
+
+    // Chain between each target
+    for (let index = 0; index < targets.length - 1; index++) {
+        this.mm3eEffect()
+            .atLocation(targets[index])
+            .stretchTo(targets[index + 1])
+            .file("jb2a.chain_lightning.secondary.blue")
+            .delay((index + 1) * 600)
+
+        this.mm3eEffect()
+            .atLocation(targets[index])
+            .file("jb2a.healing_generic.400px.blue")
+            .filter("ColorMatrix", { hue: -10, contrast: 0.5, saturate: 0.1, brightness: 1 })
+            .delay((index + 1) * 600)
+
+    }
+
+    // Healing effect for the last target
+    this.mm3eEffect()
+        .atLocation(targets[targets.length - 1])
+        .file("jb2a.healing_generic.400px.blue")
+        .filter("ColorMatrix", { hue: -10, contrast: 0.5, saturate: 0.1, brightness: 1 })
+        .delay(targets.length * 600)
+
+
+    return this;
+}
+    
+affectHealing({affected = this.affected, repeats=1}={} ){ 
+    this.affectCommon({affected: affected})
+           .file("jb2a.healing_generic.400px.blue")
+           .playbackRate(1)
+           .scale(1)
+           .fadeIn(500)
+           .scaleOut(0.5, 500, { ease: "easeInOutBounce", delay: 0 })
+           .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1, brightness: 1})
+
+    this.affectCommon()
+           .file(`jb2a.static_electricity.02.blue`)
+           .scaleToObject(1.5)
+           .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+
+        this.affectCommon()
+        .file("jb2a.healing_generic.400px.blue")
+           .playbackRate(1)
+           .scale(2)
+           .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1, brightness: 1})
+            .opacity(0)
+           
+           .playSound("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-buff-long-4.mp3")
+   return this;
+}
+    affectHealing2({affected = this.affected, repeats=1}={} ){ 
+    this.affectCommon({affected: affected})
+           .file("jb2a.healing_generic.400px.blue")
+           .playbackRate(1)
+           .scale(1)
+           .fadeIn(500)
+           .scaleOut(0.5, 500, { ease: "easeInOutBounce", delay: 0 })
+           .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1, brightness: 1})
+
+    this.affectCommon()
+           .file(`jb2a.static_electricity.02.blue`)
+           .scaleToObject(1.5)
+           .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+
+        this.affectCommon()
+        .file("jb2a.healing_generic.400px.blue")
+           .playbackRate(1)
+           .scale(2)
+           .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1, brightness: 1})
+            .opacity(0)
+           
+           .playSound("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-buff-long-4.mp3")
         return this;
     }
-    project({caster, target }={}){ 
-        super.projectCommon({caster:caster,target:target})
-            .file("animated-spell-effects-cartoon.fire.29")
-            .spriteOffset({ x: 20, y: 0 })
-            .playbackRate(1)
-            .scale(1)
-            .waitUntilFinished(-2000)
-    return this;
-    }
-
-    projectRange({caster, target }={}){ 
-        super.projectCommon({caster:caster,target:target})
-            .file("jb2a.fire_bolt.orange")
-            .playbackRate(1)
-            .waitUntilFinished(-100)
-            .duration(600)
-            .scale(1)
-    return this;
-    }
-
-    projectRay({caster, target }={}){ 
-        super.projectCommon({caster:caster,target:target})
-            .file("jb2a.scorching_ray.01.orange")
-            .playbackRate(1)
-            .scale(1.5)
-            .waitUntilFinished(-1000)
-    return this;
-    }
-    affectDamage({affected = this.affected, repeats=1}={} ){ 
-    this.affectCommon({affected: affected})
-    .affect()
-        .file("animated-spell-effects-cartoon.mix.fire earth explosion.06")
-        .delay(500)
-        .scale(0.8)
-        
-        .pause(500)
-
-    .affect()
-        .file(`jb2a.ground_cracks.orange.01`)
-        .scaleToObject(2)
-        .fadeIn(600)
-        .opacity(1)
-        .belowTokens()
-        .scaleIn(0, 600, {ease: "easeOutCubic"})
-        .filter("ColorMatrix", { hue: 0 })
-        .fadeOut(500)
-        .duration(8000)
-
-
-    .affect()
-        .file("jb2a.impact.ground_crack.still_frame.01")
-        .scaleToObject(2)
-        .fadeIn(600)
-        .opacity(1)
-        .belowTokens()
-        .scaleIn(0, 600, {ease: "easeOutCubic"})
-        .filter("ColorMatrix", { hue: 0 })
-        .fadeOut(500)
-        .duration(12000)
-
-        .canvasPan()
-        .shake({duration: 800, strength: 1, rotation: false })
-    return this
-}
-affectHealing({affected = this.affected|| this.firstSelected}={}){
-    super.affectCommon({affected:affected, persist:false})
-            .file("jb2a.healing_generic.loop.yellowwhite")
-            .playbackRate(1)
-            .scaleToObject()
-            .tint("#dc7118")
-            .scale(2)
-            .fadeIn(500)
-            .fadeOut(500)
-            .filter("Glow")
-            
-            .playSound("modules/dnd5e-animations/assets/sounds/Spells/Buff/spell-buff-long-4.mp3")
-    return this;
-}
-affectAffliction({affected}={})
-{
-    super.affectCommon({affected:affected})
-        .file("animated-spell-effects-cartoon.fire.spiral")
-        .playbackRate(1)
-        .scale(0.5)
-        
-        .pause(800)
-        
-        
-        .affect()
-        .file("jb2a.shield_themed.below.fire.01.orange")
-        .attachTo(this.affected)
-        .playbackRate(1)
-        .scaleToObject()
-        .scale(1.8)
-        .fadeIn(500)
-        .rotateIn(180, 600, {ease: "easeOutCubic"})
-        .scaleIn(0, 600, {ease: "easeOutCubic"})
-        .loopProperty("sprite", "rotation", { from: 0, to: -360, duration: 10000})
+affectAffliction({affected}={}){
+   super.affectCommon({affected:affected})
+        .file(`jb2a.static_electricity.02.blue`)
+        .scaleToObject(1.5)
+        .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
         .persist()
-        
-        .affect()
-        .file("jb2a.shield_themed.above.fire.03.orange")
-        .attachTo(this.affected)
-        .playbackRate(1)
-        .scaleToObject()
-        .scale(1.8)
-        .fadeIn(500)
-        .rotateIn(180, 600, {ease: "easeOutCubic"})
-        .scaleIn(0, 600, {ease: "easeOutCubic"})
-        .persist()
-    return this;
+   return this;
 }
 burst({affected,persist=true}={})
 {
-    super.burstCommon({affected:affected})
-        .file("jb2a.impact.fire.01.orange.0")
-        .playbackRate(1)
-        .scaleToObject(2.5)
-    return this
+   super.burstCommon({affected:affected})
+        .file(`jb2a.impact.011.blue`)
+        .scaleToObject(1.5)
+        
+       .sound()
+       .file("modules/dnd5e-animations/assets/sounds/Damage/Lightning/lightning-impact-5.mp3")
+        
+    super.burstCommon()
+        .file(`jb2a.impact.012.blue`)
+        .scaleToObject(1.5)
+        .randomRotation()
+        
+    super.burstCommon()
+        .file(`jb2a.impact.012.blue`)
+        .scaleToObject(1.5)
+        .randomRotation()
+
+    super.burstCommon()
+        .file("jb2a.static_electricity.03.blue")
+        .fadeIn(350)
+        .fadeOut(350)
+        .scaleToObject(1.1)
+        .filter("ColorMatrix", { hue: -10, contrast: 0.5, saturate: 0.1, brightness: 1 })
+        .randomRotation()
+        .duration(3500)
+        
+        .sound()
+        .file("modules/dnd5e-animations/assets/sounds/Damage/Explosion/explosion-echo-5.mp3")
+               return this
 }
 
 burstheal({affected,persist=true}={})
 {
-    super.burstCommon({affected:affected})
-        .file("jb2a.healing_generic.burst.yellowwhite")
-        .tint("#dc7118")
-        .scaleToObject(1.2)
-    return this
-}
+super.burstCommon({affected:affected})
+        .file(`jb2a.impact.011.blue`)
+        .scaleToObject(1.5)
+        
+       .sound()
+       .file("modules/dnd5e-animations/assets/sounds/Damage/Lightning/lightning-impact-5.mp3")
+        
+    super.burstCommon()
+        .file(`jb2a.impact.012.blue`)
+        .scaleToObject(1.5)
+        .randomRotation()
+        
+    super.burstCommon()
+        .file(`jb2a.impact.012.blue`)
+        .scaleToObject(1.5)
+        .randomRotation()
 
+    super.burstCommon()
+        .file(`jb2a.healing_generic.400px.blue`)
+        .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1, brightness: 1})
+        .scaleToObject(1.5)
+
+    super.burstCommon()
+        .file("jb2a.static_electricity.03.blue")
+        .fadeIn(350)
+        .fadeOut(350)
+        .scaleToObject(1.1)
+        .filter("ColorMatrix", { hue: -10, contrast: 0.5, saturate: 0.1, brightness: 1 })
+        .randomRotation()
+        .duration(3500)
+        
+        .sound()
+        .file("modules/dnd5e-animations/assets/sounds/Damage/Explosion/explosion-echo-5.mp3")
+   return this
+} 
+cone({affected} = {}) {
+   const coneStart = { x: this.affected.data.x, y: this.affected.data.y };
+   const template = canvas.templates.placeables.at(-1).document;
+       
+    super.coneCommon({affected:affected})
+   .file("jb2a.particles.outward.blue.01.04")
+    .atLocation(coneStart)
+    .fadeIn(500)
+    .fadeOut(500)
+    .anchor({x:0.5})
+    .scaleToObject(2)
+    .duration(5000)
+    .rotateTowards(template, {cacheLocation: true})
+    .loopProperty("sprite", "rotation", { from: -360, to: 360, duration: 3000})
+    .scaleOut(0, 4000, {ease: "easeOutQuint", delay: -3000})
+    .zIndex(1)
+
+    super.coneCommon()
+    .file("jb2a.particles.outward.blue.01.04")
+    .atLocation(coneStart)
+    .fadeIn(500)
+    .fadeOut(500)
+    .anchor({x:0.5})
+    .scaleToObject(2)
+    .duration(5000)
+    .rotateTowards(template, {cacheLocation: true})
+    .loopProperty("sprite", "rotation", { from: 360, to: -360, duration: 3000})
+    .scaleOut(0, 4000, {ease: "easeOutQuint", delay: -3000})
+    .zIndex(1)
+
+        
+    super.coneCommon()
+    .file(`jb2a.static_electricity.02.blue`)
+    .atLocation(coneStart)
+    .scaleToObject(1.5)
+    .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+    .duration(3000)
+
+    super.coneCommon()
+    .canvasPan()
+    .shake({duration: 4000, strength: 5, rotation: false })
+
+    super.coneCommon()
+    .file("jb2a.impact.011.blue")
+    .atLocation(coneStart)
+    .fadeOut(3000)
+    .scaleToObject(8)
+    .zIndex(3)
+    
+
+    super.coneCommon()
+    .file("jb2a.impact.ground_crack.02.blue")
+    .atLocation(coneStart)
+    .belowTokens()
+    .filter("ColorMatrix", {saturate: 2})
+    .fadeOut(1000)
+    .scaleToObject(4)
+    .zIndex(2)
+    
+    super.coneCommon()
+    .file("jb2a.ground_cracks.blue.02")
+    .atLocation(coneStart)
+    .belowTokens()
+    .filter("ColorMatrix", {saturate: 1})
+    .duration(6000)
+    .fadeOut(1000)
+    .scaleToObject(4)
+    .delay(500)
+    .zIndex(1)
+    
+    super.coneCommon()
+    .file("jb2a.burrow.out.01.still_frame.0")
+    .atLocation(coneStart)
+    .duration(5000)
+    .fadeIn(500)
+    .fadeOut(1000)
+    .belowTokens()
+    .scaleToObject(6)
+    .filter("ColorMatrix", { saturate: 1 })
+    .zIndex(1)  
+    
+    
+    super.coneCommon()
+    .file("jb2a.template_cone_5e.lightning.01.complete.bluepurple")
+    .atLocation(coneStart)
+    .stretchTo(template)
+    .aboveLighting()
+    .playbackRate(1.7)
+    .fadeIn(100)
+    .fadeOut(800)
+        return this;
+    }
     descriptorCast(){
-            return this
+         return this
     }
 
     descriptorCastBurrow(position){
@@ -8062,10 +8296,10 @@ burstheal({affected,persist=true}={})
         .duration(1800)
         
         super.affectCommon()
-            .file(`jb2a.static_electricity.02.blue`)
-            .opacity(0.9)
-            .scaleToObject(1.5)
-            .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+          .file(`jb2a.static_electricity.02.blue`)
+          .opacity(0.9)
+          .scaleToObject(1.5)
+          .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
         .waitUntilFinished(-100)
         
         super.affectCommon()
@@ -8106,23 +8340,116 @@ burstheal({affected,persist=true}={})
         return this;
     }
     descriptorProjectToLine() {
-        return this.descriptorProject()
+        return this.file("jb2a.chain_lightning.primary.blue")
+      .delay(1200)
     }
     descriptorProjectToCone() {
-        return this.descriptorProject()
+        return this.file("jb2a.chain_lightning.primary.blue")
+      .delay(1200)
     }   
 
     descriptorBurst() {
         return this;
     }
-    descriptorLine() {
+    descriptorLine({affected} = {}) {
+        let template = canvas.templates.placeables.at(-1).document;
+        const lineTemplate = canvas.templates.placeables.at(-1).document;
+
+        const start = { x: lineTemplate.x, y: lineTemplate.y };
+
+    this.file("jb2a.particles.outward.blue.01.04")
+    .atLocation(start)
+    .fadeIn(500)
+    .fadeOut(500)
+    .anchor({x:0.5})
+    .scaleToObject(2)
+    .duration(5000)
+    .rotateTowards(template, {cacheLocation: true})
+    .loopProperty("sprite", "rotation", { from: -360, to: 360, duration: 3000})
+    .scaleOut(0, 4000, {ease: "easeOutQuint", delay: -3000})
+    .zIndex(1)
+
+
+    super.lineCommon()
+    .file("jb2a.particles.outward.blue.01.04")
+    .atLocation(start)
+    .fadeIn(500)
+    .fadeOut(500)
+    .anchor({x:0.5})
+    .scaleToObject(2)
+    .duration(5000)
+    .rotateTowards(template, {cacheLocation: true})
+    .loopProperty("sprite", "rotation", { from: 360, to: -360, duration: 3000})
+    .scaleOut(0, 4000, {ease: "easeOutQuint", delay: -3000})
+    .zIndex(1)
+
+        
+    super.lineCommon()
+    .file(`jb2a.static_electricity.02.blue`)
+    .atLocation(start)
+    .scaleToObject(1.5)
+    .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+    .duration(3000)
+
+    .canvasPan()
+    .shake({duration: 4000, strength: 5, rotation: false })
+
+    super.lineCommon()
+    .file("jb2a.impact.011.blue")
+    .atLocation(start)
+    .fadeOut(3000)
+    .scaleToObject(8)
+    .zIndex(3)
+    
+
+    super.lineCommon()
+    .file("jb2a.impact.ground_crack.02.blue")
+    .atLocation(start)
+    .belowTokens()
+    .filter("ColorMatrix", {saturate: 2})
+    .fadeOut(1000)
+    .scaleToObject(4)
+    .zIndex(2)
+    
+    super.lineCommon()
+    .file("jb2a.ground_cracks.blue.02")
+    .atLocation(start)
+    .belowTokens()
+    .filter("ColorMatrix", {saturate: 1})
+    .duration(6000)
+    .fadeOut(1000)
+    .scaleToObject(4)
+    .delay(500)
+    .zIndex(1)
+    
+    super.lineCommon()
+    .file("jb2a.burrow.out.01.still_frame.0")
+    .atLocation(start)
+    .duration(5000)
+    .fadeIn(500)
+    .fadeOut(1000)
+    .belowTokens()
+    .scaleToObject(6)
+    .filter("ColorMatrix", { saturate: 1 })
+    .zIndex(1)  
+    
+    
+    super.lineCommon()
+    .file("jb2a.breath_weapons.lightning.line.blue")
+    .atLocation(start)
+    .stretchTo(template)
+    .aboveLighting()
+    .fadeIn(50)
+    .fadeOut(50)
+    .playbackRate(1.2)
         return this
     }
     descriptorCone() {
+        
         return this;
     }
     descriptorAffliction() {
-            
+         
         return this;
     }
     descriptorAura(){
@@ -8183,12 +8510,12 @@ burstheal({affected,persist=true}={})
     descriptorSpeed(){}
     descriptorFlight(){}
     descriptorHealing(){
-        
+       
         return this
     }
 
     /*
-    
+   
     descriptorAura(){
         return this
     }
