@@ -12508,6 +12508,7 @@ class SequencerScriptView{
     async generate() {  
         this.sequencerScript.generate() 
         this.script = this.sequencerScript.script
+        this.name = this.sequencerScript.name
     }
     async save(){
         this.sequencerScript.save()
