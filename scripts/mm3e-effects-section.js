@@ -283,6 +283,9 @@ Hooks.on("ready", () => {
     line({affected}={}){
         return this.lineCommon({affected:affected})
     }
+    lineHealing({affected}={}){
+        return this.lineCommon({affected:affected})
+    }
     lineCommon({affected =  this.firstTemplate}={}){
         return this.coneCommon({affected:affected})
     }
@@ -6966,6 +6969,36 @@ Hooks.on("ready", () => {
 
             return this;
         }
+        lineHealing({affected}={}) {
+
+            const template = canvas.templates.placeables.at(-1).document;
+        
+            const lineTemplate = canvas.templates.placeables.at(-1).document;
+        
+            const start = { x: lineTemplate.data.x, y: lineTemplate.data.y };
+                    
+                    super.lineCommon({affected:affected})
+            this.effect()
+            .file("jb2a.sacred_flame.target.yellow")
+            .atLocation(start) 
+            .scaleToObject(3.5)
+            .playbackRate(1)
+            .aboveLighting()
+            .zIndex(3)
+        
+            this.effect()
+            .file("animated-spell-effects-cartoon.magic.helix")
+            .atLocation(start)
+            .spriteScale(0.5)
+            .playbackRate(0.8)        
+            .stretchTo(template)
+            .aboveLighting()
+            .delay(2200)
+            .fadeIn(50)
+            .fadeOut(50)
+        
+                    return this;
+                }        
         cone({affected} = {}) {
             super.coneCommon({affected:affected})
             //play sequencer logic
