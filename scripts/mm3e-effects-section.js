@@ -9755,7 +9755,7 @@ super.burstCommon({affected:affected})
                     .atLocation(this.affected)
                     .persist()
                     .tint("#047111")
-                    .mirroredY()               
+                    .mirrorY()               
             super.affectCommon()
                     .file("jb2a.extras.tmfx.border.circle.outpulse.01.normal")
                     .atLocation(this.affected)
@@ -12401,7 +12401,7 @@ super.burstCommon({affected:affected})
     Sequencer.SectionManager.registerSection("myModule", "insectEffect",InsectEffectSection)
     Sequencer.SectionManager.registerSection("myModule", "invincibleEffect",InvincibleEffectSection)
     Sequencer.SectionManager.registerSection("myModule", "kineticEffect",KineticEffectSection)
-    Sequencer.SectionManager.registerSection("myModule", "lightEffect",LightEffectSection)
+    //Sequencer.SectionManager.registerSection("myModule", "lightEffect",LightEffectSection)
     Sequencer.SectionManager.registerSection("myModule", "lightningEffect",LightningEffectSection)
     Sequencer.SectionManager.registerSection("myModule", "magnetismEffect",MagnetismEffectSection)
     Sequencer.SectionManager.registerSection("myModule", "magicEffect",MagicEffectSection)
@@ -13271,32 +13271,32 @@ class DescriptorSequence{
         this.powerItem = powerItem;
         this.descriptorClasses = {
             "airEffect":"Air",
-            "darknessEffect":"Darkness",
+         //   "darknessEffect":"Darkness",
             "earthEffect": "Earth",
             "electricityEffect": "Electricity",
-            "energyEffect": "Energy",
-            "entropyEffect": "Entropy",
-            "exoskeletonEffect": "Exoskeleton",
+         //   "energyEffect": "Energy",
+          //  "entropyEffect": "Entropy",
+          //  "exoskeletonEffect": "Exoskeleton",
             "fireEffect": "Fire",
-            "gasEffect": "Gas",
+        //    "gasEffect": "Gas",
             "holyEffect": "Holy",
             "iceEffect": "Ice",
-            "impactEffect": "Impact",
-            "insectEffect": "Insect",
-            "invincibleEffect": "Invincible",
-            "kineticEffect": "Kinetic",
-            "lightEffect": "Light",
+        //    "impactEffect": "Impact",
+        //    "insectEffect": "Insect",
+        //    "invincibleEffect": "Invincible",
+        //    "kineticEffect": "Kinetic",
+        //    "lightEffect": "Light",
             "lightningEffect": "Lightning",
-            "magnetismEffect": "Magnetism",
-            "loveEffect": "Love",
-            "magicEffect": "Magic",
-            "plantEffect": "Plant",
-            "poisonEffect": "Poison",
-            "psychicEffect": "Psychic",
+        //    "magnetismEffect": "Magnetism",
+        //    "loveEffect": "Love",
+        //    "magicEffect": "Magic",
+        //    "plantEffect": "Plant",
+        //    "poisonEffect": "Poison",
+        //    "psychicEffect": "Psychic",
             "radiationEffect": "Radiation",
-            "noDescriptorEffect": "No Descriptor",
-            "superSpeedEffect": "Super Speed",
-            "superStrengthEffect": "Super Strength",
+        //    "noDescriptorEffect": "No Descriptor",
+        //    "superSpeedEffect": "Super Speed",
+        //    "superStrengthEffect": "Super Strength",
             "waterEffect": "Water"
         };
         if(this.powerItem){
@@ -13523,7 +13523,7 @@ get effect() {
     const effects = [  
                     "Affliction", "Alternate Form", "Blast", "Burrowing", "Communication",   
                     "Comprehend", "Concealment", "Create", "Damage", "Dazzle", 
-                    "Deflect", "Duplication", "Element Control", "Elongation", 
+                    "Deflection", "Duplication", "Element Control", "Elongation", 
                     "Energy Absorption", "Energy Aura", "Energy Control", "Enhanced Trait", 
                     "Environment", "Extra Limbs", "Feature", "Flight", "Force Field",
                     "Growth", "Healing", "Illusion", "Immortality", "Immunity", 
