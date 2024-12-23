@@ -8,7 +8,6 @@
   },
   "url": "https://github.com/thomasjeffreyandersontwin/mm3e-animations",
   "scripts": [
-	"scripts/token-effects.js",
 	"scripts/mm3e-effects-section.js"
   ],
   "packs": [
