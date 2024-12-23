@@ -12595,16 +12595,17 @@ class GameHelper{
     }
 
     static async targetWithCrossHair( {icon ='icons/skills/movement/feet-winged-boots-brown.webp', label ='target'}={}){
-
+        let selected = GameHelper.selected
         let config = {
             size: 1,
-            icon: icon,
+            icon: icon, 
             label: label,
             drawIcon: true,
             drawOutline: true,
             interval: 1 % 2 === 0 ? 1 : -1,
         }
         let position =   await warpgate.crosshairs.show(config);
+        selected.control()
         return position
     }
 
