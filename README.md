@@ -8,3 +8,12 @@ Efects based systems allow players to define the exact power they want by purcha
 5. A custom UI that enables quick mixing and marching of the above seqiencer scripts into customized macros
 
 I'll be updating with more documentation, sequencer scripts, and other functions in real time,  in the meantime hit me up on the green ronin channel over on the <a href="https://discord.com/channels/170995199584108546">foundry discord!</a>
+
+
+**Module Dependencies:**
+We use Sequencer for all of our bespoke dewscriptor animations (https://foundryvtt.com/packages/sequencer )
+- We have created a large number of descriptor animations using Automated Animations (https://foundryvtt.com/packages/autoanimations)
+- Many of our animations rely on JB2A Patreon (https://jb2a.com/)
+- Many animations also use Jacks Cartoon Spell Effects (https://foundryvtt.com/packages/animated-spell-effects-cartoon)
+- A few animations use Jinkers Animation  (https://www.jinker.org/patreon/)
+- We occasionaly rely on  FXMaster (https://github.com/ghost-fvtt/fxmaster)
