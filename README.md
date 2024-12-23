@@ -11,7 +11,7 @@ I'll be updating with more documentation, sequencer scripts, and other functions
 
 
 **Module Dependencies:**
-We use Sequencer for all of our bespoke dewscriptor animations (https://foundryvtt.com/packages/sequencer )
+We use Sequencer for all of our bespoke descriptor animations (https://foundryvtt.com/packages/sequencer )
 - We have created a large number of descriptor animations using Automated Animations (https://foundryvtt.com/packages/autoanimations)
 - Many of our animations rely on JB2A Patreon (https://jb2a.com/)
 - Many animations also use Jacks Cartoon Spell Effects (https://foundryvtt.com/packages/animated-spell-effects-cartoon)
