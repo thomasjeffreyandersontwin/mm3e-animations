@@ -1,4 +1,4 @@
-Descriptor Animations allows you to execute sequencer and automated animations based animations based on the descriptor and power effect of the item being clicked on. Building a complete list of animations for an effects based systems like Mutants and Masterminds is basically impossible. 
+mm3e-animations allows you to execute sequencer and automated animation lookep up based on the descriptor and power effect of the item being clicked on. Building a complete list of animations for an effects based systems like Mutants and Masterminds is basically impossible. 
 
 Efects based systems allow players to define the exact power they want by purchasing a game effect for their character (like damage for instance), applying one or more modifiers (like range and area effect), and then finally a descriptor (like fire, or maybe a thrown hammer). This modulemakes animating powers for this type of system by:
 1. Providing a mechanism to invoke an animation based on the descriptor, range type, option area shape, and power effects of an item being clicked
@@ -11,7 +11,7 @@ I'll be updating with more documentation, sequencer scripts, and other functions
 
 
 **Module Dependencies:**
-We use Sequencer for all of our bespoke dewscriptor animations (https://foundryvtt.com/packages/sequencer )
+We use Sequencer for all of our bespoke descriptor animations (https://foundryvtt.com/packages/sequencer )
 - We have created a large number of descriptor animations using Automated Animations (https://foundryvtt.com/packages/autoanimations)
 - Many of our animations rely on JB2A Patreon (https://jb2a.com/)
 - Many animations also use Jacks Cartoon Spell Effects (https://foundryvtt.com/packages/animated-spell-effects-cartoon)
