@@ -45846,7 +45846,7 @@
     },
     {
       "id": "1b416ee4-20cf-4eaf-b739-a27fa1e44c19",
-      "label": "Colored-Range-Energy-Cone-Affliction",
+      "label": "Colored-Energy-Range-Cone-Affliction",
       "menu": "templatefx",
       "macro": {
         "enable": false,
@@ -46033,7 +46033,7 @@
     },
     {
       "id": "75f141b1-5bf7-407c-8f77-4865a0799501",
-      "label": "Colored-Range-Energy-Cone-Damage",
+      "label": "Colored-Energy-Range-Cone-Damage",
       "menu": "templatefx",
       "macro": {
         "enable": false,
@@ -46220,7 +46220,7 @@
     },
     {
       "id": "04a8628e-8920-40f1-b957-9887898bd0b1",
-      "label": "Colored-Range-Energy-Cone-Healing",
+      "label": "Colored-Energy-Range-Cone-Healing",
       "menu": "templatefx",
       "macro": {
         "enable": false,
@@ -46407,7 +46407,7 @@
     },
     {
       "id": "9eafeec3-ebf4-48b1-962f-44d2f0a2b511",
-      "label": "Colored-Range-Energy-Line-Affliction",
+      "label": "Colored-Energy-Range-Line-Affliction",
       "menu": "templatefx",
       "macro": {
         "enable": false,
@@ -46594,7 +46594,7 @@
     },
     {
       "id": "9d05a2ef-257d-4399-826a-09ba60d3bfe4",
-      "label": "Colored-Range-Energy-Line-Damage-1",
+      "label": "Colored-Energy-Range-Line-Damage-1",
       "menu": "templatefx",
       "macro": {
         "enable": false,
@@ -46781,7 +46781,7 @@
     },
     {
       "id": "ebf06b2e-fd5e-4b4c-9f4a-f5737c371059",
-      "label": "Colored-Range-Energy-Line-Damage-2",
+      "label": "Colored-Energy-Range-Line-Damage-2",
       "menu": "templatefx",
       "macro": {
         "enable": false,
@@ -46968,7 +46968,7 @@
     },
     {
       "id": "7f39627c-9abc-40cf-a040-2742b8e62e1f",
-      "label": "Colored-Range-Energy-Line-Healing",
+      "label": "Colored-Energy-Range-Line-Healing",
       "menu": "templatefx",
       "macro": {
         "enable": false,
