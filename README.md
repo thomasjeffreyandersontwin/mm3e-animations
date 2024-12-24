@@ -1,4 +1,4 @@
-Descriptor Animations allows you to execute sequencer and automated animations based animations based on the descriptor and power effect of the item being clicked on. Building a complete list of animations for an effects based systems like Mutants and Masterminds is basically impossible. 
+mm3e-animations allows you to execute sequencer and automated animation lookep up based on the descriptor and power effect of the item being clicked on. Building a complete list of animations for an effects based systems like Mutants and Masterminds is basically impossible. 
 
 Efects based systems allow players to define the exact power they want by purchasing a game effect for their character (like damage for instance), applying one or more modifiers (like range and area effect), and then finally a descriptor (like fire, or maybe a thrown hammer). This modulemakes animating powers for this type of system by:
 1. Providing a mechanism to invoke an animation based on the descriptor, range type, option area shape, and power effects of an item being clicked
