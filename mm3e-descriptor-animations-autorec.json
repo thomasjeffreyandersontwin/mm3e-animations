@@ -9858,7 +9858,7 @@
     },
     {
       "id": "c0a05e58-809c-4ffa-a0f8-3f5e812dd952",
-      "label": "Lightning-Range-Damage-2",
+      "label": "Lightning-Range-Damage",
       "levels3d": {
         "enable": true,
         "type": "runicshot",
@@ -43084,7 +43084,7 @@
   "templatefx": [
     {
       "id": "a5846c54-fbd5-4d16-bd33-fba7635f4bc4",
-      "label": "Air-Burst-Affliction",
+      "label": "Air-Range-Burst-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -43260,7 +43260,7 @@
     },
     {
       "id": "3e3733c5-ad38-49ef-adde-781fc6d335bc",
-      "label": "Air-Burst-Affliction-Old",
+      "label": "Air-Range-Burst-Affliction-Old",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -43436,7 +43436,7 @@
     },
     {
       "id": "f3adb36d-0582-4e98-ad20-8a3ba27ebd84",
-      "label": "Air-Burst-Damage",
+      "label": "Air-Range-Burst-Damage",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -43606,7 +43606,7 @@
     },
     {
       "id": "4e4f6644-2d18-47ac-9de6-9e0c0f25565c",
-      "label": "Air-Cone-Affliction",
+      "label": "Air-Range-Cone-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -43794,7 +43794,7 @@
     },
     {
       "id": "b431ae18-0f81-4104-93c4-517817a619ab",
-      "label": "Air-Cone-Damage",
+      "label": "Air-Range-Cone-Damage",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -43980,7 +43980,7 @@
     },
     {
       "id": "0c539238-74d2-4eba-b4ac-1a097773493c",
-      "label": "Air-Cone-Healing",
+      "label": "Air-Range-Cone-Healing",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -44168,7 +44168,7 @@
     },
     {
       "id": "2a3e3c1d-0b3a-4a49-861f-5c1c97a4f0b3",
-      "label": "Air-Line-Affliction",
+      "label": "Air-Range-Line-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -44355,7 +44355,7 @@
     },
     {
       "id": "e1f835aa-1fd3-4090-823e-d70cf229faf7",
-      "label": "Air-Line-Create-2",
+      "label": "Air-Range-Line-Create-2",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -44545,7 +44545,7 @@
     },
     {
       "id": "935a25e1-7831-4ba3-ba0f-53ad536cd8bc",
-      "label": "Air-Line-Damage",
+      "label": "Air-Range-Line-Damage",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -44731,7 +44731,7 @@
     },
     {
       "id": "930b4237-c6f3-46dc-a896-42427273e67a",
-      "label": "Air-Line-Healing",
+      "label": "Air-Range-Line-Healing",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -44919,7 +44919,7 @@
     },
     {
       "id": "807cf9f8-1929-4554-9a94-57d9cf8437c7",
-      "label": "Color-Burst-Create",
+      "label": "Color-Range-Burst-Create",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -45112,7 +45112,7 @@
     },
     {
       "id": "3ff8dfb3-e638-416a-b990-1040cb7e4ab0",
-      "label": "Color-Burst-Daze",
+      "label": "Color-Range-Burst-Daze",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -45302,7 +45302,7 @@
     },
     {
       "id": "f15cbb9c-a1bc-400d-acd1-944eb4f6bcd0",
-      "label": "Color-Cone-Affliction",
+      "label": "Color-Range-Cone-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -45477,7 +45477,7 @@
     },
     {
       "id": "1e21bb72-9005-43fe-8234-d3b2ae6f22d3",
-      "label": "Color-Cone-Damage",
+      "label": "Color-Range-Cone-Damage",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -45653,7 +45653,7 @@
     },
     {
       "id": "e0605b1a-2605-4ea2-8360-d00e0176280c",
-      "label": "Color-Line-Create",
+      "label": "Color-Range-Line-Create",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -45846,7 +45846,7 @@
     },
     {
       "id": "1b416ee4-20cf-4eaf-b739-a27fa1e44c19",
-      "label": "Colored-Energy-Cone-Affliction",
+      "label": "Colored-Range-Energy-Cone-Affliction",
       "menu": "templatefx",
       "macro": {
         "enable": false,
@@ -46033,7 +46033,7 @@
     },
     {
       "id": "75f141b1-5bf7-407c-8f77-4865a0799501",
-      "label": "Colored-Energy-Cone-Damage",
+      "label": "Colored-Range-Energy-Cone-Damage",
       "menu": "templatefx",
       "macro": {
         "enable": false,
@@ -46220,7 +46220,7 @@
     },
     {
       "id": "04a8628e-8920-40f1-b957-9887898bd0b1",
-      "label": "Colored-Energy-Cone-Healing",
+      "label": "Colored-Range-Energy-Cone-Healing",
       "menu": "templatefx",
       "macro": {
         "enable": false,
@@ -46407,7 +46407,7 @@
     },
     {
       "id": "9eafeec3-ebf4-48b1-962f-44d2f0a2b511",
-      "label": "Colored-Energy-Line-Affliction",
+      "label": "Colored-Range-Energy-Line-Affliction",
       "menu": "templatefx",
       "macro": {
         "enable": false,
@@ -46594,7 +46594,7 @@
     },
     {
       "id": "9d05a2ef-257d-4399-826a-09ba60d3bfe4",
-      "label": "Colored-Energy-Line-Damage-1",
+      "label": "Colored-Range-Energy-Line-Damage-1",
       "menu": "templatefx",
       "macro": {
         "enable": false,
@@ -46781,7 +46781,7 @@
     },
     {
       "id": "ebf06b2e-fd5e-4b4c-9f4a-f5737c371059",
-      "label": "Colored-Energy-Line-Damage-2",
+      "label": "Colored-Range-Energy-Line-Damage-2",
       "menu": "templatefx",
       "macro": {
         "enable": false,
@@ -46968,7 +46968,7 @@
     },
     {
       "id": "7f39627c-9abc-40cf-a040-2742b8e62e1f",
-      "label": "Colored-Energy-Line-Healing",
+      "label": "Colored-Range-Energy-Line-Healing",
       "menu": "templatefx",
       "macro": {
         "enable": false,
@@ -47155,7 +47155,7 @@
     },
     {
       "id": "1f78a838-94ba-4961-a62f-7c21a92093ea",
-      "label": "Darkness-Burst-Affliction",
+      "label": "Darkness-Range-Burst-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -47331,7 +47331,7 @@
     },
     {
       "id": "fbe2fa42-598b-4596-a403-9999ff69f9af",
-      "label": "Darkness-Cone-Affliction",
+      "label": "Darkness-Range-Cone-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -47504,7 +47504,7 @@
     },
     {
       "id": "d44db91a-1eef-426e-82d3-a91939c83367",
-      "label": "Darkness-Cone-Healing",
+      "label": "Darkness-Range-Cone-Healing",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -47679,7 +47679,7 @@
     },
     {
       "id": "2f10f86e-1d59-4062-9d89-360d8bdeefee",
-      "label": "Darkness-Line-Affliction",
+      "label": "Darkness-Range-Line-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -47852,7 +47852,7 @@
     },
     {
       "id": "0f6a7c23-5666-4d4d-925e-f343af96794b",
-      "label": "Darkness-Line-Healing",
+      "label": "Darkness-Range-Line-Healing",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -48027,7 +48027,7 @@
     },
     {
       "id": "0614fba7-2d38-4593-9149-f34e037ef2c7",
-      "label": "Earth-Burst-Create-2",
+      "label": "Earth-Range-Burst-Create-2",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -48217,7 +48217,7 @@
     },
     {
       "id": "3f3283ed-dc1e-430b-a682-9f5229d72f3d",
-      "label": "Earth-Line-Create-2",
+      "label": "Earth-Range-Line-Create-2",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -48407,7 +48407,7 @@
     },
     {
       "id": "c6b22c5d-6453-4c08-8c6e-4b0a6e39a969",
-      "label": "Energy-Burst-Protection",
+      "label": "Energy-Range-Burst-Protection",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -48584,7 +48584,7 @@
     },
     {
       "id": "71449ea5-c787-4634-a8eb-b9aac4e4c4ca",
-      "label": "Fear-Burst-Affliction",
+      "label": "Fear-Range-Burst-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -48760,7 +48760,7 @@
     },
     {
       "id": "29c78a11-460f-4116-8279-67055629e4c9",
-      "label": "Gas-Burst-Afflicition",
+      "label": "Gas-Range-Burst-Afflicition",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -49120,7 +49120,7 @@
     },
     {
       "id": "3af8f77a-0ceb-43d6-8cb1-460f9c2148d3",
-      "label": "Ice-Burst-Affliction-2",
+      "label": "Ice-Range-Burst-Affliction-2",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -49296,7 +49296,7 @@
     },
     {
       "id": "79b54979-c852-4f7a-b121-cc6a90fd5add",
-      "label": "Ice-Cone-Damage-2",
+      "label": "Ice-Range-Cone-Damage-2",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -55550,7 +55550,7 @@
     },
     {
       "id": "d3d5b0b5-c6f2-4aba-84a5-5bcb7ca3baa9",
-      "label": "Love-Burst-Affliction",
+      "label": "Love-Range-Burst-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -55726,7 +55726,7 @@
     },
     {
       "id": "e2b9031d-0269-4c73-baf2-f94ece74e9b5",
-      "label": "Love-Burst-Affliction",
+      "label": "Love-Range-Burst-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -55902,7 +55902,7 @@
     },
     {
       "id": "c4ecc2d5-b3b4-46b6-83eb-b68e101166dd",
-      "label": "Love-Burst-Damage",
+      "label": "Love-Range-Burst-Damage",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -56077,7 +56077,7 @@
     },
     {
       "id": "6b56aebb-c0c2-47d8-99e0-145a28fbe7b5",
-      "label": "Plant-Burst-Affliction-2",
+      "label": "Plant-Range-Burst-Affliction-2",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -56253,7 +56253,7 @@
     },
     {
       "id": "76739309-df1b-40b9-82f6-189dbfc24c1c",
-      "label": "Plant-Burst-Damage",
+      "label": "Plant-Range-Burst-Damage",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -56443,7 +56443,7 @@
     },
     {
       "id": "2c6ac0c1-5d2f-4766-8550-a8401f061605",
-      "label": "Plant-Burst-Healing",
+      "label": "Plant-Range-Burst-Healing",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -56620,7 +56620,7 @@
     },
     {
       "id": "de9eb0f1-0f7a-4be3-8b56-95311aa2da77",
-      "label": "Plant-Line-Affliction",
+      "label": "Plant-Range-Line-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -56985,7 +56985,7 @@
     },
     {
       "id": "09fb524e-7007-4840-a2f3-517d6b0701a8",
-      "label": "Psychic-Burst-Affliction",
+      "label": "Psychic-Range-Burst-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -57174,7 +57174,7 @@
     },
     {
       "id": "e63b4661-85e6-4350-b856-a98a2cdcdeba",
-      "label": "Psychic-Cone-Affliction",
+      "label": "Psychic-Range-Cone-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -57714,7 +57714,7 @@
     },
     {
       "id": "494bc567-650d-4dec-bd3a-8352453b4180",
-      "label": "Weather-Burst-Affliction",
+      "label": "Weather-Range-Burst-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -57890,7 +57890,7 @@
     },
     {
       "id": "080ef479-8602-4d82-bcc6-9e0fcc6d5328",
-      "label": "Weather-Burst-Concealment",
+      "label": "Weather-Range-Burst-Concealment",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -58066,7 +58066,7 @@
     },
     {
       "id": "0aa220fc-86c3-4806-bae4-8b76caae4d5c",
-      "label": "Weather-Burst-Concealment-2",
+      "label": "Weather-Range-Burst-Concealment-2",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -58256,7 +58256,7 @@
     },
     {
       "id": "d3e8572a-07e9-4eeb-99d7-f71e3ac5a8a6",
-      "label": "Weather-Burst-Create",
+      "label": "Weather-Range-Burst-Create",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -58446,7 +58446,7 @@
     },
     {
       "id": "d5595910-13f9-46ff-9047-e15476256c37",
-      "label": "Weather-Burst-Move Object",
+      "label": "Weather-Range-Burst-Move Object",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -58622,7 +58622,7 @@
     },
     {
       "id": "b437f3fa-af87-44f3-baa0-582debd1211d",
-      "label": "Weather-Line-Create",
+      "label": "Weather-Range-Line-Create",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -59668,7 +59668,7 @@
           }
         }
       },
-      "label": "Curse-Burst-Damage",
+      "label": "Curse-Range-Burst-Damage",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -59940,7 +59940,7 @@
           }
         }
       },
-      "label": "Darkness-Burst-Concealment",
+      "label": "Darkness-Range-Burst-Concealment",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -60181,7 +60181,7 @@
           "enable": false
         }
       },
-      "label": "Darkness-Movement-Teleport",
+      "label": "Darkness-Personal-Teleport",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -60413,7 +60413,7 @@
         "playWhen": "0"
       },
       "presetType": "teleportation",
-      "label": "Darkness-Movement-Teleport-2",
+      "label": "Darkness-Personal-Teleport-2",
       "soundOnly": {
         "sound": {
           "enable": false,
@@ -60598,7 +60598,7 @@
           "file": "modules/dnd5e-animations/assets/sounds/Damage/Lightning/electric-continuous-1.mp3"
         }
       },
-      "label": "Electricity-Range-Affliction",
+      "label": "Electricity-Range-Range-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -60847,7 +60847,7 @@
         "playWhen": "0"
       },
       "presetType": "teleportation",
-      "label": "Gas-Movement-Teleport",
+      "label": "Gas-Personal-Teleport",
       "soundOnly": {
         "sound": {
           "enable": false,
@@ -61096,7 +61096,7 @@
           }
         }
       },
-      "label": "Ice-Burst-Damage-2",
+      "label": "Ice-Range-Burst-Damage-2",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -61360,7 +61360,7 @@
           }
         }
       },
-      "label": "Ice-Burst-Daze",
+      "label": "Ice-Range-Burst-Daze",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -61623,7 +61623,7 @@
           }
         }
       },
-      "label": "Indigo-Burst-Affliction",
+      "label": "Indigo-Range-Burst-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -61892,7 +61892,7 @@
           }
         }
       },
-      "label": "Light-Range-Burst-Affliction",
+      "label": "Light-Range-Range-Burst-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -62154,7 +62154,7 @@
           }
         }
       },
-      "label": "Light-Range-Burst-Damage",
+      "label": "Light-Range-Range-Burst-Damage",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -62415,7 +62415,7 @@
           }
         }
       },
-      "label": "Light-Range-Burst-Healing",
+      "label": "Light-Range-Range-Burst-Healing",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -62669,7 +62669,7 @@
         "playWhen": "0"
       },
       "presetType": "proToTemp",
-      "label": "Necro-Burst-Damage",
+      "label": "Necro-Range-Burst-Damage",
       "soundOnly": {
         "sound": {
           "enable": false,
@@ -62924,7 +62924,7 @@
         "playWhen": "0"
       },
       "presetType": "teleportation",
-      "label": "Portal-Movement-Teleport-2",
+      "label": "Portal-Personal-Teleport-2",
       "soundOnly": {
         "sound": {
           "enable": false,
@@ -63110,7 +63110,7 @@
           "file": "modules/dnd5e-animations/assets/sounds/Spells/Debuff/spell-whispers-5.mp3"
         }
       },
-      "label": "Psychic-Range-Mind Control",
+      "label": "Psychic-Range-Range-Mind Control",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -63364,7 +63364,7 @@
           }
         }
       },
-      "label": "Sample-Preset-Template",
+      "label": "Sample-Range-Preset-Template",
       "macro": {
         "enable": false,
         "name": "sample preset macro",
@@ -63537,7 +63537,7 @@
         "enable": false,
         "playWhen": "0"
       },
-      "label": "Weather-Burst-Damage",
+      "label": "Weather-Range-Burst-Damage",
       "presetType": "thunderwave",
       "data": {
         "video": {
@@ -63804,7 +63804,7 @@
         "playWhen": "0"
       },
       "presetType": "teleportation",
-      "label": "Weather-Movement-Teleport",
+      "label": "Weather-Personal-Teleport",
       "soundOnly": {
         "sound": {
           "enable": false,
@@ -64044,7 +64044,7 @@
           "startTime": null
         }
       },
-      "label": "Invisible-Movement",
+      "label": "Invisible-Personal-Teleport",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -64152,7 +64152,7 @@
           }
         }
       },
-      "label": "Colored-Energy-Burst-Affliction",
+      "label": "Colored-Energy-Range-Burst-Affliction",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -64342,7 +64342,7 @@
           }
         }
       },
-      "label": "Colored-Energy-Burst-Damage",
+      "label": "Colored-Energy-Range-Burst-Damage",
       "macro": {
         "enable": false,
         "playWhen": "0"
@@ -64532,7 +64532,7 @@
           }
         }
       },
-      "label": "Colored-Energy-Burst-Healing",
+      "label": "Colored-Energy-Range-Burst-Healing",
       "macro": {
         "enable": false,
         "playWhen": "0"
