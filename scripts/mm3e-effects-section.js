@@ -12603,6 +12603,7 @@ class SequenceRunnerEditor {
                 
                 this.descripterView.update()   
                 this.scriptView.updateFromPowerItem();
+                this.scriptView.update()
 
                 const saveButton = $('<button type="button">Save</button>');
                 saveButton.on('click', async () => {
@@ -14166,92 +14167,161 @@ this.script = script;
                 </fieldset>`
     } 
 }
-class SequencerScriptView{
+class SequencerScriptView {
     constructor(sequenceRunnerEditor) {
         this.sequenceRunnerEditor = sequenceRunnerEditor;
-        this.sequencerScript = this.sequenceRunnerEditor.descripterView.descriptorSequence.sequencerScript
-    } 
+        this.sequencerScript = this.sequenceRunnerEditor.descripterView.descriptorSequence.sequencerScript;
+    }
+
     get html() {
         return this.sequenceRunnerEditor.html;
     }
 
     get script() {
-    
         return this.html.find("#generated-script").val(); // Get the generated script
-    
     }
-    set script(script){
-        this.html.find("#generated-script").val(script)
-        //on script change, update the back end script
+
+    set script(script) {
+        this.html.find("#generated-script").val(script);
+        // Update the backend script when script changes
         this.html.find("#generated-script").on("change", async () => {
             this.sequencerScript.script = this.script;
         });
         this.sequencerScript.script = script;
     }
+
     async run() {
-        this.sequencerScript.run()
+        this.sequencerScript.run();
     }
 
-    get range(){
-        return this.sequencerScript.range()
-    }
-    get area(){
-        return this.sequencerScript.area()
-    }  
-
-    get powerEffects(){
-        return this.sequencerScript.powerEffects()
-    }
-
-    get name(){
-        return this.sequencerScript.name()
-    } 
-
-    get descriptorView(){
-        return this.sequenceRunnerEditor.descripterView
+    update() {
+        this.nameInputElement = document.getElementById('macro-name');
+        this.scriptField = document.getElementById('generated-script');
+        this.loadButton = document.getElementById('load-macro');
+        this.suggestionsElement = document.getElementById('macro-suggestions'); // Added for suggestions list
+        this.currentMatches = [];
+        this.listenForNameChanges();
+        this.registerOnEnter();
+        this.registerLoadMacroButtonClick();
     }
 
-    async generate() {  
-        this.sequencerScript.generate() 
-        this.script = this.sequencerScript.script
-        this.name = this.sequencerScript.name
-    }
-    async save(){
-        this.sequencerScript.save()
-    }
-
-    //set name from html text box acro-name
-    set name(name){
-        this.html.find("#macro-name").val(name)
-        //this.sequencerScript.name = name;
-
+    listenForNameChanges() {
+        this.nameInputElement.addEventListener('input', async (event) => {
+            const inputText = event.target.value;
+            this.matches = game.macros.contents.filter(macro =>
+                macro.name.toLowerCase().includes(inputText.toLowerCase())
+            );
+            this.updateMacroSuggestions(this.matches);
+            this.loadButton.disabled = this.matches.length === 0;
+            this.currentMatches = this.matches;
+        });
     }
 
-    updateFromPowerItem(){
+    registerOnEnter() {
+        this.nameInputElement.addEventListener('keydown', (event) => {
+            if (event.key === "Enter" && this.currentMatches.length > 0) {
+                this.name = this.currentMatches[0].name;
+                this.loadButton.disabled = false;
+                this.loadMacroContent(this.currentMatches[0]);
+            }
+        });
+    }
+
+    updateMacroSuggestions(matches) {
+        const suggestionList = this.suggestionsElement;
+        suggestionList.innerHTML = ""; // Clear previous suggestions
+
+        matches.forEach((macro) => {
+            const suggestionItem = document.createElement('div');
+            suggestionItem.classList.add('suggestion-item');
+            suggestionItem.textContent = macro.name;
+
+            // Add click behavior to select a macro
+            suggestionItem.addEventListener('click', () => {
+                this.name = macro.name;
+                this.loadButton.disabled = false;
+                this.currentMatches = [macro]; // Keep only the selected macro
+            });
+
+            suggestionList.appendChild(suggestionItem);
+        });
+    }
+
+    loadMacroContent(macro) {
+        this.script = macro.data.command;
+    }
+
+    registerLoadMacroButtonClick() {
+        this.loadButton.addEventListener('click', () => {
+            if (this.currentMatches.length > 0) {
+                this.loadMacroContent(this.currentMatches[0]);
+            }
+        });
+    }
+
+    set name(name) {
+        this.html.find("#macro-name").val(name);
+        this.sequencerScript.name = name;
+    }
+
+    get name() {
+        return this.sequencerScript.name();
+    }
+
+    get range() {
+        return this.sequencerScript.range();
+    }
+
+    get area() {
+        return this.sequencerScript.area();
+    }
+
+    get powerEffects() {
+        return this.sequencerScript.powerEffects();
+    }
+
+    get descriptorView() {
+        return this.sequenceRunnerEditor.descripterView;
+    }
+
+    async generate() {
+        this.sequencerScript.generate();
+        this.script = this.sequencerScript.script;
+        this.name = this.sequencerScript.name;
+    }
+
+    async save() {
+        this.sequencerScript.save();
+    }
+
+    updateFromPowerItem() {
         this.sequencerScript.updateFromPowerItem();
-        this.script = this.sequencerScript.script
-        this.name = this.sequencerScript.name
+        this.script = this.sequencerScript.script;
+        this.name = this.sequencerScript.name;
     }
 
     get content() {
-        return `       
-                <fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
-                    <legend>Output</legend>
-                    <input id="macro-name" type="text" style="width: 100%; margin-bottom: 10px;">
-                    <textarea id="generated-script" style="width: 100%; height: 300px;"></textarea>
-                    <button id="run-macro" type="button" style="margin-top: 10px;">Run Macro</button>
-                </fieldset>`
-    } 
+        return `
+            <fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+                <legend>Output</legend>
+                <input id="macro-name" type="text" style="width: 100%; margin-bottom: 10px;">
+                <div id="macro-suggestions" style="border: 1px solid #ddd; max-height: 150px; overflow-y: auto; margin-bottom: 10px;"></div>
+                <textarea id="generated-script" style="width: 100%; height: 300px;"></textarea>
+                <button id="run-macro" type="button" style="margin-top: 10px;">Run Macro</button>
+                <button id="load-macro" type="button" style="margin-top: 10px;" disabled>Load Macro</button>
+            </fieldset>`;
+    }
 
-    registerOnSaveClicked(){
+    registerOnSaveClicked() {
         this.html.find("#run-macro").on("click", async () => {
             await this.sequencerScript.run();
         });
     }
 
-    registerOnNameChanged(){    
+    registerOnNameChanged() {
         this.html.find("#macro-name").on("change", async (event) => {
-            this.sequencerScript.name = event.target.value
+            this.sequencerScript.name = event.target.value;
         });
     }
-} 
+}
+
