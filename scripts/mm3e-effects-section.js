@@ -13173,10 +13173,12 @@ class ProjectionSequence{
         let areaProjectMethods = projectMethods.find(method => method.original.toLowerCase().includes(powerItem.areaShape.toLowerCase()));
             if(areaProjectMethods){
                 this.method = areaProjectMethods.original;
+                return
             }
             else
             {
                 this.method ='project'
+                return
             }
         }
         else{
@@ -13189,6 +13191,7 @@ class ProjectionSequence{
                     else
                     {
                         this.method ='project'
+                        return
                     }
                 }
             else
@@ -13196,6 +13199,7 @@ class ProjectionSequence{
                 this.method = 'none';
             }
         }
+        this.method = 'none';
     }
 
     get methods() {
