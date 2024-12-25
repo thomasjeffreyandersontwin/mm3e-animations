@@ -591,10 +591,15 @@ Hooks.on("ready", () => {
                 rotation: this.affected.document.rotation + this.tokenAnchor.rotation
             });
         })
-        this._effect.effect().animation().on(this.affected).teleportTo({
-                x: position.x,
-                y: position.y
-            }).opacity(1)
+        if(position){
+            this._effect.effect().animation().on(this.affected).teleportTo({
+                    x: position.x,
+                    y: position.y
+                }).opacity(1)
+        }
+        else{
+            this._effect.effect().animation().on(this.affected).opacity(1)
+        }
         
         return this;
     }
@@ -1636,8 +1641,6 @@ Hooks.on("ready", () => {
             .endMovement(position)
             return this
         }
-
-
         affectHealing({affected = this.firstSelected}={}){
 
             this.affectCommon({affected:affected})
@@ -6281,7 +6284,7 @@ Hooks.on("ready", () => {
         } 
 
         descriptorAura(){
-            return this.file("animated-spell-effects-cartoon.fire.01")
+            return this.file("animated-spell-effects-cartoon.level 02.flaming sphere")
                 .anchor({x:0.5 , y:0.7, gridUnits:true})
                 .delay(400)
                 .scale(0.4)
@@ -11439,24 +11442,29 @@ super.burstCommon({affected:affected})
         }
 
     }
-    class SuperStrengthSection extends PowerEffectSection {  
-            constructor(inSequence) {
+    class SuperStrengthEffectSection extends TemplatedDescriptorEffect {  
+        constructor(inSequence) {
             super(inSequence);
         }
         castSlam({caster}={}){  
                 
                 super.castCommon({caster:caster, affected:caster}) 
-                let fs = new FlightEffect(this);
-                fs.start({caster:this.caster})
-                fs.end({caster:this.caster})
+              //  let fs = new FlightEffect(this);
+                this.start({caster:this.caster})
+                this.end({caster:this.caster})
             return this
         }
 
+        descriptorCastFlight(){
+            return this.start();
+        }
+  
         meleeCast({caster, affected, repeats=1}={} ){
             super.meleeCastCommon({caster:caster, affected:affected})
             .file("jb2a.melee_attack.02.trail") 
-            .scale(this.caster.document.width*.26, {gridUnits:true})
+            .scale(this.caster.document.width*.5, {gridUnits:true})
             .spriteOffset({x:-0.7*this.caster.document.width},{gridUnits:true})
+                .rotateTowards(this.affected)
             .filter("ColorMatrix", {
                 hue: 500, // Keep hue neutral for grey
                 contrast: 0, 
@@ -11469,20 +11477,19 @@ super.burstCommon({affected:affected})
 
         cast({caster, affected}={}){
             this.castCommon({caster:caster, affected:affected})
-                .file("jb2a.melee_generic.slash.01.orange").spriteOffset({x:-20, y:-10})
+                .file("jb2a.melee_generic.slash.01.orange").spriteOffset({x:20, y:-10})
                 .scaleToObject(1.5)
                 .zIndex(1)
                 .filter("ColorMatrix", {
-                    hue: 0, 
+                    hue: 500, 
                     contrast: 1, 
                     saturate: 0, 
                     brightness: 3 
                 })        
             .repeatEffect()
-            //       .mirrorY()
-            //       .pause(400)
+                   .mirrorY()
             .castCommon()
-            //     .file("jb2a.impact.001.orange")
+                 .file("jb2a.impact.001.orange")
                 .scaleToObject(2)
                 .filter("ColorMatrix", {
                     hue: 50,
@@ -11490,8 +11497,25 @@ super.burstCommon({affected:affected})
                     saturate: 0,
                     brightness: 1
                 })
-            //  .playSound("modules/mm3e-animations/sounds/action/powers/Hit6.ogg")
+              .playSound("modules/mm3e-animations/sounds/action/powers/Hit6.ogg")
             return this;
+        }
+
+        descriptorCastLeaping({position}={}){
+           this
+            .playSound("modules/mm3e-animations/sounds/action/powers/Whoosh2.ogg")
+            .file("jb2a.smoke.puff.ring.02.white")
+            .scaleToObject(1)
+            .opacity(.5)
+            .belowTokens()     
+        this.castCommon()
+            .file("jb2a.wind_stream.white")
+            .anchor({ x: 0.5, y: .5 })
+            .opacity(2)
+            .scale(this.caster.width / canvas.grid.size * 0.025)
+            .mirrorX()
+            .zIndex(1)
+        return this
         }
 
         burst({caster, affected}={}){
@@ -11577,6 +11601,21 @@ super.burstCommon({affected:affected})
             return this
         }
 
+        descriptorAura(){
+            this.file('animated-spell-effects-cartoon.energy.flash')
+                .scale(.2)
+                .spriteOffset({x:0 ,y:70})
+             
+           // .pause(500)  
+            .affectCommon()
+                .delay(-8000)
+                .file('animated-spell-effects-cartoon.smoke.57')
+             //   this.spriteOffset({x:0 ,y:70})
+                .scaleToObject(2)
+             
+            return this
+        }
+
         affectAffliction({affected}={}){
             //super.affectCommon({affected:affected})
             this.affectDamage({affected:affected,persistent:true})
@@ -11584,7 +11623,8 @@ super.burstCommon({affected:affected})
             return this
         }
 
-        affectDamage({affected = this.affected, persistent=false}){          
+        affectDamage({affected = this.affected, persistent=false}){   
+
             this.affect({affected:affected})
             this.file("jb2a.dizzy_stars.200px.yellow")
                 //.scaleIn(0, 100, {ease: "easeOutCubic"}) 
@@ -11609,12 +11649,42 @@ super.burstCommon({affected:affected})
             return this
         } 
 
+
+        descriptorLeaping(){
+            this.affectCommon()
+            this.playSound("modules/mm3e-animations/sounds/action/powers/SpringAttack_Land_01.ogg")
+            .shake({ duration: 1000, strength: 75, rotation: false, fadeOutDuration: 800 })
+            .playSound("modules/mm3e-animations/sounds/action/powers/Whoosh2.ogg") 
+            .pause(400)
+            .file("jb2a.impact.ground_crack.02.white")
+            return this
+        }
+
+        descriptorProtection(){    
+            this.effect()
+            .atLocation(this.affected)
+            .file(`animated-spell-effects-cartoon.flash.21`)
+            .tint("#808080")
+            .opacity(0.9)  
+            .size({ width: 2, height: 2 }, { gridUnits: true })
+            .fadeIn(1000, { ease: "easeInExpo" })
+            .fadeOut(2500, { ease: "easeInExpo" })
+            .filter("ColorMatrix", { hue: +60, contrast: 0.5, saturate: 0, brightness: 1 })
+            .playbackRate(0.25)
+            .scaleIn(0, 3000, { ease: "easeOutBack" })
+            .scaleOut(0, 3000, { ease: "easeInBack" })
+            .belowTokens()
+            .persist()
+            this.playSound('modules/mm3e-animations/sounds/Spells/Buff/spell-buff-build-up-2.mp3')
+            return this
+        }
+
         start({caster}={}){
-            this.originalEffectSection.castCommon({caster:caster, affected:caster})
-                .loopUp({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
+            this.castCommon({caster:caster, affected:caster})
+              //  .loopUp({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
                 .file("animated-spell-effects-cartoon.energy.16")
                 .rotate(90)
-                .scaleToObject(1)
+                .scaleToObject(1) 
                 .filter("ColorMatrix" , {
                         hue: 500, 
                         contrast: 0, 
@@ -11627,14 +11697,12 @@ super.burstCommon({affected:affected})
                 .repeatEffect()   //inherit last effect with any modifications we want below
                     .spriteOffset({x:0, y: -25})
                     .pause(900)
-                return this.originalEffectSection;
+                return this;
             }
         
         end({caster}={}){
-                this.originalEffectSection.castCommon({caster:caster, affected:caster})
-                .loopDown({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
-
-                .castCommon()
+                this.castCommon({caster:caster, affected:caster})
+              //  .loopDown({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false}
                 .file("animated-spell-effects-cartoon.energy.16")
                 .rotate(270)
                 .scaleToObject(1)
@@ -11649,9 +11717,23 @@ super.burstCommon({affected:affected})
             .repeatEffect()   //inherit last effect with any modifications we want below
                 .playSound("modules/mm3e-animations/sounds/action/powers/Whoosh2.ogg")
                 .spriteOffset({x:0, y: -25})
-                .pause(300)
-            .endMovement()
-            return this.originalEffectSection;
+            
+            return this;
+        }
+
+
+        descriptorFlight(){
+            this.end({caster:this.affected})
+                .affectCommon()
+                .file ("jb2a.impact.ground_crack.02.white")
+              //  .rotation( 270)
+                .scale( .75)
+                .filter( "ColorMatrix" , 
+                    {hue: 500, 
+                    contrast: 0, 
+                    saturate: 0,
+                    brightness: 1,
+                })
         }
     }
 
@@ -12475,13 +12557,13 @@ super.burstCommon({affected:affected})
     Sequencer.SectionManager.registerSection("myModule", "psychicEffect",PsychicEffectSection)
     Sequencer.SectionManager.registerSection("myModule", "radiationEffect",RadiationEffectSection)
     Sequencer.SectionManager.registerSection("myModule", "superSpeedEffect",SuperSpeedEffectSection)
-    Sequencer.SectionManager.registerSection("myModule", "superStrengthEffect",SuperStrengthSection)
+    Sequencer.SectionManager.registerSection("myModule", "superStrengthEffect",SuperStrengthEffectSection)
     Sequencer.SectionManager.registerSection("myModule", "waterEffect",WaterEffectSection)
 
     let selected 
   
 
- 
+   
 
 
 });
@@ -13366,7 +13448,7 @@ class DescriptorSequence{
             "radiationEffect": "Radiation",
         //    "noDescriptorEffect": "No Descriptor",
         //    "superSpeedEffect": "Super Speed",
-        //    "superStrengthEffect": "Super Strength",
+            "superStrengthEffect": "Super Strength",
             "waterEffect": "Water"
         };
         if(this.powerItem){
@@ -13452,7 +13534,15 @@ class DescriptorSequence{
     }
 
     updateFromPowerItem(){ 
-        this.selectedDescriptor = this.powerItem.descriptor.toLowerCase()+"Effect"
+        //concatentate the descriptor and effect to get the descriptorEffect
+        
+        let selectedDescriptor = this.powerItem.descriptor.replace(" ","")+"Effect"
+        //lower case first letter
+        selectedDescriptor = selectedDescriptor.charAt(0).toLowerCase() + selectedDescriptor.slice(1) ;
+       
+        
+        this.selectedDescriptor = selectedDescriptor
+        
         this.castSequence.updateFrom(this.powerItem);
         this.projectionSequence.updateFrom(this.powerItem);
         this.areaSequence.updateFrom(this.powerItem);
