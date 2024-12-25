@@ -1883,7 +1883,7 @@ Hooks.on("ready", () => {
         {
                 this.affectCommon({affected:affected})
                 //update the token image
-            this.tranform(image)
+            this.transform(image)
                 return this;
         }
         transform(image)
@@ -12597,7 +12597,7 @@ class GameHelper{
     static async targetWithCrossHair( {icon ='icons/skills/movement/feet-winged-boots-brown.webp', label ='target'}={}){
         let selected = GameHelper.selected
         let config = {
-            size: 1,
+            size: 2,
             icon: icon, 
             label: label,
             drawIcon: true,
@@ -12605,6 +12605,7 @@ class GameHelper{
             interval: 1 % 2 === 0 ? 1 : -1,
         }
         let position =   await warpgate.crosshairs.show(config);
+        //make sure this in repo
         selected.control()
         return position
     }
@@ -12969,7 +12970,7 @@ class AreaSequence{
     updateFrom(powerItem){
         if(powerItem.areaShape){
             let areaMethods = this.methods
-            if(areaMethods){
+            if(areaMethods && areaMethods.length>0){
                 let areaShapeMethod = areaMethods.find(method => method.original.toLowerCase().includes(powerItem.areaShape.toLowerCase())); // the base method
                 let areaShapeMethods = areaMethods.filter(method => method.original.toLowerCase().includes(powerItem.areaShape.toLowerCase()));//methods that match a powereffect
                 let effectMatchingAreaShapeMethod ;
@@ -12981,7 +12982,9 @@ class AreaSequence{
             }
 
             else{
+                if(areaMethods.length>0){
                 this.method = areaMethods[0].original;
+                }
             }
         }
     }
@@ -13353,6 +13356,7 @@ class DescriptorSequence{
         //    "kineticEffect": "Kinetic",
         //    "lightEffect": "Light",
             "lightningEffect": "Lightning",
+            "powerEffect": "Power",
         //    "magnetismEffect": "Magnetism",
         //    "loveEffect": "Love",
         //    "magicEffect": "Magic",
@@ -13515,8 +13519,8 @@ class DescriptorSequenceView{
         + this.affectedByPowerView.content
         + this.powerEffectMethodsView.content
     }
-    update() {
-        if(this.selected !=this.descriptorSequence.selectedDescriptor && this.descriptorSequence.selectedDescriptor!="no descriptorEffect"){
+    update() { 
+        if(this.selected!=null && this.selected !=this.descriptorSequence.selectedDescriptor && this.descriptorSequence.selectedDescriptor!="no descriptorEffect" ){
             this.selected =this.descriptorSequence.selectedDescriptor
         }
         this.castMethodsView.update()
@@ -13575,7 +13579,7 @@ class PowerItem{
     }
 get descriptor(){  
         let item = this.item;
-        return item.system.descripteurs["2"] ?item.system.descripteurs["2"]:item.system.descripteurs["1"]?item.system.descripteurs["1"]:item.system.descripteurs["0"]?item.system.descripteurs["0"]:"No Descriptor"
+        return item.system.descripteurs["2"] ?item.system.descripteurs["2"]:item.system.descripteurs["1"]?item.system.descripteurs["1"]:item.system.descripteurs["0"]?item.system.descripteurs["0"]:"Power"
 }
 get effect() {
     let power = this.item;
@@ -13608,6 +13612,7 @@ get effect() {
     //{
         //  matchedEffect = "Affliction"
     //}
+   
     return matchedEffect;
 } 
 get areaShape() {
@@ -13663,6 +13668,10 @@ get descriptorName(){
     return `${this.descriptor}-${this.range}-${area}-${this.effect}`;
     
 }
+
+get expandedDescriptorName(){
+       return this.descriptor+"-"+this.range + (this.areaShape!=undefined?"-"+this.areaShape:"" )+"-"+this.item.system.effetsprincipaux  
+} 
 get autoRecEntryLabel(){
         return this.matchingAutoRecEntry?.label
 }
@@ -13674,8 +13683,18 @@ get matchingAutoRecEntry(){
             return result
         }
         else{
-            powerName = this.descriptorName
-            return this.findAutoRecEntry(powerName)
+            powerName = this.descriptor+"-"+this.range + (this.areaShape!=undefined?"-"+this.areaShape:"" )+"-"+this.item.system.effetsprincipaux 
+            
+            result = this.findAutoRecEntry(powerName)
+            if(result){
+                return result
+            }
+            else{
+                powerName = this.descriptorName
+                result = this.findAutoRecEntry(powerName)
+                return result
+            }
+            
         }
 }
     findAutoRecEntry(search){
@@ -13709,8 +13728,15 @@ get matchingAutoRecEntry(){
             }
         }
         if(!animation.name){
-            let macroName = this.descriptorName ;
+            let macroName = this.expandedDescriptorName
             let macro = game.macros.find(macro => macro.name === macroName)
+            if(!macro){
+                let expanded = this.autoRecEntryLabel  //if there is an autorec that matches the expanded name get that first else look for a descriptor macro 
+                if(!expanded){
+                    macroName = this.descriptorName ;
+                     macro = game.macros.find(macro => macro.name === macroName)
+                }
+            }
             if(macro)
             {
                 animation.name = macroName 
