@@ -1,5 +1,6 @@
 mm3e-animations allows you to execute sequencer and automated animation lookep up based on the descriptor and power effect of the item being clicked on. Building a complete list of animations for an effects based systems like Mutants and Masterminds is basically impossible. 
 
+Check out lateest docs on the Wiki -->https://mm3efoundry.notion.site/Descriptor-Animations-for-MM3E-166b3a3d89ed809fbdf5d7d368748ad8
 Efects based systems allow players to define the exact power they want by purchasing a game effect for their character (like damage for instance), applying one or more modifiers (like range and area effect), and then finally a descriptor (like fire, or maybe a thrown hammer). This modulemakes animating powers for this type of system by:
 1. Providing a mechanism to invoke an animation based on the descriptor, range type, option area shape, and power effects of an item being clicked
 2. Support for automated animations entries and sequencer macros
