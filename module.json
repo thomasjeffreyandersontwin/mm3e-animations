@@ -1,0 +1,45 @@
+{
+  "id": "mm3e-animations",
+  "title": "MM3e Animations",
+  "version": "0.0.2",
+  "compatibility": {
+    "minimum": "11",
+    "verified": "11"
+  },
+  "url": "https://github.com/thomasjeffreyandersontwin/mm3e-animations",
+  "scripts": [
+	"scripts/mm3e-effects-section.js"
+  ],
+  "packs": [
+    {
+      "name": "animation-macros",
+      "label": "animation-macros",  
+      "path": "packs/animation-macros",
+      "type": "Macro",
+      "system": "mutants-and-masterminds-3e",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "animation-example-actors",
+      "label": "animation-example-actors",
+      "path": "packs/animation-example-actors",
+      "type": "Actor",
+      "system": "mutants-and-masterminds-3e",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    }
+  ],
+  "relationships": {
+    "requires": [
+      {
+        "id": "sequencer",
+        "type": "module"
+      }
+    ]
+  }
+}

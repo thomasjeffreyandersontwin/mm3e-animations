@@ -1953,13 +1953,18 @@ Hooks.on("ready", () => {
         transform(image)
         {
             
-            if(!image)
+           if(!image)
             {
                 image = this.constructor.name.replace('Section','')
                 image = image.charAt(0).toLowerCase() + image.slice(1);
                 image = 'modules/mm3e-animations/tiles/'+ image +'.webm'
             }
-            this.thenDo(()=> this.affected.document.update({ "texture.src": image }))
+            this.file(image)
+            .atLocation(this.affected)
+            .scaleToObject(1)
+            this.hideToken(this.affected)
+            .persist() 
+            //this.thenDo(()=> this.affected.document.update({ "texture.src": image }))
         }
 
 
@@ -12622,58 +12627,371 @@ super.burstCommon({affected:affected})
         constructor(){
             super("webEffect")
         }
-        descriptorCast(){   
-        }
+   
         descriptorMeleeCast(){
+            return this.file('jb2a.melee_generic.creature_attack.fist')
+            .rotateTowards(this.affected)
+            .scaleToObject(2)
+            .filter("ColorMatrix", { hue: 0, brightness: 1, contrast: 0, saturate: -1 })
+            return this;
         }
 
         descriptorCastSwing(){
             
         }
 
+        descriptorCast(){
+            return this.file("jb2a.impact.005.orange")
+          //  .atLocation(token)
+            .scale(0.3)
+            .aboveLighting()
+            .rotateTowards(this.affected)
+            .scaleIn(0, 200, { ease: "easeOutCubic" })
+            .filter("ColorMatrix", { saturate: -1 })
+        .castCommon()
+            .file("jb2a.particles.outward.white.01.02")
+            .scaleIn(0, 500, { ease: "easeOutQuint" })
+            .fadeOut(1000)
+            .duration(1000)
+            .size(1.75, { gridUnits: true })
+            .animateProperty("spriteContainer", "position.y", { from: 0, to: -0.5, gridUnits: true, duration: 1000 })
+            .zIndex(1)
+        
+            
+        }
+
+        castBall({caster:caster, affected:affected}={}){
+            this.castCommon({caster:caster, affected:affected})
+            .file("jb2a.cast_generic.01.yellow.0") 
+            .scaleToObject(2)
+            .filter("ColorMatrix", { saturate: -1 })
+            .playbackRate(0.8)
+            .fadeIn(500)
+            .fadeOut(100)
+            .belowTokens()
+            .waitUntilFinished()
+         .castCommon()
+            .file("jb2a.impact.005.orange")
+            .scale(0.3)
+            .aboveLighting()
+            .rotateTowards(this.affected)
+            .scaleIn(0, 200, { ease: "easeOutCubic" })
+            .filter("ColorMatrix", { saturate: -1 })
+
+         .castCommon()
+            .file("jb2a.particles.outward.white.01.02")
+            .scaleIn(0, 500, { ease: "easeOutQuint" })
+            .fadeOut(1000)
+          
+            .duration(1000)
+            .size(1.75, { gridUnits: true })
+            .animateProperty("spriteContainer", "position.y", { from: 0, to: -0.5, gridUnits: true, duration: 1000 })
+            .zIndex(1)
+
+            return this
+        }
 
         descriptorProject(){
             this.playSound('modules/mm3e-animations/sounds/power/webbing/web*.ogg')
             this.projectCommon().file('modules/makeitshiny-dnd5e/Spells/2nd_Level/Web/Throw/Throw.webm')
-            
             .waitUntilFinished(-100)
-
-
             return this
         }
-        projectDamage(){
 
+
+        projectBall({caster, affected}={}){
+            return this.castCommon({caster:caster, affected:affected})
+                .file('jb2a.markers.light_orb.loop.white')
+               
+                .moveTowards(this.affected)
+                .moveSpeed(1000)
+                .scaleToObject(0.6)
+                .zIndex(1)
+                .waitUntilFinished(-100)
         }
-        projectMultiAttack(){
+        projectMultiAttack({caster, affected}={}){
+            this.projectCommon({caster:caster,affected:affected})
+            .delay(-300)
+            return this.file("jb2a.fireball.beam.blue")
+            .filter("ColorMatrix",{hue:0, saturate: -1, brightness:0.7, contrast: 0.8})
+            .stretchTo(this.affected, {randomOffset: 0.65, attachTo: true})
+            .fadeIn(500)
+            .fadeOut(2500, {ease:"easeOutCubic"})
+            .repeats(9,2,1)
+            .zIndex(1.1)
+            .scale(0.25)
+            .opacity(0.75)
+            .pause(2400)
         }
 
-        projectDazzle(){
-
+        projectDazzle({caster, affected}={}){
+            this.projectCommon({affected, caster})
+            return this.file("jb2a.fireball.beam.blue")
+            .filter("ColorMatrix",{hue:0, saturate: -1, brightness:0.7, contrast: 0.8})
+            .stretchTo(this.affected, { offset: { x: -50, y: -50 }, local: true })
+            .fadeIn(500)
+            .fadeOut(2500, {ease:"easeOutCubic"})
+            .zIndex(1.1)
+            .scale(0.25)
+            .opacity(0.75)
+            .playbackRate(4)
+            .pause(550)
         }
         projectAffliction(){
             return this.project()
         }
 
-        descriptorBurst(){}
-        burstThick(){}
+        projectToCone({caster, affected}={}){
+            this.initializeTemplateVariables()
+            this.castCommon({caster:caster, affected:affected})
+                .file('jb2a.markers.light_orb.loop.white')
+               
+                .moveTowards(this.templateStart)
+                .moveSpeed(1000)
+                .scaleToObject(0.6)
+                .zIndex(1)
+                .waitUntilFinished(-100)
+            return this
+        }
+        projectToLine({caster, affected}={}){
+            return this.projectToCone({caster:caster, affected:affected})
+        }
 
-        descriptorCone(){}
-        descritporLine(){
+        descriptorBurst(){
+           return  this.file("jb2a.impact.004.yellow")
+                .scaleToObject(1)
+                .scaleIn(0, 200, { ease: "easeOutCubic" })
+                .filter("ColorMatrix", { saturate: -1, brightness: 1.5 })
+                .pause(100)
+            .burstCommon()
+                .file('modules/animated-spell-effects/spell-effects/misc/web_spider_realistic_CIRCLE_01.webm')
+                .filter("ColorMatrix", { saturate: -1, brightness: 1.5 })
+                .belowTokens()
+                .fadeIn(1500)
+                .zIndex(1)
+                .fadeOut(1500)
+                .scaleIn(0, 500, { ease: "easeOutCubic" })
+                .scaleToObject(1)
+                .loopOptions({ maxLoops: 1, endOnLastLoop:true })
+                .persist()
+                .pause(200)
+            .repeatEffect()
+        }
+        
+        burstThick({caster,affected}={}){
+            return this.burstCommon( {caster:caster,affected:affected})
+            .file("jb2a.impact.004.yellow")
+            .scaleToObject(1)
+            .scaleIn(0, 200, {ease: "easeOutCubic"})
+            .filter("ColorMatrix", { saturate: -1 })
+
+            .burstCommon()
+            .file('jb2a.web.01')
+            .belowTokens()
+            .fadeIn(1500)
+            .zIndex(1)
+            .fadeOut(1500)
+            .scaleIn(0, 500, {ease: "easeOutCubic"})
+            .scaleToObject(1)
+            .persist()
+            .pause(600) 
+            .repeatEffect()
+        }
+
+        descriptorCone(){ 
+            return this.file('jb2a.cone_of_cold.blue')
+            //tint grey
+            .filter("ColorMatrix", { saturate: -.9, brightness:1 })  
+            .playbackRate(4)
+        }
+        descriptorLine(){
             return this.descriptorCone()
         }
 
         descriptorAffliction(){
-            return this.descriptorSnare()
+            this.affectCommon()
+                .file("jb2a.impact.004.yellow")
+                .scaleToObject(2)
+                .scaleIn(0, 200, { ease: "easeOutCubic" })
+                .filter("ColorMatrix", { saturate: -1 , brightness: 2})
+                .pause(100)
+            .affectCommon()
+                .file('modules/animated-spell-effects/spell-effects/misc/web_spider_realistic_CIRCLE_01.webm')
+                .opacity(1.5)
+                .duration(3000)
+                .zIndex(1)
+                .fadeOut(1500)
+                .spriteRotation(30)
+              this.filter("ColorMatrix", { saturate: -1, brightness: 1.5})
+                .scaleIn(0, 500, { ease: "easeOutCubic" })
+                .scaleToObject(0.8)
+                .anchor({ x: 0.7, y: 0.8 })
+                .persist()
+        this.repeatEffect()
+            this.anchor({ x: 0.2, y: 0.5 })
+             this.filter("ColorMatrix", { saturate: -1, brightness: 1.5})
+         this.repeatEffect()
+            this.anchor({ x:.8, y:-0.1 }) 
+             this.filter("ColorMatrix", { saturate: -1, brightness: 1.5})
+        this.repeatEffect()
+            this.anchor({ x:.5, y:0.2 })   
+             this.filter("ColorMatrix", { saturate: -1, brightness: 1.5})
+        this.resistAndStruggle()
+            return this
         }
         descriptorAura(){
             return this
+            .file('animated-spell-effects-cartoon.level 01.divine favour')
+            .filter("ColorMatrix", { brightness:1, hue: 0, contrast: 0, saturate: -1 })
+            .scaleToObject(1)
+            .affectCommon()
+            .file('modules/makeitshiny-dnd5e/Spells/2nd_Level/Web/Area/Web.webm')
+            .scaleToObject(1)
+            .rotateIn(360, 5000, { ease: "linear" }) 
+            .belowTokens()
         }
 
-        descriptorDamage(){}
-        descriptorDazzle(){}
+        descriptorDamage(){
+            this.recoilAwayFromSelected({distance:.02, repeats:1})
+            this.affectCommon()
+                .file("jb2a.impact.004.yellow")
+                .scaleToObject(.5)
+                .scaleIn(0, 200, { ease: "easeOutCubic" })
+                this.filter("ColorMatrix", { saturate: -1, brightness: 2})
+                .delay(-800)
+            this.repeatEffect()
+                this.anchor({ x: -.2, y: -.7}) 
+                this.filter("ColorMatrix", { saturate: -1, brightness: 2})
+            this.repeatEffect()
+                .filter("ColorMatrix", { saturate: -1, brightness: 2})
+                this.anchor({ x: .9, y: -.7})    
+            this.repeatEffect()
+                this.anchor({ x: -.5, y: 1.1}) 
+                .filter("ColorMatrix", { saturate: -1, brightness: 2})
+            this.repeatEffect()
+                this.anchor({ x: 0, y: 0})  
+                this.filter("ColorMatrix", { saturate: -1, brightness: 2})      
+            this.repeatEffect()
+                this.anchor({ x: .5, y: 1.1}) 
+                .filter("ColorMatrix", { saturate: -1, brightness: 2})
+      
+            this.affectCommon()
+                .file('modules/animated-spell-effects/spell-effects/misc/web_spider_realistic_CIRCLE_01.webm')
+                .opacity(1.5)
+                .duration(3000)
+                .zIndex(1)
+                .fadeOut(1500)
+                .spriteRotation(30)
+                .filter("ColorMatrix", { brightness: .9, contrast: 1, saturate: 0 })
+                .scaleIn(0, 500, { ease: "easeOutCubic" })
+                .scaleToObject(0.4)
+                .anchor({ x: .7, y: 1.5 })
+        this.repeatEffect()
+            this.anchor({ x: -.2, y: -.7}) 
+            .filter("ColorMatrix", { brightness: .9, contrast: 1, saturate: 0 })
+        this.repeatEffect()
+        this.filter("ColorMatrix", { brightness: .9, contrast: 1, saturate: 0 })
+            this.anchor({ x: .9, y: -.7}) 
+           
+        this.repeatEffect()
+            this.anchor({ x: -.5, y: 1.1}) 
+            this.filter("ColorMatrix", { brightness: .9, contrast: 1, saturate: 0 })
+        this.repeatEffect()
+            this.anchor({ x: 0, y: 0})  
+            this.filter("ColorMatrix", { brightness: .9, contrast: 1, saturate: 0 }) 
+            
+        this.repeatEffect()
+            this.anchor({ x: .5, y: 1.1}) 
+            this.filter("ColorMatrix", { brightness: .9, contrast: 1, saturate: 0 })
+
+           
+            .delay(-3000)
+    
+            return this    
+        }
+
+        descriptorDeflection(){
+            this.deflectionAnimation='jb2a.bullet.Snipe.blue.05ft'
+            this.file("modules/makeitshiny-dnd5e/Spells/2nd_Level/Web/Area/Web.webm")
+            .rotateIn(360, 1000, { ease: "linear" }) 
+            .scaleToObject(1)
+            .fadeIn(500)
+            .fadeOut(500)
+            .pause(800)
+
+            .affectCommon()
+            .file("modules/animated-spell-effects/spell-effects/misc/web_spider_realistic_CIRCLE_01.webm")
+            .scaleToObject(1.5)
+            .fadeIn(500)
+            .fadeOut(500)
+            .duration(3000)
+          //  .persist(false)
+            .play();
+
+            this.initalizeRandomNumbers();
+        }
+        descriptorDazzle(){
+            this.affectCommon()
+            .delay(-1000)
+                .file("jb2a.impact.004.yellow")
+                .scaleToObject(0.3)
+                .scaleIn(0, 200, { ease: "easeOutCubic" })
+                .filter("ColorMatrix", { saturate: -1 , brightness: 2})
+                .pause(100)
+                .anchor({ x: 0.6, y: 1.9 })
+            .affectCommon()
+                .file('modules/animated-spell-effects/spell-effects/misc/web_spider_realistic_CIRCLE_01.webm')
+                .opacity(1.5)
+                .duration(3000)
+                .zIndex(1)
+                .fadeOut(1500)
+                .spriteRotation(30)
+                .spriteRotation(30)
+                .anchor({ x: 0.6, y: 1.9 })
+                this.filter("ColorMatrix", { saturate: -1, brightness: 1.5})
+                .scaleIn(0, 500, { ease: "easeOutCubic" })
+                .scaleToObject(0.3)
+                .delay(-1000)
+                .persist()
+                .attachTo(this.affected)
+            return this
+        }
         descriptorHeal(){}    
        
-        descriptorProtect(){}
+        descriptorProtection(){
+            return this
+                .file('animated-spell-effects-cartoon.level 01.divine favour')
+                .filter("ColorMatrix", { brightness:1, hue: 0, contrast: 0, saturate: -1 })
+                .scaleToObject(1)
+            .affectCommon()
+                .file('jb2a.markers.shield_rampart.complete.03.white')
+                .scaleToObject(1)
+            .affectCommon()
+                .file('modules/makeitshiny-dnd5e/Spells/2nd_Level/Web/Area/Web.webm')
+                .scaleToObject(1)
+                .rotateIn(360, 6800, { ease: "linear" }) 
+                .belowTokens()
+                .persist()
+                .pause(800)
+            .affectCommon()
+                .file('modules/makeitshiny-dnd5e/Spells/2nd_Level/Web/Area/Web.webm')
+                .scaleToObject(1)
+                .rotateIn(360, 6000, { ease: "linear" }) 
+                .belowTokens()
+                return this
+        }
+        affectSenses({affected = this.affected}={}){
+            this.affectCommon({affected:affected})
+            this.file('animated-spell-effects-cartoon.electricity.wave')
+            .spriteOffset({x:25, y:0})
+            .scaleToObject(.45)
+            .rotate(90)
+            .belowTokens()
+            .filter("ColorMatrix", {hue: 0, contrast: 0, saturate: 0})
+            .tint('0x000000')
+            .playSound('modules/mm3e-animations/sounds/action/powers/CrabEye_loop.ogg')
+            return this;
+        }
         descriptorSnare(){
             return this.affectCommon()
             .file('modules/makeitshiny-dnd5e/Spells/2nd_Level/Web/Area/Web.webm')
@@ -12685,15 +13003,7 @@ super.burstCommon({affected:affected})
         }
 
         descriptorSwing(){}
-        descriptorTransform(){
-            return this.affectCommon()
-            .file('modules/makeitshiny-dnd5e/Spells/2nd_Level/Web/Area/Web.webm')
-            .scaleToObject(1.5)
-            .zIndex(12)
-            .persist()
-            .resistAndStruggle()
-
-        }
+        
 
     }
     Sequencer.SectionManager.registerSection("myModule", "mm3eEffect", BaseEffectSection)
@@ -13335,10 +13645,10 @@ class AreaSequence extends BaseSequence {
                 this.method = areaMethods[0].original;
             }
         }
-    }
+    }   
 
     get methods() {
-        return this.getMethods({
+        let methods =  this.getMethods({
             descriptorFilter: method =>
                 ["burst", "cone", "line"].some(shape => method.toLowerCase().includes(shape)),
             macroFilter: (name, descriptor) =>
@@ -13346,6 +13656,17 @@ class AreaSequence extends BaseSequence {
             autorecFilter: (label, descriptor) =>
                 /Cone|Burst|Line/.test(label) && label.startsWith(`${descriptor}-`)
         });
+              //replace all items in methods with words Burst, Cone, Line to lowercase
+        methods = methods.map(method => {
+            method.display = method.display.replace('Burst', 'burst');
+            method.display = method.display.replace('Cone', 'cone');
+            method.display = method.display.replace('Line', 'line');
+            return method;
+        });
+        //remove all items with the word project in it
+        methods = methods.filter(method => !method.display.includes("project"));
+        
+        return methods;
     }
 
     generateScript(sequencerActive) {
@@ -13368,9 +13689,10 @@ class AreaSequence extends BaseSequence {
                 `;
                 this.sequencerActive = true;
             }
-            script += `
-            .${this.method}()
-            `;
+            let method = this.method.replace("descriptor","")
+            method = method.charAt(0).toLowerCase() + method.slice(1);
+            script += `.${method}()
+.play();`;
             this.sequencerActive = true;
         }
         else{
@@ -13529,8 +13851,7 @@ class ProjectionSequence extends BaseSequence {
                 `;
                 
             }
-            script += `
-await window.AutomatedAnimations.playAnimation(selected, { name: '${this.method}', type: "spell" }, {});
+            script += `await window.AutomatedAnimations.playAnimation(selected, { name: '${this.method}', type: "spell" }, {});
             `;
             this.sequencerActive = false;
         } else if (this.method !== "none" && this.method) {
@@ -13543,9 +13864,13 @@ new Sequence()
             }
             let method = this.method.replace("descriptor", "");
             method = method.charAt(0).toLowerCase() + method.slice(1);
-            script += `
-.${method}({ affected: ${this.descriptorSequence.affectedByPowerSequence.affectedType} })
-            `;
+            let target = this.descriptorSequence.affectedByPowerSequence.affectedType
+            if(this.descriptorSequence.areaSequence.method && this.descriptorSequence.areaSequence.method!="none")
+            {
+                target = "template"
+            }
+            script += `.${method}({ affected: ${target} })
+        `;
             this.sequencerActive = true;
         }
         else{
@@ -13708,22 +14033,26 @@ class CastSequence extends BaseSequence{
                 `;
             }
             script += `
-await window.AutomatedAnimations.playAnimation(selected, { name: '${this.method}', type: "spell" }, {});
+    await window.AutomatedAnimations.playAnimation(selected, { name: '${this.method}', type: "spell" }, {});
             `;
              this.sequencerActive = false;
         } else {
             if (!sequencerActive) { 
                 script += `
 new Sequence()
-.${this.descriptorSequence.selectedDescriptor}()`;
+    .${this.descriptorSequence.selectedDescriptor}()`;
                 this.sequencerActive = true;
             }
             let method = this.method.replace("descriptor","")
             method = method.charAt(0).toLowerCase() + method.slice(1);
-
+            let target = this.descriptorSequence.affectedByPowerSequence.affectedType
+            if(this.descriptorSequence.areaSequence.method && this.descriptorSequence.areaSequence.method!="none")
+            {
+                target = "template"
+            }
             script += `
-    .${method ? method : "cast"}({ affected: ${this.descriptorSequence.affectedByPowerSequence.affectedType} ${this.descriptorSequence.powerEffectSequence.hasMovementEffect ? ", position: position" : ""} })
-            `;
+        .${method ? method : "cast"}({ affected: ${target} ${this.descriptorSequence.powerEffectSequence.hasMovementEffect ? ", position: position" : ""} })
+        `;
          this.sequencerActive = true;
         }
         return script;
@@ -14309,7 +14638,7 @@ class SequencerScript{
     }
     get area(){
         return this.descriptorSequence.areaSequence.method && this.descriptorSequence.areaSequence.method !== "none"
-            ? ["cone", "line", "burst"].find(keyword => this.descriptorSequence.areaSequence.method.includes(keyword.toLowerCase())) || ""
+            ? ["cone", "line", "burst"].find(keyword => this.descriptorSequence.areaSequence.method.toLowerCase().includes(keyword.toLowerCase())) || ""
             : "";
     } 
 
@@ -14348,10 +14677,9 @@ class SequencerScript{
             }
         });
     
-        let script = `
-        const selected = GameHelper.selected;
-        const selectedTargets = Array.from(game.user.targets);
-        `;
+        let script = 
+`const selected = GameHelper.selected;
+const selectedTargets = Array.from(game.user.targets);`;
     
         let sequencerActive = false;
     
@@ -14370,7 +14698,7 @@ class SequencerScript{
                 script += `
     .play();
                 `;
-            }
+            } 
         } else {
             if (this.descriptorSequence.powerEffectSequence.hasMovementEffect) {
                 script += `
@@ -14381,15 +14709,15 @@ class SequencerScript{
             const areaMethod = this.descriptorSequence.areaSequence.method;
             if (areaMethod && areaMethod!= "none" ) { 
                 script += `
-                await GameHelper.waitForTemplatePlacement();
-                let template = GameHelper.template;
-                
+await GameHelper.waitForTemplatePlacement(); 
+const template = GameHelper.template;
                             `;
-            }
-            if (this.descriptorSequence.affectedByPowerSequence.affectedType === "target") {
-                script += `
+            }else{
+                if (this.descriptorSequence.affectedByPowerSequence.affectedType === "target") {
+                    script += `
 for (let target of selectedTargets) {
     `;
+                }
             }
 
             script= script+this.descriptorSequence.castSequence.generateScript(sequencerActive)
@@ -14401,6 +14729,10 @@ for (let target of selectedTargets) {
             if (areaMethod && areaMethod!= "none" ) {
                 script += this.descriptorSequence.areaSequence.generateScript(sequencerActive);
                 sequencerActive = this.descriptorSequence.areaSequence.sequencerActive;
+                script += `
+await GameHelper.sleep(3000)
+for (let target of selectedTargets) {
+    `;
             }
     
             // Add power effect logic
@@ -14416,35 +14748,29 @@ for (let target of selectedTargets) {
 await window.AutomatedAnimations.playAnimation(${whoIsAffected}, { name: '${powerEffectMethod.original}', type: "spell" }, {});
                     `;
                 } else {
-                    if (!sequencerActive) {
-                        script += `
-new Sequence()
-    .${this.descriptorSequence.selectedDescriptor}()
-                        `;
-                        sequencerActive = true;
+                    if(this.descriptorSequence.areaSequence.method && this.descriptorSequence.areaSequence.method!="none"){
+                        script+=`
+   new Sequence()
+   .${this.descriptorSequence.selectedDescriptor}()`
                     }
-                    script += `
-.${powerEffectMethod.original}({ affected: ${this.descriptorSequence.affectedByPowerSequence.affectedType} ${this.descriptorSequence.powerEffectSequence.hasMovementEffect ? ", position: position" : ""} })
-                    `;
+                    script += `.${powerEffectMethod.original}({ affected: ${this.descriptorSequence.affectedByPowerSequence.affectedType} ${this.descriptorSequence.powerEffectSequence.hasMovementEffect ? ", position: position" : ""} })
+    `;
                 }
             });
 
             if (powerEffectMethods.length === 0 && sequencerActive) {
-                script += `
-.affectAura({ affected: ${this.descriptorSequence.affectedByPowerSequence.affectedType} })
+                script += `.affectAura({ affected: ${this.descriptorSequence.affectedByPowerSequence.affectedType} })
                 `;
             }
 
             if (sequencerActive) {
-                script += `
-.play();
-                `;
+                script += `.play();
+`;
              
             }
 
             if (this.descriptorSequence.affectedByPowerSequence.affectedType === "target") {
-                script += `
-}
+                script += `}
                 `;
             }
         }
@@ -14546,7 +14872,7 @@ class SequencerScriptView {
         this.sequencerScript.script = script;
     }
 
-    async run() {
+    async run() { 
         this.sequencerScript.run();
     }
 
@@ -14617,7 +14943,7 @@ class SequencerScriptView {
 
     set name(name) {
         this.html.find("#macro-name").val(name);
-        this.sequencerScript.name = name;
+       // this.sequencerScript.name = name;
     }
 
     get name() {
