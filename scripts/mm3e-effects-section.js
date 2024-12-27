@@ -11778,7 +11778,7 @@ super.burstCommon({affected:affected})
 
         start({caster}={}){
             this.castCommon({caster:caster, affected:caster})
-              //  .loopUp({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
+                .loopUp({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
                 .file("animated-spell-effects-cartoon.energy.16")
                 .rotate(90)
                 .scaleToObject(1) 
@@ -11793,16 +11793,16 @@ super.burstCommon({affected:affected})
                     .playSound("modules/mm3e-animations/sounds/action/powers/whoosh9.ogg")
                 .repeatEffect()   //inherit last effect with any modifications we want below
                     .spriteOffset({x:0, y: -25})
-                    .pause(900)
-                return this;
+                    .pause(900)   
+                return this; 
             }
         
         end({caster}={}){
                 this.castCommon({caster:caster, affected:caster})
-              //  .loopDown({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false}
+                .loopDown({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
                 .file("animated-spell-effects-cartoon.energy.16")
                 .rotate(270)
-                .scaleToObject(1)
+                .scaleToObject(1)  
                 .filter("ColorMatrix" , {
                         hue: 500, 
                         contrast: 0, 
@@ -13125,8 +13125,10 @@ class GameHelper{
             return new Promise( (resolve) => {
                 Hooks.once("createMeasuredTemplate", async (template) => {
                     console.log("Template placed:", template);
+                    let targets = Array.from(game.user.targets); 
                     clearTimeout(timeout)
                     selected.control()
+                    await GameHelper.sleep(1000)
                     resolve(template);                
                 });
                 const timeout = setTimeout(() => {
@@ -13136,12 +13138,21 @@ class GameHelper{
             });
         }
     }
-    static get selected(){
+    static get selected(){ 
         return canvas.tokens.controlled[0];
     }
 
     static get targeted(){
         return Array.from(game.user.targets)[0];
+    }
+
+    static async getAllTargeted(){
+        let targets =  Array.from(game.user.targets);
+        while(targets.length == 0){
+            await GameHelper.sleep(1000)
+            targets =  Array.from(game.user.targets);
+        }
+        return targets;
     }
 
     static get target(){
@@ -14678,8 +14689,7 @@ class SequencerScript{
         });
     
         let script = 
-`const selected = GameHelper.selected;
-const selectedTargets = Array.from(game.user.targets);`;
+`const selected = GameHelper.selected;`;
     
         let sequencerActive = false;
     
@@ -14709,7 +14719,7 @@ const selectedTargets = Array.from(game.user.targets);`;
             const areaMethod = this.descriptorSequence.areaSequence.method;
             if (areaMethod && areaMethod!= "none" ) { 
                 script += `
-await GameHelper.waitForTemplatePlacement(); 
+await GameHelper.waitForTemplatePlacement()
 const template = GameHelper.template;
                             `;
             }else{
@@ -14719,6 +14729,7 @@ for (let target of selectedTargets) {
     `;
                 }
             }
+            script+=`const selectedTargets = await GameHelper.getAllTargeted();`
 
             script= script+this.descriptorSequence.castSequence.generateScript(sequencerActive)
             sequencerActive = this.descriptorSequence.castSequence.sequencerActive;
