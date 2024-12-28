@@ -10,6 +10,8 @@
   "scripts": [
 	"scripts/mm3e-effects-section.js"
   ],
+  "manifest": "https://github.com/thomasjeffreyandersontwin/mm3e-animations/releases/latest/download/module.json",
+  "download": "https://github.com/thomasjeffreyandersontwin/mm3e-animations/releases/download/0.0.1/mm3e-animations.zip",
   "packs": [
     {
       "name": "animation-macros",

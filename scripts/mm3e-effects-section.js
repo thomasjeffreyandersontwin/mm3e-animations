@@ -1,11 +1,11 @@
-
+   
  
 Hooks.on("ready", () => {  
     Hooks.on('rollPower', async (atk, token,strategie, altKey) => {
         let powerItem = new PowerItem(atk);
         powerItem.animation.play(token);
         })
-
+ 
     Hooks.on('rollAttack', async (atk, token,strategie, altKey) => {
         let item = token.actor.items.get(atk.links.pwr)
         let powerItem = new PowerItem(item);
@@ -14155,7 +14155,7 @@ class DescriptorSequence{
          //   "darknessEffect":"Darkness",
             "earthEffect": "Earth",
             "electricityEffect": "Electricity",
-         //   "energyEffect": "Energy",
+            "energyEffect": "Energy",
           //  "entropyEffect": "Entropy",
           //  "exoskeletonEffect": "Exoskeleton",
             "fireEffect": "Fire",
@@ -14721,16 +14721,19 @@ class SequencerScript{
                 script += `
 await GameHelper.waitForTemplatePlacement()
 const template = GameHelper.template;
-                            `;
+`;
+                            script+=`const selectedTargets = await GameHelper.getAllTargeted();`
+
             }else{
                 if (this.descriptorSequence.affectedByPowerSequence.affectedType === "target") {
+                    script+=`const selectedTargets = await GameHelper.getAllTargeted();`
+
                     script += `
 for (let target of selectedTargets) {
     `;
                 }
             }
-            script+=`const selectedTargets = await GameHelper.getAllTargeted();`
-
+            
             script= script+this.descriptorSequence.castSequence.generateScript(sequencerActive)
             sequencerActive = this.descriptorSequence.castSequence.sequencerActive;
 
@@ -14742,8 +14745,10 @@ for (let target of selectedTargets) {
                 sequencerActive = this.descriptorSequence.areaSequence.sequencerActive;
                 script += `
 await GameHelper.sleep(3000)
-for (let target of selectedTargets) {
+for (let target of selectedTargets) { 
     `;
+
+                 
             }
     
             // Add power effect logic
@@ -14773,7 +14778,7 @@ await window.AutomatedAnimations.playAnimation(${whoIsAffected}, { name: '${powe
                 script += `.affectAura({ affected: ${this.descriptorSequence.affectedByPowerSequence.affectedType} })
                 `;
             }
-
+ 
             if (sequencerActive) {
                 script += `.play();
 `;
