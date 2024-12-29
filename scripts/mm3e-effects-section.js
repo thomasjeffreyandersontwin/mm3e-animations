@@ -1,11 +1,11 @@
-   
+
  
 Hooks.on("ready", () => {  
     Hooks.on('rollPower', async (atk, token,strategie, altKey) => {
         let powerItem = new PowerItem(atk);
         powerItem.animation.play(token);
         })
- 
+
     Hooks.on('rollAttack', async (atk, token,strategie, altKey) => {
         let item = token.actor.items.get(atk.links.pwr)
         let powerItem = new PowerItem(item);
@@ -13370,6 +13370,7 @@ class BaseSequence {
             descriptorFilter: method => method.toLowerCase().includes(this.methodType.toLowerCase()),
             macroFilter: (name, descriptor) => name.startsWith(`${descriptor}-${this.methodType}`),
             autorecFilter: (label, descriptor) => {
+                descriptor = this.descriptorClasses[descriptor]
                 let result = label.startsWith(`${descriptor}-${this.methodType}`)
                  console.log(`Filtering entry: ${label} starts with ${descriptor}, result: ${result}`);
                 return result
@@ -14155,7 +14156,7 @@ class DescriptorSequence{
          //   "darknessEffect":"Darkness",
             "earthEffect": "Earth",
             "electricityEffect": "Electricity",
-            "energyEffect": "Energy",
+         //   "energyEffect": "Energy",
           //  "entropyEffect": "Entropy",
           //  "exoskeletonEffect": "Exoskeleton",
             "fireEffect": "Fire",
@@ -14177,6 +14178,7 @@ class DescriptorSequence{
         //    "psychicEffect": "Psychic",
             "radiationEffect": "Radiation",
         //    "noDescriptorEffect": "No Descriptor",
+        "sonicEffect": "Sonic",
         //    "superSpeedEffect": "Super Speed",
             "superStrengthEffect": "Super Strength",
             "waterEffect": "Water",
@@ -14184,6 +14186,11 @@ class DescriptorSequence{
         };
         if(this.powerItem){
             this.descriptorClass = Sequencer.SectionManager.externalSections[this.powerItem.descriptor.toLowerCase()+"Effect"];
+            if(! this.descriptorClass){
+                this.descriptorClass = {name:this.powerItem.descriptor}
+                
+                
+            }
         }
         this.castSequence = new CastSequence(this);
         this.projectionSequence = new ProjectionSequence(this);
@@ -14721,19 +14728,16 @@ class SequencerScript{
                 script += `
 await GameHelper.waitForTemplatePlacement()
 const template = GameHelper.template;
-`;
-                            script+=`const selectedTargets = await GameHelper.getAllTargeted();`
-
+                            `;
             }else{
                 if (this.descriptorSequence.affectedByPowerSequence.affectedType === "target") {
-                    script+=`const selectedTargets = await GameHelper.getAllTargeted();`
-
                     script += `
 for (let target of selectedTargets) {
     `;
                 }
             }
-            
+            script+=`const selectedTargets = await GameHelper.getAllTargeted();`
+
             script= script+this.descriptorSequence.castSequence.generateScript(sequencerActive)
             sequencerActive = this.descriptorSequence.castSequence.sequencerActive;
 
@@ -14745,10 +14749,8 @@ for (let target of selectedTargets) {
                 sequencerActive = this.descriptorSequence.areaSequence.sequencerActive;
                 script += `
 await GameHelper.sleep(3000)
-for (let target of selectedTargets) { 
+for (let target of selectedTargets) {
     `;
-
-                 
             }
     
             // Add power effect logic
@@ -14778,7 +14780,7 @@ await window.AutomatedAnimations.playAnimation(${whoIsAffected}, { name: '${powe
                 script += `.affectAura({ affected: ${this.descriptorSequence.affectedByPowerSequence.affectedType} })
                 `;
             }
- 
+
             if (sequencerActive) {
                 script += `.play();
 `;
