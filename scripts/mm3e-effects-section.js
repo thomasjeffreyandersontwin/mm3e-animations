@@ -14153,10 +14153,10 @@ class DescriptorSequence{
         this.powerItem = powerItem;
         this.descriptorClasses = {
             "airEffect":"Air",
-         //   "darknessEffect":"Darkness",
+            "darknessEffect":"Darkness",
             "earthEffect": "Earth",
             "electricityEffect": "Electricity",
-         //   "energyEffect": "Energy",
+            "energyEffect": "Energy",
           //  "entropyEffect": "Entropy",
           //  "exoskeletonEffect": "Exoskeleton",
             "fireEffect": "Fire",
@@ -14166,6 +14166,7 @@ class DescriptorSequence{
         //    "impactEffect": "Impact",
             "insectEffect": "Insect",
         //    "invincibleEffect": "Invincible",
+        "lightEffect": "Light",
         //    "kineticEffect": "Kinetic",
         //    "lightEffect": "Light",
             "lightningEffect": "Lightning",
