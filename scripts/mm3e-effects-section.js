@@ -218,21 +218,6 @@ Hooks.on("ready", () => {
         return this.targets[0];
     }
 
-    resistAndStruggle(target = this.affected){
-        this.mm3eEffect()
-            this.affectCommon(target)
-            .hideToken(target)
-            .turnRight({token:target, distance:25, duration:300})
-            .loopRight({token:target, distance:20,duration:300}) 
-            .loopLeft({token:target, distance:10,duration:300})
-            .turnLeft({token:target, distance:15, duration:300})
-            .turnRight({token:target, distance:35,duration:300}) 
-            .turnRight({token:target, distance:20,duration:300}) 
-            .moveLeft({token:target, distance:20,duration:300}) 
-            .showToken(target)  
-        return this;
-    }
-
     logMethodCall(methodName, args) {
         // Convert to array if args is array-like (arguments object), otherwise wrap as an array
         const argsArray = args instanceof Object && args.length !== undefined ? Array.from(args) : [args];
@@ -606,15 +591,10 @@ Hooks.on("ready", () => {
                 rotation: this.affected.document.rotation + this.tokenAnchor.rotation
             });
         })
-        if(position){
-            this._effect.effect().animation().on(this.affected).teleportTo({
-                    x: position.x,
-                    y: position.y
-                }).opacity(1)
-        }
-        else{
-            this._effect.effect().animation().on(this.affected).opacity(1)
-        }
+        this._effect.effect().animation().on(this.affected).teleportTo({
+                x: position.x,
+                y: position.y
+            }).opacity(1)
         
         return this;
     }
@@ -1565,7 +1545,7 @@ Hooks.on("ready", () => {
         super.affectCommon({affected:affected})
         return this
         }
-        create(){ 
+        create(){
         return this
         }
 
@@ -1577,26 +1557,6 @@ Hooks.on("ready", () => {
             return this.file('animated-spell-effects-cartoon.energy.flash')
             .scaleToObject(1)
             .playSound('modules/mm3e-animations/sounds/Combat/Melee%20Natural/melee-hit-1.mp3')
-        } 
-
-        affectDazzle({affected = this.affected}={}){
-            this.affectCommon({affected:affected})
-            return this.dazzle()
-        }
-        dazzle(){ 
-            for (let i = 0; i < 10; i++) {
-                let randomOffset = () => ({
-                    x: Math.floor(Math.random() * 100) - 50, // Random value between -50 and 50
-                    y: -50 + Math.floor(Math.random() * 100) - 50  // Random value between -50 and 50
-                }); 
-                this.affectCommon().file('animated-spell-effects-cartoon.energy.flash')
-                .scaleToObject(1)
-                .spriteOffset(randomOffset())
-                .playSound('modules/mm3e-animations/sounds/hazards/electricity/Electric_Spark_01.ogg')
-                .pause(50)
-            }
-            
-            return this;
         }
 
         affectDeflection({affected = this.affected}={})
@@ -1676,6 +1636,8 @@ Hooks.on("ready", () => {
             .endMovement(position)
             return this
         }
+
+
         affectHealing({affected = this.firstSelected}={}){
 
             this.affectCommon({affected:affected})
@@ -1828,7 +1790,6 @@ Hooks.on("ready", () => {
         regeneration(){
             this.affectHealing()
         }
-
         affectSenses({affected = this.affected}={})
         {
             return this.affectCommon({affected:affected})
@@ -1837,7 +1798,6 @@ Hooks.on("ready", () => {
         senses(){
             return this.file("jb2a.eyes.01")
         }
-
         affectSpeed({affected = this.affected, position}={}){
             return this.affectCommon({affected:affected})
             .speed({position:position})
@@ -1879,30 +1839,6 @@ Hooks.on("ready", () => {
             return this
 
         }
-
-        affectSnare({affected = this.affected}={})
-        {
-            return this.affectCommon({affected:affected})
-            .snare()
-        }
-        snare(){
-             this.file("jaamod.traps.trap_net_dark")
-                .playSound('modules/mm3e-animations/sounds/action/behavior/Dance_Cloth_05.ogg')
-                .scaleToObject(1.5)
-                this.pause(2500)
-            return this.affectCommon()
-                .file("jaamod.traps.trap_net_dark")
-                .timeRange(2200,4000) 
-                .scaleToObject(1.5)
-                .persist(true)
-                .pause(1000)
-                .resistAndStruggle()
-                
-                
-
-        }
-
-
 
         affectTeleport({affected = this.affected, position=0}={}){
             return this.affectCommon({affected:affected})
@@ -1947,44 +1883,20 @@ Hooks.on("ready", () => {
         {
                 this.affectCommon({affected:affected})
                 //update the token image
-            this.transform(image)
+            this.tranform(image)
                 return this;
         }
         transform(image)
         {
             
-           if(!image)
+            if(!image)
             {
                 image = this.constructor.name.replace('Section','')
                 image = image.charAt(0).toLowerCase() + image.slice(1);
                 image = 'modules/mm3e-animations/tiles/'+ image +'.webm'
             }
-            this.file(image)
-            .atLocation(this.affected)
-            .scaleToObject(1)
-            this.hideToken(this.affected)
-            .persist() 
-            //this.thenDo(()=> this.affected.document.update({ "texture.src": image }))
+            this.thenDo(()=> this.affected.document.update({ "texture.src": image }))
         }
-
-
-        swing({caster:caste,positin}={}){
-            if(!caster){
-                throw new Error("Caster is required for swing")
-            }
-        }
-
-
-        affectSwimming({affected = this.affected, position}={}){
-            return this.affectCommon({affected:affected})
-            .swimming({position:position})
-        }
-
-        swimming({position}={}){
-            return this
-        }
-
-        
 
         affectWeaken({affected = (this.affected|this.firstSelected)}={}){
             this.affectCommon({affected:affected})
@@ -2049,6 +1961,26 @@ Hooks.on("ready", () => {
             .pause(1000)
             .playSound('modules/mm3e-animations/sounds/action/powers/Seers_RevealWeakness_Attack.ogg')
             return this;
+        }
+
+
+        descriptorSpeed(){
+            return this
+        }
+
+        swing({caster:caste,positin}={}){
+            if(!caster){
+                throw new Error("Caster is required for swing")
+            }
+        }
+
+        affectSwimming({affected = this.affected, position}={}){
+            return this.affectCommon({affected:affected})
+            .swimming({position:position})
+        }
+
+        swimming({position}={}){
+            return this
         }
 
         
@@ -2167,15 +2099,6 @@ Hooks.on("ready", () => {
                 return this
         }
         descriptorBurrowing(){
-            return this
-        }
-
-        affectDazzle({affected}={}){
-            super.affectCommon({affected:affected})
-            this.descriptorDazzle()
-            return this
-        }
-        descriptorDazzle(){
             return this
         }
 
@@ -2364,16 +2287,6 @@ Hooks.on("ready", () => {
         descriptorSummon(){
             super.summon({affected:this.affected})
             return this
-        }
-
-        affectSnare({affected}={}){
-            super.affectCommon({affected:affected})
-            this.descriptorSnare()
-            this.affectAura({affected:affected, persist:true})
-            return this
-        }
-        descriptorSnare(){
-            super.snare({affected:this.affected})
         }
         affectSpeed({affected, position}={}){
             super.affectCommon({affected:affected})
@@ -3631,7 +3544,6 @@ Hooks.on("ready", () => {
         }
 
     }
-
 
     class ColorEffectSection extends TemplatedDescriptorEffect {
         constructor(inSequence) {
@@ -6368,7 +6280,7 @@ Hooks.on("ready", () => {
         } 
 
         descriptorAura(){
-            return this.file("animated-spell-effects-cartoon.level 02.flaming sphere")
+            return this.file("animated-spell-effects-cartoon.fire.01")
                 .anchor({x:0.5 , y:0.7, gridUnits:true})
                 .delay(400)
                 .scale(0.4)
@@ -6542,7 +6454,6 @@ Hooks.on("ready", () => {
             .aboveLighting()
             .zIndex(1)
         //  .delay(100)
-        //comment
         
         return this
         }
@@ -7986,7 +7897,7 @@ Hooks.on("ready", () => {
         }*/
 
     }
-    class InsectEffectSection extends TemplatedDescriptorEffect {
+    class InsectEffectSection extends PowerEffectSection {
         constructor(inSequence) {
             super(inSequence);
         }
@@ -8253,19 +8164,6 @@ Hooks.on("ready", () => {
                 .pause(1000)
                 super.affectIllusion({affected:affected})
 
-            return this;
-        }
-
-        affectSenses({affected = this.affected}={}){
-            this.affectCommon({affected:affected})
-            this.file('animated-spell-effects-cartoon.electricity.wave')
-            .spriteOffset({x:25, y:0})
-            .scaleToObject(.45)
-            .rotate(90)
-            .belowTokens()
-            .filter("ColorMatrix", {hue: 0, contrast: 0, saturate: 0})
-            .tint('0x000000')
-            .playSound('modules/mm3e-animations/sounds/action/powers/CrabEye_loop.ogg')
             return this;
         }
 
@@ -8793,7 +8691,6 @@ super.meleeCastCommon()
 
     
 .wait(750)
-//comment
 
 .canvasPan()
     .delay(250)
@@ -11541,29 +11438,24 @@ super.burstCommon({affected:affected})
         }
 
     }
-    class SuperStrengthEffectSection extends TemplatedDescriptorEffect {  
-        constructor(inSequence) {
+    class SuperStrengthSection extends PowerEffectSection {  
+            constructor(inSequence) {
             super(inSequence);
         }
         castSlam({caster}={}){  
                 
                 super.castCommon({caster:caster, affected:caster}) 
-              //  let fs = new FlightEffect(this);
-                this.start({caster:this.caster})
-                this.end({caster:this.caster})
+                let fs = new FlightEffect(this);
+                fs.start({caster:this.caster})
+                fs.end({caster:this.caster})
             return this
         }
 
-        descriptorCastFlight(){
-            return this.start();
-        }
-  
         meleeCast({caster, affected, repeats=1}={} ){
             super.meleeCastCommon({caster:caster, affected:affected})
             .file("jb2a.melee_attack.02.trail") 
-            .scale(this.caster.document.width*.5, {gridUnits:true})
+            .scale(this.caster.document.width*.26, {gridUnits:true})
             .spriteOffset({x:-0.7*this.caster.document.width},{gridUnits:true})
-                .rotateTowards(this.affected)
             .filter("ColorMatrix", {
                 hue: 500, // Keep hue neutral for grey
                 contrast: 0, 
@@ -11576,19 +11468,20 @@ super.burstCommon({affected:affected})
 
         cast({caster, affected}={}){
             this.castCommon({caster:caster, affected:affected})
-                .file("jb2a.melee_generic.slash.01.orange").spriteOffset({x:20, y:-10})
+                .file("jb2a.melee_generic.slash.01.orange").spriteOffset({x:-20, y:-10})
                 .scaleToObject(1.5)
                 .zIndex(1)
                 .filter("ColorMatrix", {
-                    hue: 500, 
+                    hue: 0, 
                     contrast: 1, 
                     saturate: 0, 
                     brightness: 3 
                 })        
             .repeatEffect()
-                   .mirrorY()
+            //       .mirrorY()
+            //       .pause(400)
             .castCommon()
-                 .file("jb2a.impact.001.orange")
+            //     .file("jb2a.impact.001.orange")
                 .scaleToObject(2)
                 .filter("ColorMatrix", {
                     hue: 50,
@@ -11596,25 +11489,8 @@ super.burstCommon({affected:affected})
                     saturate: 0,
                     brightness: 1
                 })
-              .playSound("modules/mm3e-animations/sounds/action/powers/Hit6.ogg")
+            //  .playSound("modules/mm3e-animations/sounds/action/powers/Hit6.ogg")
             return this;
-        }
-
-        descriptorCastLeaping({position}={}){
-           this
-            .playSound("modules/mm3e-animations/sounds/action/powers/Whoosh2.ogg")
-            .file("jb2a.smoke.puff.ring.02.white")
-            .scaleToObject(1)
-            .opacity(.5)
-            .belowTokens()     
-        this.castCommon()
-            .file("jb2a.wind_stream.white")
-            .anchor({ x: 0.5, y: .5 })
-            .opacity(2)
-            .scale(this.caster.width / canvas.grid.size * 0.025)
-            .mirrorX()
-            .zIndex(1)
-        return this
         }
 
         burst({caster, affected}={}){
@@ -11700,21 +11576,6 @@ super.burstCommon({affected:affected})
             return this
         }
 
-        descriptorAura(){
-            this.file('animated-spell-effects-cartoon.energy.flash')
-                .scale(.2)
-                .spriteOffset({x:0 ,y:70})
-             
-           // .pause(500)  
-            .affectCommon()
-                .delay(-8000)
-                .file('animated-spell-effects-cartoon.smoke.57')
-             //   this.spriteOffset({x:0 ,y:70})
-                .scaleToObject(2)
-             
-            return this
-        }
-
         affectAffliction({affected}={}){
             //super.affectCommon({affected:affected})
             this.affectDamage({affected:affected,persistent:true})
@@ -11722,8 +11583,7 @@ super.burstCommon({affected:affected})
             return this
         }
 
-        affectDamage({affected = this.affected, persistent=false}){   
-
+        affectDamage({affected = this.affected, persistent=false}){          
             this.affect({affected:affected})
             this.file("jb2a.dizzy_stars.200px.yellow")
                 //.scaleIn(0, 100, {ease: "easeOutCubic"}) 
@@ -11748,42 +11608,12 @@ super.burstCommon({affected:affected})
             return this
         } 
 
-
-        descriptorLeaping(){
-            this.affectCommon()
-            this.playSound("modules/mm3e-animations/sounds/action/powers/SpringAttack_Land_01.ogg")
-            .shake({ duration: 1000, strength: 75, rotation: false, fadeOutDuration: 800 })
-            .playSound("modules/mm3e-animations/sounds/action/powers/Whoosh2.ogg") 
-            .pause(400)
-            .file("jb2a.impact.ground_crack.02.white")
-            return this
-        }
-
-        descriptorProtection(){    
-            this.effect()
-            .atLocation(this.affected)
-            .file(`animated-spell-effects-cartoon.flash.21`)
-            .tint("#808080")
-            .opacity(0.9)  
-            .size({ width: 2, height: 2 }, { gridUnits: true })
-            .fadeIn(1000, { ease: "easeInExpo" })
-            .fadeOut(2500, { ease: "easeInExpo" })
-            .filter("ColorMatrix", { hue: +60, contrast: 0.5, saturate: 0, brightness: 1 })
-            .playbackRate(0.25)
-            .scaleIn(0, 3000, { ease: "easeOutBack" })
-            .scaleOut(0, 3000, { ease: "easeInBack" })
-            .belowTokens()
-            .persist()
-            this.playSound('modules/mm3e-animations/sounds/Spells/Buff/spell-buff-build-up-2.mp3')
-            return this
-        }
-
         start({caster}={}){
-            this.castCommon({caster:caster, affected:caster})
+            this.originalEffectSection.castCommon({caster:caster, affected:caster})
                 .loopUp({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
                 .file("animated-spell-effects-cartoon.energy.16")
                 .rotate(90)
-                .scaleToObject(1) 
+                .scaleToObject(1)
                 .filter("ColorMatrix" , {
                         hue: 500, 
                         contrast: 0, 
@@ -11795,16 +11625,18 @@ super.burstCommon({affected:affected})
                     .playSound("modules/mm3e-animations/sounds/action/powers/whoosh9.ogg")
                 .repeatEffect()   //inherit last effect with any modifications we want below
                     .spriteOffset({x:0, y: -25})
-                    .pause(900)   
-                return this; 
+                    .pause(900)
+                return this.originalEffectSection;
             }
         
         end({caster}={}){
-                this.castCommon({caster:caster, affected:caster})
+                this.originalEffectSection.castCommon({caster:caster, affected:caster})
                 .loopDown({distance:75, duration:1000, speed:200, ease:"easeInCirc", pause: false})
+
+                .castCommon()
                 .file("animated-spell-effects-cartoon.energy.16")
                 .rotate(270)
-                .scaleToObject(1)  
+                .scaleToObject(1)
                 .filter("ColorMatrix" , {
                         hue: 500, 
                         contrast: 0, 
@@ -11816,23 +11648,9 @@ super.burstCommon({affected:affected})
             .repeatEffect()   //inherit last effect with any modifications we want below
                 .playSound("modules/mm3e-animations/sounds/action/powers/Whoosh2.ogg")
                 .spriteOffset({x:0, y: -25})
-            
-            return this;
-        }
-
-
-        descriptorFlight(){
-            this.end({caster:this.affected})
-                .affectCommon()
-                .file ("jb2a.impact.ground_crack.02.white")
-              //  .rotation( 270)
-                .scale( .75)
-                .filter( "ColorMatrix" , 
-                    {hue: 500, 
-                    contrast: 0, 
-                    saturate: 0,
-                    brightness: 1,
-                })
+                .pause(300)
+            .endMovement()
+            return this.originalEffectSection;
         }
     }
 
@@ -12625,389 +12443,6 @@ super.burstCommon({affected:affected})
 
     }
 
-    class WebEffectSection extends TemplatedDescriptorEffect{
-        constructor(){
-            super("webEffect")
-        }
-   
-        descriptorMeleeCast(){
-            return this.file('jb2a.melee_generic.creature_attack.fist')
-            .rotateTowards(this.affected)
-            .scaleToObject(2)
-            .filter("ColorMatrix", { hue: 0, brightness: 1, contrast: 0, saturate: -1 })
-            return this;
-        }
-
-        descriptorCastSwing(){
-            
-        }
-
-        descriptorCast(){
-            return this.file("jb2a.impact.005.orange")
-          //  .atLocation(token)
-            .scale(0.3)
-            .aboveLighting()
-            .rotateTowards(this.affected)
-            .scaleIn(0, 200, { ease: "easeOutCubic" })
-            .filter("ColorMatrix", { saturate: -1 })
-        .castCommon()
-            .file("jb2a.particles.outward.white.01.02")
-            .scaleIn(0, 500, { ease: "easeOutQuint" })
-            .fadeOut(1000)
-            .duration(1000)
-            .size(1.75, { gridUnits: true })
-            .animateProperty("spriteContainer", "position.y", { from: 0, to: -0.5, gridUnits: true, duration: 1000 })
-            .zIndex(1)
-        
-            
-        }
-
-        castBall({caster:caster, affected:affected}={}){
-            this.castCommon({caster:caster, affected:affected})
-            .file("jb2a.cast_generic.01.yellow.0") 
-            .scaleToObject(2)
-            .filter("ColorMatrix", { saturate: -1 })
-            .playbackRate(0.8)
-            .fadeIn(500)
-            .fadeOut(100)
-            .belowTokens()
-            .waitUntilFinished()
-         .castCommon()
-            .file("jb2a.impact.005.orange")
-            .scale(0.3)
-            .aboveLighting()
-            .rotateTowards(this.affected)
-            .scaleIn(0, 200, { ease: "easeOutCubic" })
-            .filter("ColorMatrix", { saturate: -1 })
-
-         .castCommon()
-            .file("jb2a.particles.outward.white.01.02")
-            .scaleIn(0, 500, { ease: "easeOutQuint" })
-            .fadeOut(1000)
-          
-            .duration(1000)
-            .size(1.75, { gridUnits: true })
-            .animateProperty("spriteContainer", "position.y", { from: 0, to: -0.5, gridUnits: true, duration: 1000 })
-            .zIndex(1)
-
-            return this
-        }
-
-        descriptorProject(){
-            this.playSound('modules/mm3e-animations/sounds/power/webbing/web*.ogg')
-            this.projectCommon().file('modules/makeitshiny-dnd5e/Spells/2nd_Level/Web/Throw/Throw.webm')
-            .waitUntilFinished(-100)
-            return this
-        }
-
-
-        projectBall({caster, affected}={}){
-            return this.castCommon({caster:caster, affected:affected})
-                .file('jb2a.markers.light_orb.loop.white')
-               
-                .moveTowards(this.affected)
-                .moveSpeed(1000)
-                .scaleToObject(0.6)
-                .zIndex(1)
-                .waitUntilFinished(-100)
-        }
-        projectMultiAttack({caster, affected}={}){
-            this.projectCommon({caster:caster,affected:affected})
-            .delay(-300)
-            return this.file("jb2a.fireball.beam.blue")
-            .filter("ColorMatrix",{hue:0, saturate: -1, brightness:0.7, contrast: 0.8})
-            .stretchTo(this.affected, {randomOffset: 0.65, attachTo: true})
-            .fadeIn(500)
-            .fadeOut(2500, {ease:"easeOutCubic"})
-            .repeats(9,2,1)
-            .zIndex(1.1)
-            .scale(0.25)
-            .opacity(0.75)
-            .pause(2400)
-        }
-
-        projectDazzle({caster, affected}={}){
-            this.projectCommon({affected, caster})
-            return this.file("jb2a.fireball.beam.blue")
-            .filter("ColorMatrix",{hue:0, saturate: -1, brightness:0.7, contrast: 0.8})
-            .stretchTo(this.affected, { offset: { x: -50, y: -50 }, local: true })
-            .fadeIn(500)
-            .fadeOut(2500, {ease:"easeOutCubic"})
-            .zIndex(1.1)
-            .scale(0.25)
-            .opacity(0.75)
-            .playbackRate(4)
-            .pause(550)
-        }
-        projectAffliction(){
-            return this.project()
-        }
-
-        projectToCone({caster, affected}={}){
-            this.initializeTemplateVariables()
-            this.castCommon({caster:caster, affected:affected})
-                .file('jb2a.markers.light_orb.loop.white')
-               
-                .moveTowards(this.templateStart)
-                .moveSpeed(1000)
-                .scaleToObject(0.6)
-                .zIndex(1)
-                .waitUntilFinished(-100)
-            return this
-        }
-        projectToLine({caster, affected}={}){
-            return this.projectToCone({caster:caster, affected:affected})
-        }
-
-        descriptorBurst(){
-           return  this.file("jb2a.impact.004.yellow")
-                .scaleToObject(1)
-                .scaleIn(0, 200, { ease: "easeOutCubic" })
-                .filter("ColorMatrix", { saturate: -1, brightness: 1.5 })
-                .pause(100)
-            .burstCommon()
-                .file('modules/animated-spell-effects/spell-effects/misc/web_spider_realistic_CIRCLE_01.webm')
-                .filter("ColorMatrix", { saturate: -1, brightness: 1.5 })
-                .belowTokens()
-                .fadeIn(1500)
-                .zIndex(1)
-                .fadeOut(1500)
-                .scaleIn(0, 500, { ease: "easeOutCubic" })
-                .scaleToObject(1)
-                .loopOptions({ maxLoops: 1, endOnLastLoop:true })
-                .persist()
-                .pause(200)
-            .repeatEffect()
-        }
-        
-        burstThick({caster,affected}={}){
-            return this.burstCommon( {caster:caster,affected:affected})
-            .file("jb2a.impact.004.yellow")
-            .scaleToObject(1)
-            .scaleIn(0, 200, {ease: "easeOutCubic"})
-            .filter("ColorMatrix", { saturate: -1 })
-
-            .burstCommon()
-            .file('jb2a.web.01')
-            .belowTokens()
-            .fadeIn(1500)
-            .zIndex(1)
-            .fadeOut(1500)
-            .scaleIn(0, 500, {ease: "easeOutCubic"})
-            .scaleToObject(1)
-            .persist()
-            .pause(600) 
-            .repeatEffect()
-        }
-
-        descriptorCone(){ 
-            return this.file('jb2a.cone_of_cold.blue')
-            //tint grey
-            .filter("ColorMatrix", { saturate: -.9, brightness:1 })  
-            .playbackRate(4)
-        }
-        descriptorLine(){
-            return this.descriptorCone()
-        }
-
-        descriptorAffliction(){
-            this.affectCommon()
-                .file("jb2a.impact.004.yellow")
-                .scaleToObject(2)
-                .scaleIn(0, 200, { ease: "easeOutCubic" })
-                .filter("ColorMatrix", { saturate: -1 , brightness: 2})
-                .pause(100)
-            .affectCommon()
-                .file('modules/animated-spell-effects/spell-effects/misc/web_spider_realistic_CIRCLE_01.webm')
-                .opacity(1.5)
-                .duration(3000)
-                .zIndex(1)
-                .fadeOut(1500)
-                .spriteRotation(30)
-              this.filter("ColorMatrix", { saturate: -1, brightness: 1.5})
-                .scaleIn(0, 500, { ease: "easeOutCubic" })
-                .scaleToObject(0.8)
-                .anchor({ x: 0.7, y: 0.8 })
-                .persist()
-        this.repeatEffect()
-            this.anchor({ x: 0.2, y: 0.5 })
-             this.filter("ColorMatrix", { saturate: -1, brightness: 1.5})
-         this.repeatEffect()
-            this.anchor({ x:.8, y:-0.1 }) 
-             this.filter("ColorMatrix", { saturate: -1, brightness: 1.5})
-        this.repeatEffect()
-            this.anchor({ x:.5, y:0.2 })   
-             this.filter("ColorMatrix", { saturate: -1, brightness: 1.5})
-        this.resistAndStruggle()
-            return this
-        }
-        descriptorAura(){
-            return this
-            .file('animated-spell-effects-cartoon.level 01.divine favour')
-            .filter("ColorMatrix", { brightness:1, hue: 0, contrast: 0, saturate: -1 })
-            .scaleToObject(1)
-            .affectCommon()
-            .file('modules/makeitshiny-dnd5e/Spells/2nd_Level/Web/Area/Web.webm')
-            .scaleToObject(1)
-            .rotateIn(360, 5000, { ease: "linear" }) 
-            .belowTokens()
-        }
-
-        descriptorDamage(){
-            this.recoilAwayFromSelected({distance:.02, repeats:1})
-            this.affectCommon()
-                .file("jb2a.impact.004.yellow")
-                .scaleToObject(.5)
-                .scaleIn(0, 200, { ease: "easeOutCubic" })
-                this.filter("ColorMatrix", { saturate: -1, brightness: 2})
-                .delay(-800)
-            this.repeatEffect()
-                this.anchor({ x: -.2, y: -.7}) 
-                this.filter("ColorMatrix", { saturate: -1, brightness: 2})
-            this.repeatEffect()
-                .filter("ColorMatrix", { saturate: -1, brightness: 2})
-                this.anchor({ x: .9, y: -.7})    
-            this.repeatEffect()
-                this.anchor({ x: -.5, y: 1.1}) 
-                .filter("ColorMatrix", { saturate: -1, brightness: 2})
-            this.repeatEffect()
-                this.anchor({ x: 0, y: 0})  
-                this.filter("ColorMatrix", { saturate: -1, brightness: 2})      
-            this.repeatEffect()
-                this.anchor({ x: .5, y: 1.1}) 
-                .filter("ColorMatrix", { saturate: -1, brightness: 2})
-      
-            this.affectCommon()
-                .file('modules/animated-spell-effects/spell-effects/misc/web_spider_realistic_CIRCLE_01.webm')
-                .opacity(1.5)
-                .duration(3000)
-                .zIndex(1)
-                .fadeOut(1500)
-                .spriteRotation(30)
-                .filter("ColorMatrix", { brightness: .9, contrast: 1, saturate: 0 })
-                .scaleIn(0, 500, { ease: "easeOutCubic" })
-                .scaleToObject(0.4)
-                .anchor({ x: .7, y: 1.5 })
-        this.repeatEffect()
-            this.anchor({ x: -.2, y: -.7}) 
-            .filter("ColorMatrix", { brightness: .9, contrast: 1, saturate: 0 })
-        this.repeatEffect()
-        this.filter("ColorMatrix", { brightness: .9, contrast: 1, saturate: 0 })
-            this.anchor({ x: .9, y: -.7}) 
-           
-        this.repeatEffect()
-            this.anchor({ x: -.5, y: 1.1}) 
-            this.filter("ColorMatrix", { brightness: .9, contrast: 1, saturate: 0 })
-        this.repeatEffect()
-            this.anchor({ x: 0, y: 0})  
-            this.filter("ColorMatrix", { brightness: .9, contrast: 1, saturate: 0 }) 
-            
-        this.repeatEffect()
-            this.anchor({ x: .5, y: 1.1}) 
-            this.filter("ColorMatrix", { brightness: .9, contrast: 1, saturate: 0 })
-
-           
-            .delay(-3000)
-    
-            return this    
-        }
-
-        descriptorDeflection(){
-            this.deflectionAnimation='jb2a.bullet.Snipe.blue.05ft'
-            this.file("modules/makeitshiny-dnd5e/Spells/2nd_Level/Web/Area/Web.webm")
-            .rotateIn(360, 1000, { ease: "linear" }) 
-            .scaleToObject(1)
-            .fadeIn(500)
-            .fadeOut(500)
-            .pause(800)
-
-            .affectCommon()
-            .file("modules/animated-spell-effects/spell-effects/misc/web_spider_realistic_CIRCLE_01.webm")
-            .scaleToObject(1.5)
-            .fadeIn(500)
-            .fadeOut(500)
-            .duration(3000)
-          //  .persist(false)
-            .play();
-
-            this.initalizeRandomNumbers();
-        }
-        descriptorDazzle(){
-            this.affectCommon()
-            .delay(-1000)
-                .file("jb2a.impact.004.yellow")
-                .scaleToObject(0.3)
-                .scaleIn(0, 200, { ease: "easeOutCubic" })
-                .filter("ColorMatrix", { saturate: -1 , brightness: 2})
-                .pause(100)
-                .anchor({ x: 0.6, y: 1.9 })
-            .affectCommon()
-                .file('modules/animated-spell-effects/spell-effects/misc/web_spider_realistic_CIRCLE_01.webm')
-                .opacity(1.5)
-                .duration(3000)
-                .zIndex(1)
-                .fadeOut(1500)
-                .spriteRotation(30)
-                .spriteRotation(30)
-                .anchor({ x: 0.6, y: 1.9 })
-                this.filter("ColorMatrix", { saturate: -1, brightness: 1.5})
-                .scaleIn(0, 500, { ease: "easeOutCubic" })
-                .scaleToObject(0.3)
-                .delay(-1000)
-                .persist()
-                .attachTo(this.affected)
-            return this
-        }
-        descriptorHeal(){}    
-       
-        descriptorProtection(){
-            return this
-                .file('animated-spell-effects-cartoon.level 01.divine favour')
-                .filter("ColorMatrix", { brightness:1, hue: 0, contrast: 0, saturate: -1 })
-                .scaleToObject(1)
-            .affectCommon()
-                .file('jb2a.markers.shield_rampart.complete.03.white')
-                .scaleToObject(1)
-            .affectCommon()
-                .file('modules/makeitshiny-dnd5e/Spells/2nd_Level/Web/Area/Web.webm')
-                .scaleToObject(1)
-                .rotateIn(360, 6800, { ease: "linear" }) 
-                .belowTokens()
-                .persist()
-                .pause(800)
-            .affectCommon()
-                .file('modules/makeitshiny-dnd5e/Spells/2nd_Level/Web/Area/Web.webm')
-                .scaleToObject(1)
-                .rotateIn(360, 6000, { ease: "linear" }) 
-                .belowTokens()
-                return this
-        }
-        affectSenses({affected = this.affected}={}){
-            this.affectCommon({affected:affected})
-            this.file('animated-spell-effects-cartoon.electricity.wave')
-            .spriteOffset({x:25, y:0})
-            .scaleToObject(.45)
-            .rotate(90)
-            .belowTokens()
-            .filter("ColorMatrix", {hue: 0, contrast: 0, saturate: 0})
-            .tint('0x000000')
-            .playSound('modules/mm3e-animations/sounds/action/powers/CrabEye_loop.ogg')
-            return this;
-        }
-        descriptorSnare(){
-            return this.affectCommon()
-            .file('modules/makeitshiny-dnd5e/Spells/2nd_Level/Web/Area/Web.webm')
-            .scaleToObject(1.5)
-            .zIndex(12)
-            .persist()
-            .resistAndStruggle()
-
-        }
-
-        descriptorSwing(){}
-        
-
-    }
     Sequencer.SectionManager.registerSection("myModule", "mm3eEffect", BaseEffectSection)
     Sequencer.SectionManager.registerSection("myModule", "powerEffect", PowerEffectSection) 
     Sequencer.SectionManager.registerSection("myModule", "noDescriptorEffect", NoDescriptorEffectSection)
@@ -13039,15 +12474,10 @@ super.burstCommon({affected:affected})
     Sequencer.SectionManager.registerSection("myModule", "psychicEffect",PsychicEffectSection)
     Sequencer.SectionManager.registerSection("myModule", "radiationEffect",RadiationEffectSection)
     Sequencer.SectionManager.registerSection("myModule", "superSpeedEffect",SuperSpeedEffectSection)
-    Sequencer.SectionManager.registerSection("myModule", "superStrengthEffect",SuperStrengthEffectSection)
+    Sequencer.SectionManager.registerSection("myModule", "superStrengthEffect",SuperStrengthSection)
     Sequencer.SectionManager.registerSection("myModule", "waterEffect",WaterEffectSection)
-    Sequencer.SectionManager.registerSection("myModule", "webEffect",WebEffectSection)
 
     let selected 
-  
-
-   
-
 
 });
 
@@ -13081,13 +12511,11 @@ class SequenceRunnerEditor {
                 this.moveDialogueToFarRightOfCanvas();
                 this.descripterView.registerOnDescriptorSelected();
                 this.scriptView.registerOnSaveClicked();
-                this.scriptView.registerOnRunClicked();
                 this.scriptView.registerOnNameChanged();
                 this.descripterView.updateFromPowerItem();
                 
                 this.descripterView.update()   
                 this.scriptView.updateFromPowerItem();
-                this.scriptView.update()
 
                 const saveButton = $('<button type="button">Save</button>');
                 saveButton.on('click', async () => {
@@ -13127,10 +12555,8 @@ class GameHelper{
             return new Promise( (resolve) => {
                 Hooks.once("createMeasuredTemplate", async (template) => {
                     console.log("Template placed:", template);
-                    let targets = Array.from(game.user.targets); 
                     clearTimeout(timeout)
                     selected.control()
-                    await GameHelper.sleep(1000)
                     resolve(template);                
                 });
                 const timeout = setTimeout(() => {
@@ -13140,21 +12566,12 @@ class GameHelper{
             });
         }
     }
-    static get selected(){ 
+    static get selected(){
         return canvas.tokens.controlled[0];
     }
 
     static get targeted(){
         return Array.from(game.user.targets)[0];
-    }
-
-    static async getAllTargeted(){
-        let targets =  Array.from(game.user.targets);
-        while(targets.length == 0){
-            await GameHelper.sleep(1000)
-            targets =  Array.from(game.user.targets);
-        }
-        return targets;
     }
 
     static get target(){
@@ -13175,7 +12592,7 @@ class GameHelper{
     static async targetWithCrossHair( {icon ='icons/skills/movement/feet-winged-boots-brown.webp', label ='target'}={}){
         let selected = GameHelper.selected
         let config = {
-            size: 2,
+            size: 1,
             icon: icon, 
             label: label,
             drawIcon: true,
@@ -13183,7 +12600,6 @@ class GameHelper{
             interval: 1 % 2 === 0 ? 1 : -1,
         }
         let position =   await warpgate.crosshairs.show(config);
-        //make sure this in repo
         selected.control()
         return position
     }
@@ -13277,7 +12693,6 @@ class GameHelper{
         return f;
     }
 
-    
     static SequenceRunnerHelper(app) {
         const helper = new SequenceRunnerEditor({foundryApplication: app});
         
@@ -13288,8 +12703,6 @@ class GameHelper{
         
     }   
 } 
-
-
 class AffectedByPowerSequence{
     constructor(descriptorSequence) {
         this.descriptorSequence = descriptorSequence;
@@ -13354,91 +12767,7 @@ class AffectedByPowerSequenceView{
     } 
 
 }
-class BaseSequence {
-    constructor(descriptorSequence, methodType) {
-        this.descriptorSequence = descriptorSequence;
-        this.methodType = methodType; // e.g., "Cast", "Project", etc.
-        this.sourceMode = "descriptor"; // Default source mode
-    }
 
-    setSourceMode(mode) { 
-        this.sourceMode = mode;
-    }
-
-    get methods() {
-        const descriptor = this.descriptorSequence.selectedDescriptor;
-
-        return this.getMethods({
-            descriptorFilter: method => method.toLowerCase().includes(this.methodType.toLowerCase()),
-            macroFilter: (name, descriptor) => name.startsWith(`${descriptor}-${this.methodType}`),
-            autorecFilter: (label, descriptor) => {
-                descriptor = this.descriptorClasses[descriptor]
-                let result = label.startsWith(`${descriptor}-${this.methodType}`)
-                 console.log(`Filtering entry: ${label} starts with ${descriptor}, result: ${result}`);
-                return result
-            }
-        });
-    }
-
-    getMethods(filters) {
-        const descriptor = this.descriptorSequence.descriptorName;
-
-        switch (this.sourceMode) {
-            case "descriptor":
-                return this.getDescriptorMethods(filters.descriptorFilter);
-            case "macro":
-                return this.getMacroMethods(descriptor, filters.macroFilter);
-            case "autorec":
-                return this.getAutoRecMethods(descriptor, filters.autorecFilter);
-            default:
-                return [];
-        }
-    }
-
-    getDescriptorMethods(descriptorFilter) {
-        const allMethods = this.descriptorSequence.methods;
-        return allMethods
-            .filter(descriptorFilter)
-            .map(method => ({
-                original: method,
-                display: method.replace(/descriptor/i, "").trim()
-            }));
-    }
-
-    getMacroMethods(descriptor, macroFilter) {
-        return game.macros.contents
-            .filter(macro => macroFilter(macro.name, descriptor))
-            .map(macro => ({
-                original: macro.name,
-                display: macro.name.replace(`${descriptor}-${this.methodType}-`, "").trim()
-            }));
-    }
-
-    getAutoRecMethods(descriptor, autorecFilter) {
-        const melee =  game.settings.get("autoanimations", "aaAutorec-melee")
-        const range =  game.settings.get("autoanimations", "aaAutorec-range")
-        const ontoken =   game.settings.get("autoanimations", "aaAutorec-ontoken")
-        const preset =   game.settings.get("autoanimations", "aaAutorec-preset")
-        const templatefx =   game.settings.get("autoanimations", "aaAutorec-templatefx")
-    
-        const allEntries = [...melee, ...range, ...ontoken, ...preset, ...templatefx];
-        return allEntries
-        .filter(entry => {
-        const result = autorecFilter(entry.label, descriptor);
-       
-        return result;
-    })
-    .map(entry => {
-        const displayLabel = entry.label.replace(`${descriptor}-${this.methodType}-`, "").trim();
-        console.log(`Mapping entry: ${entry.label}, display: ${displayLabel}`);
-        return {
-            original: entry.label,
-            display: displayLabel
-        };
-    });
-    }
-    
-}
 
 class PowerEffectSequence{
     constructor(descriptorSequence) {
@@ -13626,143 +12955,80 @@ class PowerEffectsSequenceView{
     }
 } 
 
-class AreaSequence extends BaseSequence {
-    constructor(descriptorSequence) {
-        super(descriptorSequence, "Area"); // Pass "Area" as methodType
+class AreaSequence{
+    constructor(descriptorSequence){ 
+        this.descriptorSequence = descriptorSequence;
         this.method = "none";
     }
-
-    updateFrom(powerItem) {
-        if (powerItem.areaShape) {
-            const areaMethods = this.methods;
-
-            if (areaMethods && areaMethods.length > 0) {
-                const areaShapeMethod = areaMethods.find(method =>
-                    method.original.toLowerCase().includes(powerItem.areaShape.toLowerCase())
-                );
-
-                const areaShapeMethods = areaMethods.filter(method =>
-                    method.original.toLowerCase().includes(powerItem.areaShape.toLowerCase())
-                );
-
-                let effectMatchingAreaShapeMethod;
-                if (areaShapeMethods) {
-                    effectMatchingAreaShapeMethod = areaShapeMethods.find(method =>
-                        method.original.toLowerCase().includes(powerItem.effect?.toLowerCase())
-                    );
+    updateFrom(powerItem){
+        if(powerItem.areaShape){
+            let areaMethods = this.methods
+            if(areaMethods){
+                let areaShapeMethod = areaMethods.find(method => method.original.toLowerCase().includes(powerItem.areaShape.toLowerCase())); // the base method
+                let areaShapeMethods = areaMethods.filter(method => method.original.toLowerCase().includes(powerItem.areaShape.toLowerCase()));//methods that match a powereffect
+                let effectMatchingAreaShapeMethod ;
+                if(areaShapeMethods){
+                    effectMatchingAreaShapeMethod = areaShapeMethods.find(method => method.original.toLowerCase().includes(powerItem.effect?.toLowerCase()));
                 }
+                
+                this.method = effectMatchingAreaShapeMethod?effectMatchingAreaShapeMethod.original: areaShapeMethod.original;
+            }
 
-                this.method = effectMatchingAreaShapeMethod
-                    ? effectMatchingAreaShapeMethod.original
-                    : areaShapeMethod.original;
-            } else if (areaMethods.length > 0) {
+            else{
                 this.method = areaMethods[0].original;
             }
         }
-    }   
-
-    get methods() {
-        let methods =  this.getMethods({
-            descriptorFilter: method =>
-                ["burst", "cone", "line"].some(shape => method.toLowerCase().includes(shape)),
-            macroFilter: (name, descriptor) =>
-                /Cone|Burst|Line/.test(name) && name.startsWith(`${descriptor}-`),
-            autorecFilter: (label, descriptor) =>
-                /Cone|Burst|Line/.test(label) && label.startsWith(`${descriptor}-`)
-        });
-              //replace all items in methods with words Burst, Cone, Line to lowercase
-        methods = methods.map(method => {
-            method.display = method.display.replace('Burst', 'burst');
-            method.display = method.display.replace('Cone', 'cone');
-            method.display = method.display.replace('Line', 'line');
-            return method;
-        });
-        //remove all items with the word project in it
-        methods = methods.filter(method => !method.display.includes("project"));
-        
-        return methods;
     }
-
-    generateScript(sequencerActive) {
-        let script="";
-        if (this.sourceMode === "autorec") {
-            if (sequencerActive) {
-                script += `
-            .play();
-                `;
-            }
-            script += `
-            await window.AutomatedAnimations.playAnimation(selected, { name: '${this.method}', type: "spell" }, {});
-            `;
-            this.sequencerActive = false;
-        } else if (this.method !== "none" && this.method) {
-            if (!sequencerActive) {
-                script += `
-        new Sequence()
-            .${this.descriptorSequence.descriptor}()
-                `;
-                this.sequencerActive = true;
-            }
-            let method = this.method.replace("descriptor","")
-            method = method.charAt(0).toLowerCase() + method.slice(1);
-            script += `.${method}()
-.play();`;
-            this.sequencerActive = true;
-        }
-        else{
-            this.sequencerActive = sequencerActive;
-        }
-        return script
+    get methods() {
+        const allMethods = this.descriptorSequence.methods;
+        let p = allMethods
+            .filter(method => method.toLowerCase().includes("burst") || method.toLowerCase().includes("cone") || method.toLowerCase().includes("line"))
+            .map(method => {
+                const transformedMethod = method
+                    .replace(/descriptor/gi, "")
+                    .replace(/Burst/g, "burst")
+                    .replace(/Line/g, "line")
+                    .replace(/Cone/g, "cone")
+                
+                return {
+                    original: transformedMethod, 
+                    display: transformedMethod 
+                };
+            });
+        //remove all project methods
+        p = p.filter(method => !method.original.toLowerCase().includes("project"));
+        p =p.filter(method => !method.original.toLowerCase().includes("get"))
+        p = p.filter(method => !method.original.toLowerCase().includes("cast"))
+        return p;
     }
 }
-class AreaSequenceView {
+class AreaSequenceView{
     constructor(sequenceRunnerEditor) {
         this.sequenceRunnerEditor = sequenceRunnerEditor;
-        this.areaSequence = this.sequenceRunnerEditor.descripterView.descriptorSequence.areaSequence;
+        this.areaSequence = sequenceRunnerEditor.descripterView.descriptorSequence.areaSequence;
     }
-
     get html() {
         return this.sequenceRunnerEditor.html;
     }
-
     get chosen() {
-        return this.html.find('[name="areaMethod"]:checked').val(); // Get selected area method
+        return this.html.find('[name="areaMethod"]:checked').val(); // Area type (Burst, Line, Cone, or None)
     }
-
     set chosen(chosenAreaMethod) {
         const areaRadio = this.html.find(`#area-${chosenAreaMethod}`);
         areaRadio.prop("checked", true).trigger("change");
         this.areaSequence.method = chosenAreaMethod;
     }
-
-    updateFrom(powerItem) {
+    updateFrom(powerItem){
         this.areaSequence.updateFrom(powerItem);
         this.chosen = this.areaSequence.method;
     }
-
     get methods() {
-        return this.areaSequence.methods;
+    return this.areaSequence.methods
     }
-
     update() {
         const areaMethodsContainer = document.querySelector("#area-methods");
-        const sourceModeDropdown = this.html.find("#area-source-mode");
-
-        // Update source mode on dropdown change
-        sourceModeDropdown.on("change", (event) => {
-            this.areaSequence.setSourceMode(event.target.value);
-            this.updateMethods();
-        });
-
-        this.updateMethods();
-    }
-
-    updateMethods() {
-        const areaMethodsContainer = document.querySelector("#area-methods");
-        areaMethodsContainer.innerHTML = ""; // Clear existing methods
-
+        areaMethodsContainer.innerHTML="Choose a sequencer effect that animates on a template";
         const areaMethods = this.methods;
-
         if (areaMethods.length > 0) {
             areaMethods.forEach(({ original, display }) => {
                 areaMethodsContainer.innerHTML += `
@@ -13779,168 +13045,117 @@ class AreaSequenceView {
                     <label for="area-none">None</label>
                 </div>
             `;
-
             this.html.find("input[type='radio'][name='areaMethod']").on("change", async () => {
-                this.areaSequence.method = this.chosen;
+                this.areaSequence.method = this.chosen
                 this.sequenceRunnerEditor.scriptView.generate();
             });
         } else {
-            areaMethodsContainer.innerHTML = `<p>No area methods found for the selected source mode.</p>`;
+            areaMethods.innerHTML = `
+                <p>No methods containing "area" found for this effect.</p>
+            `;
         }
-
         this.chosen = this.areaSequence.method;
     }
-
     get content() {
-        return `
-            <fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
-                <legend>Area Methods</legend>
-                <label for="area-source-mode">Source:</label>
-                <select id="area-source-mode" style="margin-bottom: 10px;">
-                    <option value="descriptor">Descriptor</option>
-                    <option value="macro">Macro</option>
-                    <option value="autorec">AutoRec</option>
-                </select>
-                <div id="area-methods" style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
-                    <p>Select an effect to see available methods containing "area"</p>
-                </div>
-            </fieldset>
-        `;
+        return ` <fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+            <legend>Area Methods</legend>
+            <div id="area-methods" style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+                <p>Select an effect to see available methods containing "project"</p>
+            </div>
+        </fieldset>`;
     }
 }
 
-
-class ProjectionSequence extends BaseSequence {
-    constructor(descriptorSequence) {
-        super(descriptorSequence, "Project"); // Pass methodType as "Project"
+class ProjectionSequence{
+    constructor(descriptorSequence){
+        this.descriptorSequence = descriptorSequence;
         this.method = "project";
     }
 
-    updateFrom(powerItem) {
-        const projectMethods = this.methods;
-
-        if (powerItem.range === "Personal") {
-            this.method = "none";
-            return;
+    updateFrom(powerItem){
+        let projectMethods = this.methods;
+        if(powerItem.range == "Personal"){
+            this.method = "none"
+            return
         }
-
-        if (powerItem.areaShape && powerItem.range === "Range") {
-            const areaProjectMethod = projectMethods.find(method =>
-                method.original.toLowerCase().includes(powerItem.areaShape.toLowerCase())
-            );
-            if (areaProjectMethod) {
-                this.method = areaProjectMethod.original;
-                return;
-            } else {
-                this.method = "project";
-                return;
+        if(powerItem.areaShape && powerItem.range == "Range"){
+        let areaProjectMethods = projectMethods.find(method => method.original.toLowerCase().includes(powerItem.areaShape.toLowerCase()));
+            if(areaProjectMethods){
+                this.method = areaProjectMethods.original;
             }
-        } else if (powerItem.range === "Range") {
-            if (powerItem.effect) {
-                const powerProjectMethod = projectMethods.find(method =>
-                    method.original.toLowerCase().includes(powerItem.effect.toLowerCase())
-                );
-                if (powerProjectMethod) {
-                    this.method = powerProjectMethod.original;
-                    return;
-                } else {
-                    this.method = "project";
-                    return;
-                }
-            } else {
-                this.method = "none";
-            }
-        }
-
-
-        this.method = "none";
-    }
-
-    generateScript(sequencerActive) {
-        let script = "";
-        if (this.sourceMode === "autorec") {
-            if (sequencerActive) {
-                script += `
-.play();
-                `;
-                
-            }
-            script += `await window.AutomatedAnimations.playAnimation(selected, { name: '${this.method}', type: "spell" }, {});
-            `;
-            this.sequencerActive = false;
-        } else if (this.method !== "none" && this.method) {
-            if (!sequencerActive) {
-                script += `
-new Sequence()
-    .${this.descriptorSequence.selectedDescriptor}()
-                `;
-                this.sequencerActive = true;
-            }
-            let method = this.method.replace("descriptor", "");
-            method = method.charAt(0).toLowerCase() + method.slice(1);
-            let target = this.descriptorSequence.affectedByPowerSequence.affectedType
-            if(this.descriptorSequence.areaSequence.method && this.descriptorSequence.areaSequence.method!="none")
+            else
             {
-                target = "template"
+                this.method ='project'
             }
-            script += `.${method}({ affected: ${target} })
-        `;
-            this.sequencerActive = true;
         }
         else{
-            this.sequencerActive = sequencerActive;
+            if(powerItem.range == "Range")
+                if(powerItem.effect){
+                    let powerProjectMethods = projectMethods.find(method => method.original.toLowerCase().includes(powerItem.effect.toLowerCase()))
+                    if(powerProjectMethods){
+                        this.chosen = powerProjectMethods.original;
+                    }
+                    else
+                    {
+                        this.method ='project'
+                    }
+                }
+            else
+            {
+                this.method = 'none';
+            }
         }
-        return script;
-    }
-}
-class ProjectionSequenceView {
-    constructor(sequenceRunnerEditor) {
-        this.sequenceRunnerEditor = sequenceRunnerEditor;
-        this.projectionSequence = this.sequenceRunnerEditor.descripterView.descriptorSequence.projectionSequence;
     }
 
+    get methods() {
+        const allMethods = this.descriptorSequence.methods
+        let p = allMethods
+            .filter(method => method.toLowerCase().includes("project")) 
+            .map(method => {
+                const transformedMethod = method
+                    .replace(/descriptor/gi, "")
+                    .replace(/Project/g, "project"); 
+
+                return {
+                    original: transformedMethod, 
+                    display: transformedMethod 
+                };
+            });
+
+        return p;
+    }
+
+}
+class ProjectionSequenceView{
+    constructor(sequenceRunnerEditor) {
+        this.sequenceRunnerEditor = sequenceRunnerEditor;
+        this.projectionSequence = sequenceRunnerEditor.descripterView.descriptorSequence.projectionSequence;
+    }
     get html() {
         return this.sequenceRunnerEditor.html;
     }
-
     get chosen() {
-        return this.html.find('[name="projectMethod"]:checked').val(); // Get the selected project method
-    }
 
+        return this.html.find('[name="projectMethod"]:checked').val(); // Check if there's a project method
+    }
     set chosen(projectMethod) {
         const projectRadio = this.html.find(`#project-${projectMethod}`);
         projectRadio.prop("checked", true).trigger("change");
         this.projectionSequence.method = projectMethod;
     }
-
-    updateFrom(powerItem) {
-        this.projectionSequence.updateFrom(powerItem);
+    updateFrom(powerItem){
+        this.projectionSequence.updateFrom(powerItem);  
         this.chosen = this.projectionSequence.method;
     }
-
+    
     get methods() {
         return this.projectionSequence.methods;
     }
-
     update() {
-        const projectMethodsContainer = document.querySelector("#project-methods");
-        const sourceModeDropdown = this.html.find("#project-source-mode");
-
-        // Update source mode on dropdown change
-        sourceModeDropdown.on("change", (event) => {
-            this.projectionSequence.setSourceMode(event.target.value);
-            this.updateMethods();
-        });
-
-        this.updateMethods();
-    }
-
-    updateMethods() {
-        const projectMethodsContainer = document.querySelector("#project-methods");
-        projectMethodsContainer.innerHTML = ""; // Clear existing methods
 
         const projectMethods = this.methods;
-
+        const projectMethodsContainer = document.querySelector("#project-methods");
+        projectMethodsContainer.innerHTML = "Choose a sequencer effect that animates from the caster's token to a template or targeted Token"; 
         if (projectMethods.length > 0) {
             projectMethods.forEach(({ original, display }) => {
                 projectMethodsContainer.innerHTML += `
@@ -13957,46 +13172,58 @@ class ProjectionSequenceView {
                     <label for="project-none">None</label>
                 </div>
             `;
-
             this.html.find("input[type='radio'][name='projectMethod']").on("change", async () => {
                 this.projectionSequence.method = this.chosen;
-                await this.sequenceRunnerEditor.scriptView.generate();
+                await this.sequenceRunnerEditor.scriptView.generate()
             });
         } else {
-            projectMethodsContainer.innerHTML = `<p>No methods containing "project" found for this effect.</p>`;
+            projectMethodsContainer.innerHTML = `
+                <p>No methods containing "project" found for this effect.</p>
+            `;
         }
-
-        this.chosen = this.projectionSequence.method;
+        this.chosen = this.projectionSequence.method
     }
-
     get content() {
-        return `
-            <fieldset>
-                <legend>Project Methods</legend>
-                <label for="project-source-mode">Source:</label>
-                <select id="project-source-mode" style="margin-bottom: 10px;">
-                    <option value="descriptor">Descriptor</option>
-                    <option value="macro">Macro</option>
-                    <option value="autorec">AutoRec</option>
-                </select>
-                <div id="project-methods" style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
-                    <p>Select an effect to see available methods containing "project"</p>
-                </div>
-            </fieldset>
-        `;
+        return `<fieldset>
+            <legend>Project Methods</legend>
+            <div id="project-methods" style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+                <p>Select an effect to see available methods containing "project"</p>
+            </div>
+        </fieldset>`;
     }
 }
 
-
-
-class CastSequence extends BaseSequence{
+class CastSequence{
     constructor(descriptorSequence){
-        super(descriptorSequence, "Cast");
         this.descriptorSequence = descriptorSequence;
         this.method = "cast";
     }
+    get methods() {
+        const allMethods = this.descriptorSequence.methods
+        let castMethods = allMethods.filter(method => method.toLowerCase().includes("cast"));
+        if (!castMethods.includes("cast")) {
+            castMethods.unshift("cast");
+        }
+        castMethods = castMethods.filter((method, index, self) =>
+            self.findIndex(m => m.toLowerCase() === method.toLowerCase()) === index
+        );
+        const index = castMethods.indexOf("descriptorCast");
+        if(index!=-1){
+            castMethods.splice(index, 1);
+        }
 
 
+        castMethods= castMethods.map(method => ({
+            original: method.replace(/descriptor/i, ""),
+            display: method.replace(/descriptor/i, "") 
+        }));
+        castMethods = castMethods.map(method => ({
+            original: method.original.charAt(0).toLowerCase() + method.original.slice(1),
+            display: method.display.charAt(0).toLowerCase() + method.display.slice(1)
+        }));
+        
+        return castMethods;
+    }
     updateFrom(powerItem){
         let castFound = false;
         let castMethods = this.methods;
@@ -14017,7 +13244,7 @@ class CastSequence extends BaseSequence{
                 }
             }
         }
-        if(!castFound){ 
+        if(!castFound){
             let powerEffectCastMethods = castMethods.find(method => method.original.toLowerCase().includes(powerItem?.effect?.toLowerCase()));
             if(powerEffectCastMethods){
                 this.method = powerEffectCastMethods.original;
@@ -14037,41 +13264,6 @@ class CastSequence extends BaseSequence{
                 this.method = "cast";
         }
     }
-
-    generateScript(sequencerActive) {
-        let script="";
-        if (this.sourceMode === "autorec") {
-            if (sequencerActive) {
-                script += `
-.play();
-                `;
-            }
-            script += `
-    await window.AutomatedAnimations.playAnimation(selected, { name: '${this.method}', type: "spell" }, {});
-            `;
-             this.sequencerActive = false;
-        } else {
-            if (!sequencerActive) { 
-                script += `
-new Sequence()
-    .${this.descriptorSequence.selectedDescriptor}()`;
-                this.sequencerActive = true;
-            }
-            let method = this.method.replace("descriptor","")
-            method = method.charAt(0).toLowerCase() + method.slice(1);
-            let target = this.descriptorSequence.affectedByPowerSequence.affectedType
-            if(this.descriptorSequence.areaSequence.method && this.descriptorSequence.areaSequence.method!="none")
-            {
-                target = "template"
-            }
-            script += `
-        .${method ? method : "cast"}({ affected: ${target} ${this.descriptorSequence.powerEffectSequence.hasMovementEffect ? ", position: position" : ""} })
-        `;
-         this.sequencerActive = true;
-        }
-        return script;
-    }
-    
 }
 class CastSequenceView{
     constructor(sequenceRunnerEditor) {
@@ -14097,56 +13289,40 @@ class CastSequenceView{
         return this.castSequence.methods;
     }
     update() {
-      
         const castMethodsContainer = document.querySelector("#cast-methods");
-        const sourceModeDropdown = this.html.find("#cast-source-mode");
-
-        sourceModeDropdown.on("change", (event) => {
-            this.castSequence.setSourceMode(event.target.value);
-            this.updateMethods();
-        });
-
-        this.updateMethods();
-        
-    }
-    updateMethods() {  
-        const castMethodsContainer = document.querySelector("#cast-methods");
-        castMethodsContainer.innerHTML = ""; // Clear existing methods
-
-        const castMethods = this.castSequence.methods;
+        castMethodsContainer.innerHTML = "Choose a sequencer effect that animates on the caster's token"; 
+        const castMethods = this.methods; 
         if (castMethods.length > 0) {
             castMethods.forEach(({ original, display }) => {
                 castMethodsContainer.innerHTML += `
-                    <div>
-                        <input type="radio" id="cast-${original}" name="castMethod" value="${original}">
-                        <label for="cast-${original}">${display}</label>
-                    </div>
-                `;
+            <div>
+                <input type="radio" id="cast-${original}" name="castMethod" value="${original}">
+                <label for="cast-${original}">${display}</label>
+            </div>
+        `;
             });
+
             this.html.find("input[type='radio'][name='castMethod']").on("change", async () => {
                 this.castSequence.method = this.chosen
                 await this.sequenceRunnerEditor.scriptView.generate();
             });
+
         } else {
-            castMethodsContainer.innerHTML = `<p>No cast methods found for the selected source mode.</p>`;
+            castMethodsContainer.innerHTML = `
+        <p>No methods containing "cast" found for this effect.</p>
+    `;
         }
-         this.chosen = this.castSequence.method;
+        this.chosen = this.castSequence.method
     }
     get content() {
         return `
-            <fieldset>
-                <legend>Cast Methods</legend>
-                <label for="cast-source-mode">Source:</label>
-                <select id="cast-source-mode" style="margin-bottom: 10px;">
-                    <option value="descriptor">Descriptor</option>
-                    <option value="macro">Macro</option>
-                    <option value="autorec">AutoRec</option>
-                </select>
-                <div id="cast-methods" style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
-                    <p>Select a cast method</p>
-                </div>
-            </fieldset>
-        `;
+        <fieldset>
+            <legend>Cast Methods</legend>
+            <div id="cast-methods" style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+                <p>Select an effect to see available methods containing "cast"</p>
+            </div>
+        </fieldset>
+        `
     }
 }
 
@@ -14155,10 +13331,10 @@ class DescriptorSequence{
         this.powerItem = powerItem;
         this.descriptorClasses = {
             "airEffect":"Air",
-            "darknessEffect":"Darkness",
+         //   "darknessEffect":"Darkness",
             "earthEffect": "Earth",
             "electricityEffect": "Electricity",
-            "energyEffect": "Energy",
+         //   "energyEffect": "Energy",
           //  "entropyEffect": "Entropy",
           //  "exoskeletonEffect": "Exoskeleton",
             "fireEffect": "Fire",
@@ -14166,13 +13342,11 @@ class DescriptorSequence{
             "holyEffect": "Holy",
             "iceEffect": "Ice",
         //    "impactEffect": "Impact",
-            "insectEffect": "Insect",
+        //    "insectEffect": "Insect",
         //    "invincibleEffect": "Invincible",
-        "lightEffect": "Light",
         //    "kineticEffect": "Kinetic",
         //    "lightEffect": "Light",
             "lightningEffect": "Lightning",
-            "powerEffect": "Power",
         //    "magnetismEffect": "Magnetism",
         //    "loveEffect": "Love",
         //    "magicEffect": "Magic",
@@ -14181,19 +13355,12 @@ class DescriptorSequence{
         //    "psychicEffect": "Psychic",
             "radiationEffect": "Radiation",
         //    "noDescriptorEffect": "No Descriptor",
-        "sonicEffect": "Sonic",
         //    "superSpeedEffect": "Super Speed",
-            "superStrengthEffect": "Super Strength",
-            "waterEffect": "Water",
-            "webEffect": "Web",
+        //    "superStrengthEffect": "Super Strength",
+            "waterEffect": "Water"
         };
         if(this.powerItem){
             this.descriptorClass = Sequencer.SectionManager.externalSections[this.powerItem.descriptor.toLowerCase()+"Effect"];
-            if(! this.descriptorClass){
-                this.descriptorClass = {name:this.powerItem.descriptor}
-                
-                
-            }
         }
         this.castSequence = new CastSequence(this);
         this.projectionSequence = new ProjectionSequence(this);
@@ -14232,13 +13399,10 @@ class DescriptorSequence{
         return name;
     }
 
-    get descriptorName(){
-        let descriptor =  this.descriptorClass?.name?.replace(/\b[A-Z]/g, char => char.toLowerCase()).replace("Section","");
-        
-        return  this.descriptorClasses[descriptor]
-    }
     get name(){
-        let name = this.descriptorName
+        let descriptor =  this.descriptorClass.name.replace(/\b[A-Z]/g, char => char.toLowerCase()).replace("Section","");
+        
+        let name = this.descriptorClasses[descriptor]
         let range
         if(this.projectionSequence.method!="none")
         range="-"+"Range"
@@ -14278,15 +13442,7 @@ class DescriptorSequence{
     }
 
     updateFromPowerItem(){ 
-        //concatentate the descriptor and effect to get the descriptorEffect
-        
-        let selectedDescriptor = this.powerItem.descriptor.replace(" ","")+"Effect"
-        //lower case first letter
-        selectedDescriptor = selectedDescriptor.charAt(0).toLowerCase() + selectedDescriptor.slice(1) ;
-       
-        
-        this.selectedDescriptor = selectedDescriptor
-        
+        this.selectedDescriptor = this.powerItem.descriptor.toLowerCase()+"Effect"
         this.castSequence.updateFrom(this.powerItem);
         this.projectionSequence.updateFrom(this.powerItem);
         this.areaSequence.updateFrom(this.powerItem);
@@ -14353,9 +13509,8 @@ class DescriptorSequenceView{
         + this.affectedByPowerView.content
         + this.powerEffectMethodsView.content
     }
-    update() { 
-       // this.selected!=null &&
-        if( this.selected !=this.descriptorSequence.selectedDescriptor && this.descriptorSequence.selectedDescriptor!="no descriptorEffect" ){
+    update() {
+        if(this.selected !=this.descriptorSequence.selectedDescriptor && this.descriptorSequence.selectedDescriptor!="no descriptorEffect"){
             this.selected =this.descriptorSequence.selectedDescriptor
         }
         this.castMethodsView.update()
@@ -14414,7 +13569,7 @@ class PowerItem{
     }
 get descriptor(){  
         let item = this.item;
-        return item.system.descripteurs["2"] ?item.system.descripteurs["2"]:item.system.descripteurs["1"]?item.system.descripteurs["1"]:item.system.descripteurs["0"]?item.system.descripteurs["0"]:"Power"
+        return item.system.descripteurs["2"] ?item.system.descripteurs["2"]:item.system.descripteurs["1"]?item.system.descripteurs["1"]:item.system.descripteurs["0"]?item.system.descripteurs["0"]:"No Descriptor"
 }
 get effect() {
     let power = this.item;
@@ -14447,7 +13602,6 @@ get effect() {
     //{
         //  matchedEffect = "Affliction"
     //}
-   
     return matchedEffect;
 } 
 get areaShape() {
@@ -14503,10 +13657,6 @@ get descriptorName(){
     return `${this.descriptor}-${this.range}-${area}-${this.effect}`;
     
 }
-
-get expandedDescriptorName(){
-       return this.descriptor+"-"+this.range + (this.areaShape!=undefined?"-"+this.areaShape:"" )+"-"+this.item.system.effetsprincipaux  
-} 
 get autoRecEntryLabel(){
         return this.matchingAutoRecEntry?.label
 }
@@ -14518,18 +13668,8 @@ get matchingAutoRecEntry(){
             return result
         }
         else{
-            powerName = this.descriptor+"-"+this.range + (this.areaShape!=undefined?"-"+this.areaShape:"" )+"-"+this.item.system.effetsprincipaux 
-            
-            result = this.findAutoRecEntry(powerName)
-            if(result){
-                return result
-            }
-            else{
-                powerName = this.descriptorName
-                result = this.findAutoRecEntry(powerName)
-                return result
-            }
-            
+            powerName = this.descriptorName
+            return this.findAutoRecEntry(powerName)
         }
 }
     findAutoRecEntry(search){
@@ -14563,15 +13703,8 @@ get matchingAutoRecEntry(){
             }
         }
         if(!animation.name){
-            let macroName = this.expandedDescriptorName
+            let macroName = this.descriptorName ;
             let macro = game.macros.find(macro => macro.name === macroName)
-            if(!macro){
-                let expanded = this.autoRecEntryLabel  //if there is an autorec that matches the expanded name get that first else look for a descriptor macro 
-                if(!expanded){
-                    macroName = this.descriptorName ;
-                     macro = game.macros.find(macro => macro.name === macroName)
-                }
-            }
             if(macro)
             {
                 animation.name = macroName 
@@ -14622,7 +13755,6 @@ get matchingAutoRecEntry(){
     }
 }
 
-
 class SequencerScript{
     constructor(descriptorSequence){
         this.descriptorSequence = descriptorSequence;
@@ -14659,7 +13791,7 @@ class SequencerScript{
     }
     get area(){
         return this.descriptorSequence.areaSequence.method && this.descriptorSequence.areaSequence.method !== "none"
-            ? ["cone", "line", "burst"].find(keyword => this.descriptorSequence.areaSequence.method.toLowerCase().includes(keyword.toLowerCase())) || ""
+            ? ["cone", "line", "burst"].find(keyword => this.descriptorSequence.areaSequence.method.includes(keyword.toLowerCase())) || ""
             : "";
     } 
 
@@ -14686,130 +13818,168 @@ class SequencerScript{
         return this.descriptorSequence.selectedDescriptor
     }
 
-    async generate() {  
-        
+    async generate() {   
+        const selectedDescriptor = this.descriptorSequence.selectedDescriptor; 
+        const selectedDescripptorClass = this.descriptorSequence.selectedDescriptor
+        const castMethod = this.descriptorSequence.castSequence.method;
+        const projectMethod = this.descriptorSequence.projectionSequence.method;
+                
+        const areaMethod = this.descriptorSequence.areaSequence.method;
+        const whoIsAffected = this.descriptorSequence.affectedByPowerSequence.affectedType; 
         const powerEffectMethods = this.descriptorSequence.powerEffectSequence.selectedEffectMethods.map(effect => {
             const methodNames = this.descriptorSequence.powerEffectSequence.methods;
-            const isMethodInDescriptor = methodNames.some(method => method.original === effect.original);
+            const isMethodInDescriptor = methodNames.some(method => method.original == effect.original );
             if (isMethodInDescriptor) {
                 return effect;
             } else {
                 return { original: "affectAura", display: "Aura" };
             }
         });
-    
-        let script = 
-`const selected = GameHelper.selected;`;
-    
-        let sequencerActive = false;
-    
         
-        if (powerEffectMethods.some(p => p.original.includes("Create"))) {
-            script += `
-    let create = await GameHelper.placeCreationTile({ power: '${selectedDescriptor}' });
-            `;
-            this.descriptorSequence.affectedByPowerSequence.affectedType = "create";
-            script=script+this.descriptorSequence.castSequence.generateScript(sequencerActive)
-            sequencerActive = this.descriptorSequence.castSequence.sequencerActive;  
+        //this.html.find("#macro-name").val(this.name);
 
-            script+= this.descriptorSequence.projectionSequence.generateScript(sequencerActive)
-            sequencerActive = this.descriptorSequence.projectionSequence.sequencerActive;        
-            if (sequencerActive) {
-                script += `
-    .play();
-                `;
-            } 
-        } else {
-            if (this.descriptorSequence.powerEffectSequence.hasMovementEffect) {
-                script += `
-    let position = await GameHelper.placeEffectTargeter('${this.descriptorSequence.selectedDescriptor}');
-                `;
-            } 
-    
-            const areaMethod = this.descriptorSequence.areaSequence.method;
-            if (areaMethod && areaMethod!= "none" ) { 
-                script += `
-await GameHelper.waitForTemplatePlacement()
-const template = GameHelper.template;
-                            `;
-            }else{
-                if (this.descriptorSequence.affectedByPowerSequence.affectedType === "target") {
-                    script += `
-for (let target of selectedTargets) {
-    `;
+        let script = `
+        `
+        if(powerEffectMethods.filter(p=>p.original.includes("Create")).length>0){
+            script+=
+`
+let create = await GameHelper.placeCreationTile({power:'${selectedDescriptor}'})
+
+new Sequence() 
+    .${selectedDescripptorClass}()
+        .${castMethod?castMethod:"cast"}({affected:create})
+`           
+            if (projectMethod !== "none" && projectMethod!=undefined && projectMethod !=="") 
+            { 
+                script +=`        
+        .${projectMethod}({affected:create})
+` 
+            }
+        script+=`.play()`
+        }
+        else {
+            if(whoIsAffected=='selected'){
+            script+=
+`const selected = GameHelper.selected;
+`
+            }
+            script+=        
+`const selectedTargets = Array.from(game.user.targets);
+`
+            if(this.descriptorSequence.powerEffectSequence.hasMovementEffect){ 
+                script+= `let position = await GameHelper.placeEffectTargeter('${selectedDescriptor}');
+`
+            }
+            if ((areaMethod === "none" || areaMethod === undefined)  && whoIsAffected === "target" || whoIsAffected=="selected") {
+            if(whoIsAffected=="target"){
+                    script += 
+`for (let target of selectedTargets) {
+    `
+            }  
+            script += `new Sequence()
+        .${selectedDescripptorClass}()
+`
+            if(this.descriptorSequence.powerEffectSequence.hasMovementEffect){
+                script +=
+`       .${castMethod?castMethod:"cast"}({affected: ${whoIsAffected}, position:position})`
+            }
+            else{
+            script +=
+`       .${castMethod?castMethod:"cast"}({affected: ${whoIsAffected}})`           
+            }
+                if (projectMethod !== "none" && projectMethod!=undefined && projectMethod !=="") 
+                { 
+                    script +=`        
+        .${projectMethod}()`
+                    }
+            powerEffectMethods.forEach((powerEffectMethod) => {
+            if(this.descriptorSequence.powerEffectSequence.hasMovementEffect){
+                script += 
+        `
+        .${powerEffectMethod.original}({affected: ${whoIsAffected}, position:position})
+`
+            }
+            else
+            {
+                if(powerEffectMethod.original=="affectCreate"){
+                    script +=
+`
+        .${powerEffectMethod.original}({affected: ${whoIsAffected}, position:position})
+`
                 }
-            }
-            script+=`const selectedTargets = await GameHelper.getAllTargeted();`
-
-            script= script+this.descriptorSequence.castSequence.generateScript(sequencerActive)
-            sequencerActive = this.descriptorSequence.castSequence.sequencerActive;
-
-            script+= this.descriptorSequence.projectionSequence.generateScript(sequencerActive)
-            sequencerActive = this.descriptorSequence.projectionSequence.sequencerActive;  
-
-            if (areaMethod && areaMethod!= "none" ) {
-                script += this.descriptorSequence.areaSequence.generateScript(sequencerActive);
-                sequencerActive = this.descriptorSequence.areaSequence.sequencerActive;
-                script += `
-await GameHelper.sleep(3000)
-for (let target of selectedTargets) {
-    `;
-            }
-    
-            // Add power effect logic
-            powerEffectMethods.forEach(powerEffectMethod => {
-                if (this.descriptorSequence.powerEffectSequence.sourceMode === "autorec") {
-                    if (sequencerActive) {
-                        script += `
-.play();
-                        `;
-                        sequencerActive = false;
+                else{
+                    script += 
+`                   
+        .${powerEffectMethod.original}({affected: ${whoIsAffected}})
+`
                     }
-                    script += `
-await window.AutomatedAnimations.playAnimation(${whoIsAffected}, { name: '${powerEffectMethod.original}', type: "spell" }, {});
-                    `;
-                } else {
-                    if(this.descriptorSequence.areaSequence.method && this.descriptorSequence.areaSequence.method!="none"){
-                        script+=`
-   new Sequence()
-   .${this.descriptorSequence.selectedDescriptor}()`
-                    }
-                    script += `.${powerEffectMethod.original}({ affected: ${this.descriptorSequence.affectedByPowerSequence.affectedType} ${this.descriptorSequence.powerEffectSequence.hasMovementEffect ? ", position: position" : ""} })
-    `;
                 }
             });
-
-            if (powerEffectMethods.length === 0 && sequencerActive) {
-                script += `.affectAura({ affected: ${this.descriptorSequence.affectedByPowerSequence.affectedType} })
-                `;
+            if(powerEffectMethods.length==0){
+                script +=
+`
+        .affectAura({affected: ${whoIsAffected}})
+`           
             }
+        
+        script +=
+`   .play(); `
+        if(whoIsAffected=="target"){
+            script +=
+`
+}`
+        }
+        
+        } 
+        else {
+            script += 
+`await GameHelper.waitForTemplatePlacement()
+let template = GameHelper.template
 
-            if (sequencerActive) {
-                script += `.play();
+let target = Array.from(game.user.targets)[0];
+new Sequence()
+    .${selectedDescripptorClass}()
+    .${castMethod?castMethod:"cast"}({affected: template})`
+        script += projectMethod !== "none" && projectMethod !=="" ? 
+`   
+    .${projectMethod}()
+` : "";
+        script += 
+`    .${areaMethod !== "none" ?`${areaMethod}()` : ""}
+.play()
+
+await new Promise(resolve => setTimeout(resolve, 6000));
+for (let target of selectedTargets) {
+    new Sequence()
+        .${selectedDescripptorClass}()`
+    powerEffectMethods.forEach((powerEffectMethod) => {
+        script +=
+`
+        .${powerEffectMethod.original}({affected: ${whoIsAffected}})
 `;
-             
-            }
+        });
+    script += 
+`   .play(); 
+}
+`; 
 
-            if (this.descriptorSequence.affectedByPowerSequence.affectedType === "target") {
-                script += `}
-                `;
-            }
-        }
-    
-        this.script = script;
-    
-        try {
-            const asyncWrapper = new Function(`return (async () => { ${script} })();`);
-            // await asyncWrapper();
-        } catch (error) {
-            this.script += `\n\n---------------------------Error executing script---------------------------:
-            ${error.message}
-            ${error.stack}`;
-            console.error("Script Execution Error:", error);
-        }
+
     }
-    
 
+}
+this.script = script;
+
+    try{
+        const asyncWrapper = new Function(`return (async () => { ${script} })();`);
+    // await asyncWrapper();
+    }
+    catch (error) {
+        this.script + `\n\n---------------------------Error executing script---------------------------:
+        ${error.message}
+        ${error.stack}`;
+        console.error("Script Execution Error:", error);
+    }
+    }
     async save(){
         try {
             let macro = game.macros.find(m => m.name === this.name);
@@ -14870,170 +14040,92 @@ await window.AutomatedAnimations.playAnimation(${whoIsAffected}, { name: '${powe
                 </fieldset>`
     } 
 }
-class SequencerScriptView {
+class SequencerScriptView{
     constructor(sequenceRunnerEditor) {
         this.sequenceRunnerEditor = sequenceRunnerEditor;
-        this.sequencerScript = this.sequenceRunnerEditor.descripterView.descriptorSequence.sequencerScript;
-    }
-
+        this.sequencerScript = this.sequenceRunnerEditor.descripterView.descriptorSequence.sequencerScript
+    } 
     get html() {
         return this.sequenceRunnerEditor.html;
     }
 
     get script() {
+    
         return this.html.find("#generated-script").val(); // Get the generated script
+    
     }
-
-    set script(script) {
-        this.html.find("#generated-script").val(script);
-        // Update the backend script when script changes
+    set script(script){
+        this.html.find("#generated-script").val(script)
+        //on script change, update the back end script
         this.html.find("#generated-script").on("change", async () => {
             this.sequencerScript.script = this.script;
         });
         this.sequencerScript.script = script;
     }
-
-    async run() { 
-        this.sequencerScript.run();
+    async run() {
+        this.sequencerScript.run()
     }
 
-    update() {
-        this.nameInputElement = document.getElementById('macro-name');
-        this.scriptField = document.getElementById('generated-script');
-        this.loadButton = document.getElementById('load-macro');
-        this.suggestionsElement = document.getElementById('macro-suggestions'); // Added for suggestions list
-        this.currentMatches = [];
-        this.listenForNameChanges();
-        this.registerOnEnter();
-        this.registerLoadMacroButtonClick();
+    get range(){
+        return this.sequencerScript.range()
+    }
+    get area(){
+        return this.sequencerScript.area()
+    }  
+
+    get powerEffects(){
+        return this.sequencerScript.powerEffects()
     }
 
-    listenForNameChanges() {
-        this.nameInputElement.addEventListener('input', async (event) => {
-            const inputText = event.target.value;
-            this.matches = game.macros.contents.filter(macro =>
-                macro.name.toLowerCase().includes(inputText.toLowerCase())
-            );
-            this.updateMacroSuggestions(this.matches);
-            this.loadButton.disabled = this.matches.length === 0;
-            this.currentMatches = this.matches;
-        });
-    }
-
-    registerOnEnter() {
-        this.nameInputElement.addEventListener('keydown', (event) => {
-            if (event.key === "Enter" && this.currentMatches.length > 0) {
-                this.name = this.currentMatches[0].name;
-                this.loadButton.disabled = false;
-                this.loadMacroContent(this.currentMatches[0]);
-            }
-        });
-    }
-
-    updateMacroSuggestions(matches) {
-        const suggestionList = this.suggestionsElement;
-        suggestionList.innerHTML = ""; // Clear previous suggestions
-
-        matches.forEach((macro) => {
-            const suggestionItem = document.createElement('div');
-            suggestionItem.classList.add('suggestion-item');
-            suggestionItem.textContent = macro.name;
-
-            // Add click behavior to select a macro
-            suggestionItem.addEventListener('click', () => {
-                this.name = macro.name;
-                this.loadButton.disabled = false;
-                this.currentMatches = [macro]; // Keep only the selected macro
-            });
-
-            suggestionList.appendChild(suggestionItem);
-        });
-    }
-
-    loadMacroContent(macro) {
-        this.script = macro.command;
-    }
-
-    registerLoadMacroButtonClick() {
-        this.loadButton.addEventListener('click', () => {
-            if (this.currentMatches.length > 0) {
-                this.loadMacroContent(this.currentMatches[0]);
-            }
-        });
-    }
-
-    set name(name) {
-        this.html.find("#macro-name").val(name);
-       // this.sequencerScript.name = name;
-    }
-
-    get name() {
-        return this.sequencerScript.name();
-    }
-
-    get range() {
-        return this.sequencerScript.range();
-    }
-
-    get area() {
-        return this.sequencerScript.area();
-    }
-
-    get powerEffects() {
-        return this.sequencerScript.powerEffects();
-    }
-
-    get descriptorView() {
-        return this.sequenceRunnerEditor.descripterView;
+    get name(){
+        return this.sequencerScript.name()
     } 
 
-    async generate() {
-        this.sequencerScript.generate();
-        this.script = this.sequencerScript.script;
-        this.name = this.sequencerScript.name;
+    get descriptorView(){
+        return this.sequenceRunnerEditor.descripterView
     }
 
-    async save() {
-        this.sequencerScript.save();
+    async generate() {  
+        this.sequencerScript.generate() 
+        this.script = this.sequencerScript.script
+        this.name = this.sequencerScript.name
+    }
+    async save(){
+        this.sequencerScript.save()
     }
 
-    updateFromPowerItem() {
+    //set name from html text box acro-name
+    set name(name){
+        this.html.find("#macro-name").val(name)
+        //this.sequencerScript.name = name;
+
+    }
+
+    updateFromPowerItem(){
         this.sequencerScript.updateFromPowerItem();
-        this.script = this.sequencerScript.script;
-        this.name = this.sequencerScript.name;
-    } 
+        this.script = this.sequencerScript.script
+        this.name = this.sequencerScript.name
+    }
 
     get content() {
-        return `
-           <fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
-            <legend>Macro Name</legend>
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                <input id="macro-name" type="text" style="flex: 1;">
-                <button id="load-macro" type="button" style="width: 100px;" disabled>Load Macro</button>
-            </div>
-            <div id="macro-suggestions" style="border: 1px solid #ddd; max-height: 150px; overflow-y: auto; margin-bottom: 10px;"></div>
-            <textarea id="generated-script" style="width: 100%; height: 300px;"></textarea>
-            <button id="run-macro" type="button" style="margin-top: 10px;">Run Macro</button>
-            <button id="save-macro" type="button" style="margin-top: 10px;">Save Macro</button>
-        </fieldset>`
-    }
+        return `       
+                <fieldset style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+                    <legend>Output</legend>
+                    <input id="macro-name" type="text" style="width: 100%; margin-bottom: 10px;">
+                    <textarea id="generated-script" style="width: 100%; height: 300px;"></textarea>
+                    <button id="run-macro" type="button" style="margin-top: 10px;">Run Macro</button>
+                </fieldset>`
+    } 
 
-    registerOnSaveClicked() {
-        this.html.find("#save-macro").on("click", async () => {
-            await this.sequencerScript.save();
-        });
-    }
-
-    registerOnRunClicked() {
+    registerOnSaveClicked(){
         this.html.find("#run-macro").on("click", async () => {
             await this.sequencerScript.run();
         });
     }
 
-    registerOnNameChanged() {
+    registerOnNameChanged(){    
         this.html.find("#macro-name").on("change", async (event) => {
-            this.sequencerScript.name = event.target.value;
+            this.sequencerScript.name = event.target.value
         });
     }
-}
-
+} 
