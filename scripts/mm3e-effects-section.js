@@ -9261,8 +9261,8 @@ Hooks.on("ready", () => {
                     return this
             }
     
-            descriptorCastBurrow(position){
-                this.castCommon({affected:affected, caster:caster})
+            descriptorCastBurrowing(position){
+                this.castCommon()
                 .file("jb2a.static_electricity.03.blue")
                 .fadeIn(350)
                 .fadeOut(350)
@@ -9286,6 +9286,13 @@ Hooks.on("ready", () => {
                 .filter("ColorMatrix", {hue:70, contrast: 0.5, saturate: 0.5,brightness: 1,})
                 
                 .pause(500)
+    
+                super.affectCommon()
+                .file("animated-spell-effects-cartoon.electricity.18")
+                .filter("ColorMatrix", { brightness: 1, contrast: 1 })
+                .fadeOut(3000)
+                .scaleToObject(6)
+                .zIndex(3)            
                 
                 super.affectCommon()
                 .file("jb2a.burrow.out.01.still_frame.0")
@@ -9296,6 +9303,8 @@ Hooks.on("ready", () => {
                 .scaleToObject(6)
                 .filter("ColorMatrix", { saturate: 1 })
                 .zIndex(1)
+    
+    
                 
                 super.affectCommon()
                 .file("jb2a.lightning_bolt.wide.blue")
@@ -9305,9 +9314,168 @@ Hooks.on("ready", () => {
                 .zIndex(1)
                 return this
             }
-            descriptorCastLeap(position){}
-            descriptorCastTeleport(position){}
-            descriptorCastSpeed(position){}
+            descriptorCastLeaping(position){
+    
+                const originalPosition = { x: token.x, y: token.y };
+                
+                this.castCommon()
+                .file("jb2a.static_electricity.03.blue")
+                .atLocation(this.caster)
+                .fadeIn(350)
+                .fadeOut(350)
+                .scaleToObject(3)
+                .filter("ColorMatrix", { hue: -10, contrast: 0.5, saturate: 0.1, brightness: 1 })
+                .randomRotation()
+                .belowTokens()
+                .duration(1000)
+    
+                super.castCommon()
+                .file(`jb2a.static_electricity.02.blue`)
+                .atLocation(this.caster)
+                .opacity(0.9)
+                .scaleToObject(1.5)
+                .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+                .waitUntilFinished(-1200)
+    
+                super.affectCommon()
+                .file("jb2a.impact.ground_crack.02.blue")
+                .atLocation(this.caster)
+                .belowTokens()
+                .filter("ColorMatrix", {saturate: 2})
+                .fadeOut(1000)
+                .scaleToObject(4)
+                .zIndex(2)
+                
+                super.affectCommon()
+                .file("jb2a.ground_cracks.blue.02")
+                .atLocation(originalPosition)
+                .belowTokens()
+                .filter("ColorMatrix", {saturate: 1})
+                .duration(6000)
+                .fadeOut(1000)
+                .scaleToObject(4)
+                .zIndex(1)
+                .opacity(0.1)
+    
+                super.affectCommon()    
+                .file("jb2a.burrow.out.01.still_frame.0")
+                .atLocation(this.caster)
+                .duration(5000)
+                .fadeIn(500)
+                .fadeOut(1000)
+                .belowTokens()
+                .scaleToObject(6)
+                .filter("ColorMatrix", { saturate: 1 })
+                .zIndex(1)
+                
+                super.affectCommon()
+                .file("jb2a.impact.011.blue")
+                .atLocation(this.caster) 
+                .scaleToObject(8)
+                .fadeOut(300)
+                return this
+            }
+            descriptorCastTeleport(position){
+                
+                this.file("jb2a.static_electricity.01.blue")
+                .atLocation(this.caster)
+                .scaleToObject(1.2)
+                .playbackRate(1.25)
+                .waitUntilFinished(-200)
+                
+                super.castCommon()
+                .file("jb2a.impact.ground_crack.blue.01")
+                .atLocation(this.caster)
+                .belowTokens()
+                .filter("ColorMatrix", {saturate: -0.5})
+                .size(3, {gridUnits: true})
+                .zIndex(1)
+                
+                super.castCommon()
+                .file("jb2a.impact.ground_crack.still_frame.01")
+                .atLocation(this.caster)
+                .belowTokens()
+                .size(3, {gridUnits: true})
+                .persist()
+                .zIndex(0)
+                
+                super.castCommon()
+                .file("jb2a.lightning_strike.blue.0")
+                .atLocation(this.caster)
+                .randomizeMirrorX()
+                .scale(1)
+                
+                super.affectCommon()
+                .file("jb2a.extras.tmfx.outpulse.circle.02.normal")
+                .atLocation(this.caster)
+                .size(4, {gridUnits: true})
+                
+                super.affectCommon()
+                .file("jb2a.extras.tmfx.outpulse.circle.02.fast")
+                .atLocation(this.caster)
+                .size(4, {gridUnits: true})
+                
+                return this
+            }
+            descriptorCastSpeed(position){
+                
+                    this.file("jb2a.static_electricity.03.blue")
+                    .atLocation(this.caster)
+                    .fadeIn(350)
+                    .fadeOut(350)
+                    .scaleToObject(3)
+                    .filter("ColorMatrix", { hue: -10, contrast: 0.5, saturate: 0.1, brightness: 1 })
+                    .randomRotation()
+                    .belowTokens()
+                    .duration(1800)
+                
+                    super.castCommon()
+                    .file(`jb2a.static_electricity.02.blue`)
+                    .atLocation(this.caster)
+                    .opacity(0.9)
+                    .scaleToObject(1.5)
+                    .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+                    
+                    super.castCommon()
+                    .file("blfx.spell.melee.radial1.lightning1.shock1")
+                    .atLocation(this.caster)
+                    .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+                    .playbackRate(1.5)
+                    .scaleToObject(4)
+                    .scaleOut(0, 500, {ease: "easeOutCubic"})
+                    .waitUntilFinished(-2000)
+                
+                .animation()
+                    .on(this.caster)
+                    .fadeOut(500)
+                    .waitUntilFinished(-150)
+                
+                .wait(50)
+                .canvasPan()
+                .shake({duration: 1500, strength: 1, rotation: false })
+                
+                
+    
+                    super.castCommon()
+                    .file("jb2a.lightning_bolt.wide.blue")
+                    .opacity(2)
+                    .playbackRate(1)
+                    .atLocation(this.caster)
+                    .stretchTo(position, {cacheLocation: true})
+                    .aboveLighting()
+                
+    
+                    super.castCommon()
+                    .file("jb2a.gust_of_wind.default")
+                    .filter("ColorMatrix", { hue: 15, saturate: -0.6, contrast: 2})
+                    .opacity(0.6)
+                    .playbackRate(1.5)
+                    .atLocation(this.caster)
+                    .delay(500)
+                    .stretchTo(position, {cacheLocation: true})
+                    .waitUntilFinished(-1600)
+                return this
+            }
             descriptorCastFlight(position){}
             descriptorMeleeCast(){
                 return this
@@ -9378,7 +9546,6 @@ Hooks.on("ready", () => {
             .scaleToObject(8)
             .zIndex(3)
             
-    
             super.lineCommon()
             .file("jb2a.impact.ground_crack.02.blue")
             .atLocation(start)
@@ -9436,8 +9603,9 @@ Hooks.on("ready", () => {
                 return this;
             }
     
-            descriptorBurrow(){
-                this.file("jb2a.cast_generic.02.blue.0")
+            descriptorBurrowing(){
+                this.file("jb2a.cast_generic.02.blue")
+                    .pause(2000)
                     .atLocation(this.affected)
                     .scaleToObject(2.25)
                     .animateProperty("sprite", "width", { from: this.affected.document.width * 2.25, to: 0, duration: 1500, ease: "easeInQuint", gridUnits: true, delay: 500 })
@@ -9446,13 +9614,15 @@ Hooks.on("ready", () => {
                     .animateProperty("sprite", "height", { from: 0, to: this.affected.document.width * 2.25, duration: 500, ease: "easeOutCubic", gridUnits: true, delay: 2500 })
                     .playbackRate(0.8)
                     .belowTokens()
-                    .pause(1000)
+                    .wait(1000)
+                
                 super.affectCommon()
                     .file("jb2a.impact.earth.01.browngreen.0")
                     .atLocation(this.affected)
                     .scaleToObject(6)
                     .opacity(0.8)
                     .filter("ColorMatrix", {hue:70, contrast: 0.5, saturate: 0.5,brightness: 1,})
+                
                 super.affectCommon()
                     .file("jb2a.burrow.out.01.brown.1")
                     .atLocation(this.affected)
@@ -9461,6 +9631,7 @@ Hooks.on("ready", () => {
                     .scaleToObject(8)
                     .filter("ColorMatrix", {hue:70, contrast: 0.5, saturate: 0.5,brightness: 1,})
                     .zIndex(1)
+                
                 .animation()
                 .delay(1400)
                 .on(this.affected)
@@ -9473,6 +9644,7 @@ Hooks.on("ready", () => {
                     .scaleToObject(6)
                     .zIndex(3)
                     .waitUntilFinished(-2000)
+                
                 super.affectCommon()
                     .file("jb2a.impact.ground_crack.02.blue")
                     .belowTokens()
@@ -9482,9 +9654,99 @@ Hooks.on("ready", () => {
                     .zIndex(2)
                 return this
             }
-            descriptorLeap(){}
-            descriptorTeleport(){}
-            descriptorSpeed(){}
+            descriptorLeaping(position){
+                
+                    
+                    this.canvasPan()
+                    .shake({duration: 2000, strength: 5, rotation: false })
+                    
+                    super.affectCommon()
+                    .file("jb2a.impact.011.blue")
+                    .atLocation(position)
+                    .fadeOut(3000)
+                    .scaleToObject(8)
+                    .zIndex(3)
+                    
+                    super.affectCommon()
+                    .file("jb2a.impact.ground_crack.02.blue")
+                    .atLocation(position)
+                    .belowTokens()
+                    .filter("ColorMatrix", {saturate: 2})
+                    .fadeOut(1000)
+                    .scaleToObject(4)
+                    .zIndex(2)
+                    
+                    super.affectCommon()
+                    .file("jb2a.ground_cracks.blue.02")
+                    .atLocation(position)
+                    .belowTokens()
+                    .filter("ColorMatrix", {saturate: 1})
+                    .duration(6000)
+                    .fadeOut(1000)
+                    .scaleToObject(4)
+                    .delay(1000)
+                    .zIndex(1)
+                    
+                    .file("jb2a.burrow.out.01.still_frame.0")
+                    .atLocation(position)
+                    .duration(5000)
+                    .fadeIn(500)
+                    .fadeOut(1000)
+                    .belowTokens()
+                    .scaleToObject(6)
+                    .filter("ColorMatrix", { saturate: 1 })
+                    .zIndex(1)
+                return this
+            }
+            descriptorTeleport(position){
+                
+                this.file("jb2a.lightning_strike.blue.0")
+                .atLocation(position)
+                .randomizeMirrorX()
+                .scale(1)
+                
+                
+                super.affectCommon()
+                .file("jb2a.impact.ground_crack.blue.01")
+                .atLocation(position)
+                .belowTokens()
+                .filter("ColorMatrix", {saturate: -0.5})
+                .size(3, {gridUnits: true})
+                .zIndex(1)
+                
+                super.affectCommon()
+                .file("jb2a.impact.ground_crack.still_frame.01")
+                .atLocation(position)
+                .belowTokens()
+                .size(3, {gridUnits: true})
+                .persist()
+                .zIndex(0)
+                return this
+            }
+            descriptorSpeed(position){
+                
+                    super.affectCommon()
+                    .file("blfx.spell.melee.radial1.lightning1.shock1")
+                    .filter("ColorMatrix", {hue:-10, contrast: 0.5, saturate: 0.1,brightness: 1,})
+                    .atLocation(position)
+                    .playbackRate(1)
+                    .scaleToObject(5, {considerTokenScale: true})
+                    .scaleOut(0, 500, {ease: "easeOutCubic"})
+                    .belowTokens()
+    
+    
+                    this.affectCommon()
+                    .file("jb2a.burrow.out.01.still_frame.0")
+                    .atLocation(position)
+                    .duration(5000)
+                    .fadeIn(500)
+                    .fadeOut(1000)
+                    .belowTokens()
+                    .scaleToObject(6)
+                    .filter("ColorMatrix", { saturate: 1 })
+                    .zIndex(1)
+                return this
+            }
             descriptorFlight(){}
             descriptorHealing(){
                 
