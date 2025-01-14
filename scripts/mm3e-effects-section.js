@@ -6809,11 +6809,11 @@ Hooks.on("ready", () => {
                 super(inSequence);
             }
             cast({caster, affected , duration = 1}={}){ 
-                super.castCommon({caster:caster, affected:affected})
-                    super.castCommon()
-                        .file(`jb2a.bless.400px.intro.yellow`)
-                        .opacity(1)
-                        .size({ width: 2.5, height: 2.5 }, {gridUnits: true})
+                super.castCommon({caster:caster, affected:affected})                    
+                        this.file(`jb2a.bless.400px.intro.yellow`)
+                        .atLocation(this.caster)
+                        .opacity(0.9)
+                        .scale(0.7)
                         .fadeIn(1000, {ease: "easeInExpo"})
                         .fadeOut(2500, {ease: "easeInExpo"})
                         .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 18000})
@@ -6822,6 +6822,8 @@ Hooks.on("ready", () => {
                         .belowTokens()
                         .duration(5000)
                         .zIndex(1)
+
+
                     
                     super.castCommon()
                         .file("jb2a.cast_generic.01.yellow.0") 
@@ -6841,7 +6843,7 @@ Hooks.on("ready", () => {
                         .scaleToObject(2.5)
                         .playbackRate(1)
                         .zIndex(3)
-                    return this
+                    return this;
             } 
             castSpecificEffect({caster, affected , duration = 1}={}){
                 super.castCommon({caster:caster, affected:affected})
