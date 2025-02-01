@@ -8658,6 +8658,7 @@ Hooks.on("ready", () => {
             constructor(inSequence) {
                 super(inSequence);
             }
+            ///fix
             castDamage({affected,caster}={}) {
                 return super.castCommon({affected:affected, caster:caster, rotation:false})
                     .file("animated-spell-effects-cartoon.fire.03") // Fire casting animation
