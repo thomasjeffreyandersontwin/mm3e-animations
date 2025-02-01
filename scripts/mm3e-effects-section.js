@@ -6854,6 +6854,7 @@ Hooks.on("ready", () => {
             meleeCast({caster, affected, repeats=1}={} ){
                 super.meleeCastCommon({caster:caster, affected:affected}) 
                 let target = Array.from(game.user.targets)[0];
+                let token = canvas.tokens.controlled[0];
     
         const targetCenter = {
         x: target.x+canvas.grid.size*target.document.width/2,
@@ -6875,7 +6876,7 @@ Hooks.on("ready", () => {
         .file(`jb2a.bless.400px.intro.yellow`)
         .atLocation(token)
         .opacity(0.9)
-        .size({ width: 2.5, height: 2.5 }, {gridUnits: true})
+        .scale(0.7)
         .fadeIn(1000, {ease: "easeInExpo"})
         .fadeOut(2500, {ease: "easeInExpo"})
         .loopProperty("sprite", "rotation", { from: 0, to: 360, duration: 18000})
@@ -7274,6 +7275,9 @@ Hooks.on("ready", () => {
                 
                 return this
             }
+            descriptorCreate(){ //optionally override for custom sequence effect                
+            return this
+        }
     
             /*
             
