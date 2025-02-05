@@ -6,7 +6,7 @@ Effects based systems allow players to define the exact power they want by purch
 1. Providing a mechanism to invoke an animation based on the descriptor, range type, option area shape, and power effects of an item being clicked
 2. Support for automated animations entries and sequencer macros
 3. an Autorec file with a set of pre-labelled entries for various descriptor-range-area-effect combinations out of the box!
-4. A collection of bespoke sequencer scripts that have been componetized into various descriptor-range-area-effect scripts that can be mixed and matched, Earth, Air, Fire, Radiation in the current list with many more on the way!
+4. A collection of bespoke sequencer scripts that have been componetized into various descriptor-range-area-effect scripts that can be mixed and matched, Earth, Air, Fire, Radiation, Lightning, Black Venom, to name a few with many more on the way!
 5. A custom UI that enables quick mixing and marching of the above seqiencer scripts into customized macros
 
 I'll be updating with more documentation, sequencer scripts, and other functions in real time,  in the meantime hit me up on the green ronin channel over on the <a href="https://discord.com/channels/170995199584108546">foundry discord!</a>
